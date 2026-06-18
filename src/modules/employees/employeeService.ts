@@ -14,6 +14,26 @@ export function getEmployeeByDiscordId(discordUserId: string): Promise<Employee 
 }
 
 /**
+ * Enregistre/MAJ le tarif actif d'un grade (CDC §6.2) sans reecrire l'historique :
+ * un changement clot l'ancien tarif et en cree un nouveau.
+ */
+export async function upsertGradeRate(
+  guildConfigId: string,
+  roleId: string,
+  label: string,
+  ratePerUnit: number,
+): Promise<void> {
+  const active = await prisma.gradeRate.findFirst({
+    where: { guildConfigId, roleId, validTo: null },
+  });
+  if (active && active.ratePerUnit === ratePerUnit && active.label === label) return;
+  if (active) {
+    await prisma.gradeRate.update({ where: { id: active.id }, data: { validTo: new Date() } });
+  }
+  await prisma.gradeRate.create({ data: { guildConfigId, roleId, label, ratePerUnit } });
+}
+
+/**
  * Casier actif associe a un Forum (CDC §2.4 / §5.2).
  * Retourne null si le Forum n'est pas un casier, ou si l'employe est archive.
  */
