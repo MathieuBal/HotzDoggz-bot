@@ -1,13 +1,26 @@
-import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
-import { logger } from '../../infrastructure/logging/logger.js';
-import { getOpenWeekSnapshot, openWeek } from '../../modules/accounting/accountingService.js';
-import { writeAudit } from '../../modules/audit/auditService.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+  SlashCommandBuilder,
+  type ChatInputCommandInteraction,
+} from 'discord.js';
 import { prisma } from '../../infrastructure/database/client.js';
+import { logger } from '../../infrastructure/logging/logger.js';
+import {
+  getOpenWeek,
+  getOpenWeekSnapshot,
+  openWeek,
+} from '../../modules/accounting/accountingService.js';
+import { writeAudit } from '../../modules/audit/auditService.js';
 import { buildAccountingBoard, buildEmployeeBoard } from '../../modules/dashboards/embeds.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { reconcileActiveThreads } from '../../modules/sales/reconcile.js';
-import { isDirection } from '../permissions.js';
+import { WeekButtonId } from '../components/ids.js';
+import { buildForceCloseModal } from '../modals/weekModals.js';
+import { isDirecteurMember, isDirection } from '../permissions.js';
 import type { SlashCommand } from './types.js';
 
 export const semaineCommand: SlashCommand = {
@@ -19,6 +32,16 @@ export const semaineCommand: SlashCommand = {
     )
     .addSubcommand((s) =>
       s.setName('voir').setDescription('Affiche le rapport de la semaine ouverte'),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('cloturer')
+        .setDescription('Cloture la semaine (apercu + confirmation, mode strict)'),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('cloturer-force')
+        .setDescription('Cloture forcee malgre des ventes en cours (Directeur uniquement)'),
     )
     .toJSON(),
 
@@ -35,6 +58,31 @@ export const semaineCommand: SlashCommand = {
       });
       return;
     }
+
+    const sub = interaction.options.getSubcommand();
+
+    // Cloture forcee : modal (pas de defer avant showModal).
+    if (sub === 'cloturer-force') {
+      if (
+        !(await isDirecteurMember(interaction.guild, interaction.user.id, config.roleDirecteur))
+      ) {
+        await interaction.reply({
+          content: 'Cloture forcee reservee au Directeur.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      if (!(await getOpenWeek(config.id))) {
+        await interaction.reply({
+          content: 'Aucune semaine ouverte.',
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      await interaction.showModal(buildForceCloseModal());
+      return;
+    }
+
     if (!(await isDirection(interaction, config))) {
       await interaction.reply({
         content: 'Action reservee a la direction.',
@@ -44,7 +92,6 @@ export const semaineCommand: SlashCommand = {
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const sub = interaction.options.getSubcommand();
 
     if (sub === 'ouvrir') {
       const result = await openWeek(config.id, interaction.guild.id, config.timezone);
@@ -59,15 +106,12 @@ export const semaineCommand: SlashCommand = {
         entityType: 'AccountingWeek',
         entityId: result.week.id,
       });
-
-      // Reprend les posts faits avant l'ouverture, puis publie les tableaux.
       await reconcileActiveThreads(interaction.client).catch((err) =>
         logger.warn({ err }, 'Reconciliation post-ouverture KO'),
       );
       await updateDashboardsNow(interaction.client, config.id).catch((err) =>
         logger.warn({ err }, 'Publication des tableaux KO'),
       );
-
       const fmt = (d: Date): string => d.toLocaleDateString('fr-FR', { timeZone: config.timezone });
       await interaction.editReply(
         `Semaine ouverte : du ${fmt(result.week.startAt)} au ${fmt(result.week.endAt)}.`,
@@ -92,6 +136,44 @@ export const semaineCommand: SlashCommand = {
             snapshot.pendingCount,
           ),
         ],
+      });
+      return;
+    }
+
+    if (sub === 'cloturer') {
+      const snapshot = await getOpenWeekSnapshot(config.id);
+      if (!snapshot) {
+        await interaction.editReply('Aucune semaine ouverte.');
+        return;
+      }
+      if (snapshot.pendingCount > 0) {
+        await interaction.editReply(
+          `Cloture refusee : ${snapshot.pendingCount} vente(s) encore en cours (a verifier / a completer). ` +
+            'Traite-les, ou utilise `/semaine cloturer-force` (Directeur).',
+        );
+        return;
+      }
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(WeekButtonId.CLOSE_CONFIRM)
+          .setLabel('Confirmer la cloture')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(WeekButtonId.CLOSE_CANCEL)
+          .setLabel('Annuler')
+          .setStyle(ButtonStyle.Secondary),
+      );
+      await interaction.editReply({
+        content: 'Apercu de la cloture — verifie puis confirme :',
+        embeds: [
+          buildAccountingBoard(
+            snapshot.report,
+            snapshot.week.startAt,
+            snapshot.week.endAt,
+            snapshot.pendingCount,
+          ),
+        ],
+        components: [row],
       });
     }
   },

@@ -2,8 +2,10 @@ import { Events, MessageFlags, type Client, type Interaction } from 'discord.js'
 import { randomUUID } from 'node:crypto';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { handleSaleButton } from '../buttons/saleButtons.js';
+import { handleWeekButton } from '../buttons/weekButtons.js';
 import { commands } from '../commands/index.js';
 import { handleSaleModal } from '../modals/saleModalHandlers.js';
+import { handleWeekModal } from '../modals/weekModalHandlers.js';
 
 async function notifyError(interaction: Interaction): Promise<void> {
   if (!interaction.isRepliable()) return;
@@ -31,11 +33,13 @@ export function registerInteractionCreate(client: Client): void {
 
     try {
       if (interaction.isButton()) {
-        await handleSaleButton(interaction);
+        if (await handleSaleButton(interaction)) return;
+        await handleWeekButton(interaction);
         return;
       }
       if (interaction.isModalSubmit()) {
-        await handleSaleModal(interaction);
+        if (await handleSaleModal(interaction)) return;
+        await handleWeekModal(interaction);
         return;
       }
       if (interaction.isChatInputCommand()) {

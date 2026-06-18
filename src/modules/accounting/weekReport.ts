@@ -99,6 +99,34 @@ export function computeWeekReport(
   };
 }
 
+/**
+ * Repartition de la prime du meilleur employe a la cloture (CDC §6.5).
+ * En cas d'egalite au sommet du classement eligible, la prime est partagee a
+ * parts egales entre les leaders (residu d'arrondi aux premiers par ordre
+ * alphabetique, pour un resultat deterministe).
+ *
+ * @returns Map employeeId -> montant de prime (entier).
+ */
+export function computeBonusShares(report: WeekReport): Map<string, number> {
+  const shares = new Map<string, number>();
+  if (report.bonus <= 0 || !report.bestEmployee) return shares;
+
+  const topQuantity = report.bestEmployee.quantity;
+  const leaders = report.employees
+    .filter((e) => e.eligible && e.quantity === topQuantity && e.quantity > 0)
+    .sort((a, b) => a.nomRP.localeCompare(b.nomRP));
+  if (leaders.length === 0) return shares;
+
+  const base = Math.floor(report.bonus / leaders.length);
+  let residual = report.bonus - base * leaders.length;
+  for (const leader of leaders) {
+    const extra = residual > 0 ? 1 : 0;
+    shares.set(leader.employeeId, base + extra);
+    if (residual > 0) residual--;
+  }
+  return shares;
+}
+
 export interface PersonalView {
   quantity: number;
   salary: number;

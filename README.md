@@ -20,7 +20,7 @@ roadmap par phases.
 | **2 — Détection & ingestion**   | association employé-casier, `threadCreate` + fallback `messageCreate`, contrôles, idempotence, copie durable des preuves, fiche contrôle | ✅ **en place** |
 | **3 — Workflow de validation**  | boutons/modals direction, synchronisation des tags, validation/complément/refus/correction, audit                                        | ✅ **en place** |
 | **4 — Comptabilité temps réel** | journal financier, tableaux permanents, classement & prime                                                                               | ✅ **en place** |
-| 5 — Clôture & paies             | clôture stricte/forcée, fiches de paie, paiements, exports                                                                               | ⏳              |
+| **5 — Clôture & paies**         | clôture stricte/forcée, fiches de paie, paiements, exports                                                                               | ✅ **en place** |
 | 6 — Durcissement & prod         | tests de charge, sauvegardes/restauration, déploiement permanent                                                                         | ⏳              |
 
 ## Décisions métier figées
@@ -111,6 +111,15 @@ docker compose up --build      # PostgreSQL + bot (migrations appliquées au dé
 - `/tableau publier` — (re)crée ou actualise les tableaux permanents (direction).
 - `/macompta` — fiche perso (privée) : production, salaire provisoire, rang et
   **écart au meilleur employé** (calculé hors direction/co-patron, pour motiver).
+- `/semaine cloturer` — clôture stricte avec aperçu + bouton de confirmation
+  (refusée s'il reste des ventes en cours) (direction).
+- `/semaine cloturer-force` — clôture forcée : modal motif + double confirmation,
+  **Directeur uniquement**, intégralement auditée.
+- `/paie voir` — paies de la dernière semaine clôturée (direction).
+- `/paie marquer-payee <membre>` — confirme le versement en jeu (anti-double
+  paiement) (direction).
+- `/export semaine` — exporte la dernière semaine clôturée en CSV (ventes +
+  paies) (direction).
 
 ## Flux d'ingestion (Phase 2)
 
@@ -172,6 +181,53 @@ Les totaux sont **dérivés des ventes validées** (jamais des messages, §6.1) 
 - À la **validation**, le journal financier reçoit `SALE_REVENUE` et
   `SALARY_LIABILITY` ; une correction ajoute un `ADJUSTMENT`. Les montants
   restent recalculables depuis les ventes.
+
+## Clôture & paies (Phase 5)
+
+- **Clôture stricte** (`/semaine cloturer`) : aperçu du bilan + bouton de
+  confirmation. Refusée tant que des ventes sont en cours (§6.6).
+- **Clôture forcée** (`/semaine cloturer-force`, Directeur) : modal motif +
+  double confirmation (taper `CLOTURER`), intégralement auditée.
+- À la clôture, dans **une seule transaction** : verrouillage des totaux sur la
+  semaine, désignation du meilleur employé (prime partagée en cas d'égalité),
+  création des **fiches de paie** (salaire + prime), écritures d'allocation
+  (réserve, prime, parts directeur/co-directeur), intégration des ventes
+  validées. Le bilan final est publié dans `comptabilité` et les tableaux sont
+  réinitialisés.
+- **Paiement** (`/paie marquer-payee`) : verrouille la fiche, enregistre payeur
+  et date, passe les ventes liées à `PAYEE`. **Impossible de payer deux fois**
+  sans correction.
+- **Export** (`/export semaine`) : CSV ventes + CSV paies de la dernière semaine
+  clôturée.
+
+## Mise en route sur un serveur Discord (test)
+
+1. **Application Discord** — sur le [Developer Portal](https://discord.com/developers/applications) :
+   créer une application, onglet _Bot_ → copier le **token** ; activer
+   **MESSAGE CONTENT INTENT** et **SERVER MEMBERS INTENT**. Onglet _OAuth2_ →
+   copier l'**Application ID** (= `DISCORD_CLIENT_ID`).
+2. **Inviter le bot** — OAuth2 → URL Generator, scopes `bot` + `applications.commands`,
+   permissions : View Channels, Send Messages, Send Messages in Threads, Embed
+   Links, Attach Files, Manage Threads, Read Message History (pas Administrateur).
+3. **Récupérer les IDs Discord** (mode développeur activé) : serveur (guild),
+   rôles de grade/direction, salons (Forum de contrôle, comptabilité, paies,
+   logs, tableau hebdo), et les Forums casiers.
+4. **Configurer** — `cp .env.example .env`, renseigner `DISCORD_TOKEN`,
+   `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `DATABASE_URL`, puis les
+   `ROLE_*` et `CHANNEL_*`.
+5. **Base + démarrage** :
+   ```bash
+   npm install
+   docker compose up -d postgres      # ou un PostgreSQL existant
+   npx prisma migrate deploy
+   npm run db:seed                    # GuildConfig + grille salariale
+   npm run dev                        # démarre le bot (commandes auto-synchro)
+   ```
+6. **Vérifier** dans Discord : `/hotzdogz diagnostic` (doit être au vert),
+   associer les employés `/employe associer`, ouvrir la semaine
+   `/semaine ouvrir`, puis tester un cycle complet : un employé poste une vente
+   dans son casier → la direction valide depuis la fiche de contrôle →
+   `/semaine cloturer` → `/paie marquer-payee` → `/export semaine`.
 
 ## Scripts npm
 

@@ -1,8 +1,14 @@
-import { EmbedBuilder, type Client, type MessageCreateOptions } from 'discord.js';
+import { ChannelType, EmbedBuilder, type Client, type MessageCreateOptions } from 'discord.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
+import type { ClosureSummary } from '../accounting/closureService.js';
 import { getOpenWeekSnapshot } from '../accounting/accountingService.js';
-import { buildAccountingBoard, buildEmployeeBoard, buildSalaryGrid } from './embeds.js';
+import {
+  buildAccountingBoard,
+  buildClosureSummary,
+  buildEmployeeBoard,
+  buildSalaryGrid,
+} from './embeds.js';
 
 /**
  * Tableaux permanents (CDC §5.5 / §7.4) : le bot edite TOUJOURS le meme message,
@@ -89,5 +95,25 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   if (grid.changed && grid.messageId) data.msgSalaryGrid = grid.messageId;
   if (Object.keys(data).length > 0) {
     await prisma.guildConfig.update({ where: { id: guildConfigId }, data });
+  }
+}
+
+/**
+ * Publie le bilan final de cloture dans le salon comptabilite, comme archive
+ * permanente (nouveau message, CDC §6.6 : "Publier le bilan final").
+ */
+export async function postClosureReport(
+  client: Client,
+  guildConfigId: string,
+  summary: ClosureSummary,
+  weekLabel: string,
+): Promise<void> {
+  const config = await prisma.guildConfig.findUnique({ where: { id: guildConfigId } });
+  if (!config?.channelAccounting) return;
+  const channel = await client.channels.fetch(config.channelAccounting).catch(() => null);
+  if (channel?.type === ChannelType.GuildText) {
+    await channel
+      .send({ embeds: [buildClosureSummary(summary, weekLabel)] })
+      .catch((err) => logger.warn({ err }, 'Publication du bilan de cloture KO'));
   }
 }

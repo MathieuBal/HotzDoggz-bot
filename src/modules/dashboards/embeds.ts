@@ -1,5 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
+import type { ClosureSummary } from '../accounting/closureService.js';
 import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
+import type { PayrollLine } from '../payroll/payrollService.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
 const money = (n: number): string => `${nf.format(n)} $`;
@@ -105,6 +107,52 @@ export function buildPersonalBoard(
       { name: 'Objectif', value: objectiveMessage(view) },
     )
     .setFooter({ text: 'Provisoire — definitif a la cloture' })
+    .setTimestamp(new Date());
+}
+
+/** Bilan final de cloture (CDC §6.6). */
+export function buildClosureSummary(summary: ClosureSummary, weekLabel: string): EmbedBuilder {
+  const best = summary.bestEmployeeName
+    ? summary.bestTie
+      ? `${summary.bestEmployeeName} (prime partagee — egalite)`
+      : summary.bestEmployeeName
+    : '—';
+  return new EmbedBuilder()
+    .setTitle(`Cloture de la semaine du ${weekLabel}${summary.forced ? ' (forcee)' : ''}`)
+    .setColor(summary.forced ? 0xe67e22 : 0x2ecc71)
+    .addFields(
+      { name: "Chiffre d'affaires", value: money(summary.totalRevenue), inline: true },
+      { name: 'Salaires', value: money(summary.totalSalaries), inline: true },
+      { name: 'Reserve (5 %)', value: money(summary.reserve), inline: true },
+      { name: 'Benefice distribuable', value: money(summary.distributable), inline: true },
+      { name: 'Prime (35 %)', value: money(summary.bonus), inline: true },
+      { name: 'Meilleur employe', value: best, inline: true },
+      { name: 'Directeur (40 %)', value: money(summary.directorShare), inline: true },
+      { name: 'Co-directeur (25 %)', value: money(summary.coDirectorShare), inline: true },
+      { name: 'Fiches de paie', value: String(summary.payrollCount), inline: true },
+    )
+    .setTimestamp(new Date());
+}
+
+/** Liste des paies d'une semaine cloturee (CDC §5.5 / §6.7). */
+export function buildPayrollList(
+  weekLabel: string,
+  payrolls: readonly PayrollLine[],
+): EmbedBuilder {
+  const lines =
+    payrolls.length === 0
+      ? '_Aucune fiche de paie._'
+      : payrolls
+          .map((p) => {
+            const mark = p.status === 'PAID' ? '✅' : '⏳';
+            const bonus = p.bonusAmount > 0 ? ` (+${money(p.bonusAmount)} prime)` : '';
+            return `${mark} **${p.employee.nomRP}** — ${money(p.totalAmount)}${bonus} — ${p.status === 'PAID' ? 'payee' : 'a payer'}`;
+          })
+          .join('\n');
+  return new EmbedBuilder()
+    .setTitle(`Paies — semaine du ${weekLabel}`)
+    .setColor(0x8e44ad)
+    .setDescription(lines)
     .setTimestamp(new Date());
 }
 

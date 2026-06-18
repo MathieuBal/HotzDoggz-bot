@@ -21,3 +21,20 @@ export const SaleFieldId = {
   COMMENT: 'comment',
   REASON: 'reason',
 } as const;
+
+export const WeekButtonId = {
+  CLOSE_CONFIRM: 'week:close:confirm',
+  CLOSE_CANCEL: 'week:close:cancel',
+} as const;
+
+export const WeekModalId = {
+  FORCE_CLOSE: 'week:forceclose:modal',
+} as const;
+
+export const WeekFieldId = {
+  REASON: 'reason',
+  CONFIRM: 'confirm',
+} as const;
+
+/** Mot a saisir pour confirmer une cloture forcee (double confirmation). */
+export const FORCE_CLOSE_WORD = 'CLOTURER';

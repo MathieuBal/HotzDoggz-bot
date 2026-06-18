@@ -31,3 +31,18 @@ export async function isDirection(
   if (!interaction.guild) return false;
   return isDirectionMember(interaction.guild, interaction.user.id, config);
 }
+
+/**
+ * Autorisation "Directeur" (CDC §10.2) : Directeur ou administrateur seulement
+ * (ex. cloture forcee). Le Co-directeur n'est pas suffisant.
+ */
+export async function isDirecteurMember(
+  guild: Guild,
+  userId: string,
+  roleDirecteur: string | null,
+): Promise<boolean> {
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) return false;
+  if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
+  return roleDirecteur !== null && member.roles.cache.has(roleDirecteur);
+}
