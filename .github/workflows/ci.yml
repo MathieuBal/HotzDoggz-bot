@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint · Build · Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+
+  migrations:
+    name: Migrations PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hotzdogz
+          POSTGRES_PASSWORD: hotzdogz
+          POSTGRES_DB: hotzdogz
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hotzdogz -d hotzdogz"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://hotzdogz:hotzdogz@localhost:5432/hotzdogz?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Verifie que les migrations s'appliquent proprement sur une base vierge.
+      - run: npx prisma migrate deploy
+      # Verifie que le schema et les migrations ne divergent pas.
+      - run: npx prisma migrate status
