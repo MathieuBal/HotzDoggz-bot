@@ -1,0 +1,345 @@
+// ════════════════════════════════════════════════════════════════════════════
+// HotzDogz · Modele de donnees (CDC §9)
+// PostgreSQL est la source officielle ; Discord n'est que l'interface.
+// Principes : montants entiers, append-only pour l'audit/le journal financier,
+// idempotence (threadId unique), snapshots figes a la validation.
+// ════════════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ───────────────────────────────────────────────────────────────────
+
+enum EmployeeStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AccountingWeekStatus {
+  OPEN
+  CLOSED
+}
+
+/// Statuts internes de la vente (CDC Annexe B). Plus precis que les tags Discord,
+/// qui ne sont qu'une representation visuelle simplifiee.
+enum SaleStatus {
+  SOUMISE
+  INCOMPLETE
+  EN_VERIFICATION
+  VALIDEE
+  INTEGREE_A_LA_PAIE
+  PAYEE
+  REFUSEE
+  ANNULEE
+}
+
+enum PayrollStatus {
+  PENDING // a payer
+  PAID
+}
+
+/// Type de preuve jointe (CDC §4.1).
+enum AttachmentType {
+  COFFRE_PLEIN // avant la vente
+  COFFRE_VIDE // apres la vente
+}
+
+/// Ecritures du journal financier append-only (CDC §6.3).
+enum LedgerEntryType {
+  SALE_REVENUE
+  SALARY_LIABILITY
+  RESERVE_ALLOCATION
+  BONUS_ALLOCATION
+  DIRECTION_ALLOCATION
+  PAYMENT
+  ADJUSTMENT
+}
+
+/// Cle interne d'un tag de Forum, mappee vers l'ID Discord propre a chaque salon
+/// (les tags ne sont pas dupliques automatiquement entre Forums - CDC §5.1).
+enum ForumTagKey {
+  NOUVELLE_VENTE
+  A_VERIFIER
+  A_COMPLETER
+  VALIDEE
+  PAYEE
+  REFUSEE
+}
+
+// ── Configuration ───────────────────────────────────────────────────────────
+
+/// Une configuration active par serveur Discord. Les rôles et salons sont
+/// reference par identifiant Discord, jamais par nom (CDC §2.1).
+model GuildConfig {
+  id       String @id @default(cuid())
+  guildId  String @unique
+  timezone String @default("Europe/Paris")
+
+  // Roles (IDs Discord)
+  roleDirecteur   String?
+  roleCoDirecteur String?
+  roleChefEquipe  String?
+  roleExperimente String?
+  roleNovice      String?
+  roleStagiaire   String?
+
+  // Salons (IDs Discord)
+  channelControl     String? // Forum prive de controle (1 fiche / vente)
+  channelAccounting  String? // comptabilite
+  channelPayroll     String? // paies
+  channelLogs        String? // logs-et-archives
+  channelWeeklyBoard String? // tableau-de-bord-hebdo
+
+  // Messages permanents edites par le bot (CDC §5.5 / §7.4)
+  msgWeeklyEmployees String?
+  msgAccounting      String?
+  msgPayroll         String?
+  msgSalaryGrid      String?
+
+  // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
+  pnjUnitPrice Int @default(210)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees  Employee[]
+  gradeRates GradeRate[]
+  forumTags  ForumTag[]
+  weeks      AccountingWeek[]
+  sales      Sale[]
+  payrolls   Payroll[]
+  ledger     LedgerEntry[]
+  auditLogs  AuditLog[]
+}
+
+/// Historique des tarifs salariaux par role (CDC §6.2 : instantanes financiers).
+model GradeRate {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  roleId        String // ID du role Discord
+  label         String // "Chef d'equipe", "Directeur", ...
+  ratePerUnit   Int // salaire par hot dog valide (entier)
+  validFrom     DateTime    @default(now())
+  validTo       DateTime? // null = tarif actif
+  createdAt     DateTime    @default(now())
+
+  @@index([guildConfigId, roleId])
+  @@index([roleId, validTo])
+}
+
+/// Mapping cle interne -> ID de tag Discord, propre a chaque Forum (CDC §5.1).
+model ForumTag {
+  id             String      @id @default(cuid())
+  guildConfig    GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId  String
+  forumChannelId String
+  key            ForumTagKey
+  discordTagId   String
+  createdAt      DateTime    @default(now())
+
+  @@unique([forumChannelId, key])
+}
+
+// ── Employes & casiers ──────────────────────────────────────────────────────
+
+model Employee {
+  id            String         @id @default(cuid())
+  guildConfig   GuildConfig    @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  discordUserId String         @unique
+  nomRP         String
+  casierForumId String?        @unique // Forum prive de l'employe (CDC §2.4)
+  status        EmployeeStatus @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  sales    Sale[]
+  payrolls Payroll[]
+}
+
+// ── Semaine comptable ───────────────────────────────────────────────────────
+
+/// Une seule semaine OPEN par serveur (CDC §9.3). Garanti par `openGuildKey`
+/// (= guildId tant que la semaine est ouverte, null une fois cloturee).
+model AccountingWeek {
+  id            String               @id @default(cuid())
+  guildConfig   GuildConfig          @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  startAt       DateTime
+  endAt         DateTime
+  status        AccountingWeekStatus @default(OPEN)
+  openGuildKey  String?              @unique // verrou "une seule semaine ouverte"
+
+  // Snapshots de cloture (figes, recalculables depuis les ventes)
+  totalRevenue    Int?
+  totalSalaries   Int?
+  reserve         Int?
+  distributable   Int?
+  bonus           Int?
+  directorShare   Int?
+  coDirectorShare Int?
+  bestEmployeeId  String?
+
+  closedAt          DateTime?
+  closedByDiscordId String?
+  createdAt         DateTime  @default(now())
+
+  sales    Sale[]
+  payrolls Payroll[]
+  ledger   LedgerEntry[]
+}
+
+// ── Ventes ──────────────────────────────────────────────────────────────────
+
+model Sale {
+  id            String      @id @default(cuid())
+  reference     String      @unique // ex. HD-2026-0042
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  week          AccountingWeek @relation(fields: [weekId], references: [id])
+  weekId        String
+  employee      Employee    @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  threadId        String  @unique // post du casier (cle d'idempotence - CDC §4.2)
+  controlThreadId String? @unique // fiche de controle (CDC §4.5)
+
+  declaredQuantity  Int
+  validatedQuantity Int?
+
+  // Instantanes financiers figes a la declaration / validation (CDC §6.2)
+  gradeSnapshot        String?
+  gradeRoleIdSnapshot  String?
+  salaryRateSnapshot   Int?
+  pnjUnitPriceSnapshot Int?
+
+  status SaleStatus @default(SOUMISE)
+
+  declaredAt           DateTime
+  submittedAt          DateTime  @default(now())
+  controllerDiscordId  String? // prise en charge
+  validatedAt          DateTime?
+  validatedByDiscordId String?
+  verificationNote     String? // note de verification PC in-game
+  refusalReason        String?
+  comment              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attachments   SaleAttachment[]
+  statusHistory SaleStatusHistory[]
+  ledger        LedgerEntry[]
+
+  @@index([weekId, status])
+  @@index([employeeId, weekId])
+}
+
+/// Preuves : copie durable obligatoire en stockage objet (CDC §5.3).
+model SaleAttachment {
+  id                  String         @id @default(cuid())
+  sale                Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId              String
+  type                AttachmentType
+  discordMessageId    String
+  discordAttachmentId String
+  fileName            String
+  size                Int
+  mimeType            String
+  sha256              String
+  storageKey          String // cle dans le stockage objet (source durable)
+  discordUrl          String? // reference secondaire (URL signee, expire)
+  createdAt           DateTime       @default(now())
+
+  @@index([saleId])
+}
+
+/// Historique des statuts append-only (CDC §9.2).
+model SaleStatusHistory {
+  id              String      @id @default(cuid())
+  sale            Sale        @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId          String
+  fromStatus      SaleStatus?
+  toStatus        SaleStatus
+  authorDiscordId String?
+  reason          String?
+  correlationId   String?
+  createdAt       DateTime    @default(now())
+
+  @@index([saleId])
+}
+
+// ── Paies ───────────────────────────────────────────────────────────────────
+
+/// Paie suivie par employe et par semaine, pas vente par vente (CDC §6.7).
+model Payroll {
+  id            String         @id @default(cuid())
+  guildConfig   GuildConfig    @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  employee      Employee       @relation(fields: [employeeId], references: [id])
+  employeeId    String
+  week          AccountingWeek @relation(fields: [weekId], references: [id])
+  weekId        String
+
+  salaryAmount Int // salaire de production
+  bonusAmount  Int           @default(0) // prime meilleur employe (le cas echeant)
+  totalAmount  Int
+  status       PayrollStatus @default(PENDING)
+
+  paidAt         DateTime?
+  payerDiscordId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([employeeId, weekId])
+}
+
+// ── Journal financier & audit (append-only) ─────────────────────────────────
+
+model LedgerEntry {
+  id            String          @id @default(cuid())
+  guildConfig   GuildConfig     @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  type          LedgerEntryType
+  amount        Int // entier, jamais negatif sur le montant ; signe porte par le type
+  week          AccountingWeek? @relation(fields: [weekId], references: [id])
+  weekId        String?
+  sale          Sale?           @relation(fields: [saleId], references: [id])
+  saleId        String?
+  employeeId    String?
+  payrollId     String?
+  description   String?
+  correlationId String?
+  createdAt     DateTime        @default(now())
+
+  @@index([weekId, type])
+  @@index([saleId])
+}
+
+/// Journal d'audit : aucune action sensible sans trace (CDC §10.3).
+model AuditLog {
+  id              String       @id @default(cuid())
+  guildConfig     GuildConfig? @relation(fields: [guildConfigId], references: [id])
+  guildConfigId   String?
+  action          String
+  authorDiscordId String?
+  entityType      String?
+  entityId        String?
+  before          Json?
+  after           Json?
+  reason          String?
+  channelId       String?
+  correlationId   String?
+  createdAt       DateTime     @default(now())
+
+  @@index([correlationId])
+  @@index([entityType, entityId])
+}

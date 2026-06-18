@@ -1,0 +1,40 @@
+# Developpement local : PostgreSQL + bot reproductibles (cf. CDC §8.5).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hotzdogz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hotzdogz
+      POSTGRES_PASSWORD: hotzdogz
+      POSTGRES_DB: hotzdogz
+    ports:
+      - '5432:5432'
+    volumes:
+      - hotzdogz_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hotzdogz -d hotzdogz']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  bot:
+    build: .
+    container_name: hotzdogz-bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hotzdogz:hotzdogz@postgres:5432/hotzdogz?schema=public
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TIMEZONE: ${TIMEZONE:-Europe/Paris}
+    # Applique les migrations avant de demarrer le bot.
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+
+volumes:
+  hotzdogz_pgdata:
