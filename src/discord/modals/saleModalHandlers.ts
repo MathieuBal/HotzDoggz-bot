@@ -6,6 +6,7 @@ import {
   getGuildConfigByGuildId,
   resolveMemberGrade,
 } from '../../modules/employees/employeeService.js';
+import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import { parseQuantityField } from '../../modules/sales/quantity.js';
 import {
   correctSale,
@@ -108,6 +109,7 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.VALIDEE,
         message: `✅ Vente **${res.data.reference}** validee. Quantite validee : ${res.data.validatedQuantity}. Salaire : ${res.data.salaryAmount} $.`,
       });
+      scheduleDashboardUpdate(client, config.id);
       await interaction.editReply(
         `Vente ${res.data.reference} validee (salaire ${res.data.salaryAmount} $).`,
       );
@@ -187,6 +189,7 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.VALIDEE,
         message: `✏️ Quantite validee corrigee : ${res.data.oldQuantity} → ${res.data.newQuantity}.`,
       });
+      scheduleDashboardUpdate(client, config.id);
       await interaction.editReply(
         `Correction enregistree (${res.data.oldQuantity} → ${res.data.newQuantity}).`,
       );

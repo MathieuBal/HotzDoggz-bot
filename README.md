@@ -14,14 +14,14 @@ roadmap par phases.
 
 ## État d'avancement
 
-| Phase                          | Contenu                                                                                                                                  | Statut          |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| **1 — Fondations techniques**  | TypeScript · discord.js · PostgreSQL · Prisma · Docker Compose · schéma + migrations + seed · connexion bot · diagnostic · logs · CI     | ✅ **en place** |
-| **2 — Détection & ingestion**  | association employé-casier, `threadCreate` + fallback `messageCreate`, contrôles, idempotence, copie durable des preuves, fiche contrôle | ✅ **en place** |
-| **3 — Workflow de validation** | boutons/modals direction, synchronisation des tags, validation/complément/refus/correction, audit                                        | ✅ **en place** |
-| 4 — Comptabilité temps réel    | journal financier, tableaux permanents, classement & prime                                                                               | ⏳              |
-| 5 — Clôture & paies            | clôture stricte/forcée, fiches de paie, paiements, exports                                                                               | ⏳              |
-| 6 — Durcissement & prod        | tests de charge, sauvegardes/restauration, déploiement permanent                                                                         | ⏳              |
+| Phase                           | Contenu                                                                                                                                  | Statut          |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| **1 — Fondations techniques**   | TypeScript · discord.js · PostgreSQL · Prisma · Docker Compose · schéma + migrations + seed · connexion bot · diagnostic · logs · CI     | ✅ **en place** |
+| **2 — Détection & ingestion**   | association employé-casier, `threadCreate` + fallback `messageCreate`, contrôles, idempotence, copie durable des preuves, fiche contrôle | ✅ **en place** |
+| **3 — Workflow de validation**  | boutons/modals direction, synchronisation des tags, validation/complément/refus/correction, audit                                        | ✅ **en place** |
+| **4 — Comptabilité temps réel** | journal financier, tableaux permanents, classement & prime                                                                               | ✅ **en place** |
+| 5 — Clôture & paies             | clôture stricte/forcée, fiches de paie, paiements, exports                                                                               | ⏳              |
+| 6 — Durcissement & prod         | tests de charge, sauvegardes/restauration, déploiement permanent                                                                         | ⏳              |
 
 ## Décisions métier figées
 
@@ -105,6 +105,10 @@ docker compose up --build      # PostgreSQL + bot (migrations appliquées au dé
   casier et cartographie automatiquement les tags du casier (direction).
 - `/employe archiver <membre>` — désactive un employé en conservant son
   historique (empêche les nouvelles déclarations).
+- `/semaine ouvrir` — ouvre une semaine comptable (lundi→dimanche, Europe/Paris),
+  reprend les posts en attente et publie les tableaux (direction).
+- `/semaine voir` — affiche le rapport de la semaine ouverte (éphémère).
+- `/tableau publier` — (re)crée ou actualise les tableaux permanents (direction).
 
 ## Flux d'ingestion (Phase 2)
 
@@ -141,12 +145,31 @@ le statut de la vente (machine à états §4.8) :
   `SALARY_LIABILITY`), historise et audite (§9.4).
 - **Refuser** — modal motif obligatoire → `REFUSEE`, dossier conservé.
 - **Corriger** (avant clôture) — nouvelle quantité validée ; ancien et nouveau
-  montants conservés, écriture d'`ADJUSTMENT`. Le recalcul des tableaux de
-  semaine sera branché en Phase 4 (les totaux restent dérivés des ventes
-  validées, §6.1).
+  montants conservés, écriture d'`ADJUSTMENT`. Les tableaux de semaine se
+  rafraîchissent automatiquement (Phase 4), les totaux restant dérivés des
+  ventes validées (§6.1).
 
 Chaque action rafraîchit la fiche, synchronise le tag du casier et répond à
 l'employé. Toutes les transitions interdites sont refusées et tracées.
+
+## Comptabilité temps réel (Phase 4)
+
+Les totaux sont **dérivés des ventes validées** (jamais des messages, §6.1) :
+
+- **Tableaux permanents** édités en place par le bot (le même message est
+  modifié, son ID est conservé ; recréé s'il a été supprimé, §5.5/§7.4) :
+  - _Tableau hebdomadaire employés_ — classement par quantité validée, salaire
+    provisoire, grade, meilleur employé et **prime provisoire** (direction
+    exclue, gestion de l'égalité).
+  - _Tableau comptable direction_ — CA, salaires, réserve (5 %), bénéfice,
+    parts 35/40/25 et dossiers en attente.
+  - _Grille salariale_ — prix PNJ et tarifs par grade.
+- Les mises à jour sont **debouncées** (coalescées) puis **sérialisées** par
+  serveur, pour éviter d'éditer plusieurs fois le même message et de heurter les
+  limites de l'API Discord.
+- À la **validation**, le journal financier reçoit `SALE_REVENUE` et
+  `SALARY_LIABILITY` ; une correction ajoute un `ADJUSTMENT`. Les montants
+  restent recalculables depuis les ventes.
 
 ## Scripts npm
 

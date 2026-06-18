@@ -1,0 +1,93 @@
+import { EmbedBuilder, type Client, type MessageCreateOptions } from 'discord.js';
+import { prisma } from '../../infrastructure/database/client.js';
+import { logger } from '../../infrastructure/logging/logger.js';
+import { getOpenWeekSnapshot } from '../accounting/accountingService.js';
+import { buildAccountingBoard, buildEmployeeBoard, buildSalaryGrid } from './embeds.js';
+
+/**
+ * Tableaux permanents (CDC §5.5 / §7.4) : le bot edite TOUJOURS le meme message,
+ * dont l'identifiant est conserve en base. Au demarrage / a la mise a jour, il
+ * verifie l'existence du message et le recree au besoin.
+ */
+
+interface EnsureResult {
+  messageId: string | null;
+  changed: boolean;
+}
+
+async function ensureMessage(
+  client: Client,
+  channelId: string | null,
+  messageId: string | null,
+  embed: EmbedBuilder,
+): Promise<EnsureResult> {
+  if (!channelId) return { messageId, changed: false };
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  if (!channel || !channel.isTextBased() || !('send' in channel)) {
+    logger.warn({ channelId }, 'Salon de tableau introuvable ou non textuel');
+    return { messageId, changed: false };
+  }
+
+  const payload = { embeds: [embed] } satisfies MessageCreateOptions;
+
+  if (messageId) {
+    try {
+      const msg = await channel.messages.fetch(messageId);
+      await msg.edit({ embeds: [embed] });
+      return { messageId, changed: false };
+    } catch {
+      // message supprime -> on le recree (CDC §11 : dashboard supprime)
+      logger.warn({ channelId, messageId }, 'Message permanent absent — recreation');
+    }
+  }
+  const created = await channel.send(payload);
+  return { messageId: created.id, changed: true };
+}
+
+function placeholder(title: string): EmbedBuilder {
+  return new EmbedBuilder()
+    .setTitle(title)
+    .setColor(0x95a5a6)
+    .setDescription('Aucune semaine comptable ouverte (`/semaine ouvrir`).')
+    .setTimestamp(new Date());
+}
+
+/** Reconstruit/actualise les 3 tableaux permanents d'un serveur. */
+export async function updateDashboards(client: Client, guildConfigId: string): Promise<void> {
+  const config = await prisma.guildConfig.findUnique({ where: { id: guildConfigId } });
+  if (!config) return;
+
+  const snapshot = await getOpenWeekSnapshot(guildConfigId);
+
+  const employeeEmbed = snapshot
+    ? buildEmployeeBoard(snapshot.report, snapshot.week.startAt, snapshot.week.endAt)
+    : placeholder('Tableau hebdomadaire — Employes');
+  const accountingEmbed = snapshot
+    ? buildAccountingBoard(
+        snapshot.report,
+        snapshot.week.startAt,
+        snapshot.week.endAt,
+        snapshot.pendingCount,
+      )
+    : placeholder('Tableau comptable — Direction');
+
+  const rates = await prisma.gradeRate.findMany({
+    where: { guildConfigId, validTo: null },
+    select: { label: true, ratePerUnit: true },
+  });
+  const gridEmbed = buildSalaryGrid(rates, config.pnjUnitPrice);
+
+  const [emp, acc, grid] = await Promise.all([
+    ensureMessage(client, config.channelWeeklyBoard, config.msgWeeklyEmployees, employeeEmbed),
+    ensureMessage(client, config.channelAccounting, config.msgAccounting, accountingEmbed),
+    ensureMessage(client, config.channelWeeklyBoard, config.msgSalaryGrid, gridEmbed),
+  ]);
+
+  const data: Record<string, string> = {};
+  if (emp.changed && emp.messageId) data.msgWeeklyEmployees = emp.messageId;
+  if (acc.changed && acc.messageId) data.msgAccounting = acc.messageId;
+  if (grid.changed && grid.messageId) data.msgSalaryGrid = grid.messageId;
+  if (Object.keys(data).length > 0) {
+    await prisma.guildConfig.update({ where: { id: guildConfigId }, data });
+  }
+}

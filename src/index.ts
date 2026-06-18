@@ -3,6 +3,7 @@ import { createDiscordClient } from './discord/client.js';
 import { registerEvents } from './discord/events/index.js';
 import { disconnectPrisma, prisma } from './infrastructure/database/client.js';
 import { logger } from './infrastructure/logging/logger.js';
+import { flushDashboards } from './modules/dashboards/scheduler.js';
 
 /**
  * Point d'entree du bot HotzDogz.
@@ -25,6 +26,7 @@ async function main(): Promise<void> {
     shuttingDown = true;
     logger.info({ signal }, 'Arret en cours...');
     try {
+      await flushDashboards();
       await client.destroy();
       await disconnectPrisma();
     } catch (err) {
