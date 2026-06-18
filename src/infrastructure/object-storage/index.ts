@@ -2,9 +2,9 @@
  * Stockage objet des preuves (CDC §5.3) — interface.
  *
  * Les URLs de pieces jointes Discord sont signees et expirent : une copie
- * durable externe est obligatoire (§14). L'implementation concrete (S3/MinIO/R2)
- * arrive en Phase 2 ; on fixe ici le contrat pour decoupler le metier du
- * fournisseur.
+ * durable externe est obligatoire (§14). Implementation par defaut : fichier
+ * local (cf. ./filesystem.ts) ; un backend S3/MinIO/R2 pourra etre branche via
+ * le meme contrat (cf. ./factory.ts).
  */
 
 export interface PutObjectInput {

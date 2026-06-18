@@ -17,7 +17,7 @@ roadmap par phases.
 | Phase                         | Contenu                                                                                                                                  | Statut          |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
 | **1 — Fondations techniques** | TypeScript · discord.js · PostgreSQL · Prisma · Docker Compose · schéma + migrations + seed · connexion bot · diagnostic · logs · CI     | ✅ **en place** |
-| 2 — Détection & ingestion     | association employé-casier, `threadCreate` + fallback `messageCreate`, contrôles, idempotence, copie durable des preuves, fiche contrôle | ⏳ à venir      |
+| **2 — Détection & ingestion** | association employé-casier, `threadCreate` + fallback `messageCreate`, contrôles, idempotence, copie durable des preuves, fiche contrôle | ✅ **en place** |
 | 3 — Workflow de validation    | boutons/modals direction, synchronisation des tags, validation/complément/refus/correction, audit                                        | ⏳              |
 | 4 — Comptabilité temps réel   | journal financier, tableaux permanents, classement & prime                                                                               | ⏳              |
 | 5 — Clôture & paies           | clôture stricte/forcée, fiches de paie, paiements, exports                                                                               | ⏳              |
@@ -96,11 +96,35 @@ npm run build && npm start
 docker compose up --build      # PostgreSQL + bot (migrations appliquées au démarrage)
 ```
 
-## Commande disponible (Phase 1)
+## Commandes disponibles
 
 - `/hotzdogz diagnostic` — vérifie rôles, salons, permissions du bot, tags,
   tarifs de grade, casiers, messages permanents et semaine comptable ouverte
   (réponse éphémère).
+- `/employe associer <membre> <nom_rp> <casier>` — lie un membre à son Forum
+  casier et cartographie automatiquement les tags du casier (direction).
+- `/employe archiver <membre>` — désactive un employé en conservant son
+  historique (empêche les nouvelles déclarations).
+
+## Flux d'ingestion (Phase 2)
+
+Lorsqu'un employé crée un post dans son casier (`threadCreate`, fallback
+`messageCreate` si le message initial arrive après) :
+
+1. Idempotence par `threadId` (jamais deux fois la même vente).
+2. Contrôles (CDC §4.3) : propriétaire du casier, tag « Nouvelle vente »,
+   ≥ 2 captures, quantité exploitable, semaine ouverte.
+3. Selon le verdict : **refus technique** (auteur ≠ propriétaire), **à
+   compléter** (manques listés dans le casier, aucun calcul), **en attente**
+   (pas de semaine ouverte) ou **accepté**.
+4. Si accepté : copie durable des 2 preuves (SHA-256 + stockage objet),
+   création transactionnelle de la vente (statut `SOUMISE` + snapshots
+   grade/tarif/prix), génération de la référence `HD-AAAA-NNNN`, création de la
+   **fiche de contrôle** dans le Forum de direction et notification.
+5. Le tag du casier passe à « À vérifier » et l'employé reçoit sa référence.
+
+Au démarrage, le bot **réconcilie** les posts actifs des casiers créés
+pendant qu'il était hors ligne (sans doublon).
 
 ## Scripts npm
 
@@ -123,8 +147,11 @@ src/
   discord/         client, events, commands (buttons/modals à venir)
   modules/         logique métier testable
     accounting/    calculs comptables (purs)
-    employees/     résolution de grade
-    sales/         références de vente
+    employees/     grade + service employés/casiers
+    lockers/       cartographie et application des tags de Forum
+    sales/         ingestion, quantité, références, preuves, réconciliation
+    verification/  fiche de contrôle
+    audit/         journal d'audit
   infrastructure/  database (Prisma), logging (Pino), object-storage, scheduling
   index.ts         point d'entrée (processus permanent)
 prisma/            schema + migrations + seed

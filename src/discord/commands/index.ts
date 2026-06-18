@@ -1,8 +1,9 @@
 import { Collection } from 'discord.js';
 import { diagnosticCommand } from './diagnostic.js';
+import { employeCommand } from './employe.js';
 import type { SlashCommand } from './types.js';
 
-const all: SlashCommand[] = [diagnosticCommand];
+const all: SlashCommand[] = [diagnosticCommand, employeCommand];
 
 /** Registre nom -> commande, consulte par le handler interactionCreate. */
 export const commands = new Collection<string, SlashCommand>();

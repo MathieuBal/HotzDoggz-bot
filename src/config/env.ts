@@ -18,7 +18,8 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().url('DATABASE_URL doit etre une URL postgresql valide'),
 
-  // Stockage objet des preuves (Phase 2 : optionnel pour l'instant)
+  // Stockage objet des preuves (§5.3). Repli fichier local par defaut.
+  STORAGE_DIR: z.string().min(1).default('./storage'),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().optional(),
   S3_BUCKET: z.string().optional(),

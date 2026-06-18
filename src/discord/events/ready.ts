@@ -1,13 +1,12 @@
 import { Events, type Client } from 'discord.js';
 import { loadEnv } from '../../config/env.js';
 import { logger } from '../../infrastructure/logging/logger.js';
+import { reconcileActiveThreads } from '../../modules/sales/reconcile.js';
 import { commandData } from '../commands/index.js';
 
 /**
  * Initialisation a la connexion (CDC Annexe A : ready/clientReady).
- * La reconciliation complete au demarrage (§11.1) sera branchee ici aux phases
- * ulterieures (verification des objets Discord, semaine ouverte, messages
- * permanents, threads non enregistres...).
+ * Synchronise les commandes puis reconcilie les posts crees hors-ligne (§11.1).
  */
 export function registerReady(client: Client): void {
   client.once(Events.ClientReady, async (c) => {
@@ -24,6 +23,12 @@ export function registerReady(client: Client): void {
       } catch (err) {
         logger.error({ err }, 'Echec de synchronisation des slash commands');
       }
+    }
+
+    try {
+      await reconcileActiveThreads(c);
+    } catch (err) {
+      logger.error({ err }, 'Reconciliation au demarrage KO');
     }
   });
 }
