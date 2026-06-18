@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ObjectStorage, PutObjectInput } from './index.js';
 
@@ -22,7 +22,10 @@ export class FilesystemObjectStorage implements ObjectStorage {
 
   private pathFor(key: string): string {
     const target = resolve(this.baseDir, key);
-    if (target !== this.baseDir && !target.startsWith(this.baseDir + '/')) {
+    // Confinement multi-plateforme (Windows/Linux) : la cible doit rester
+    // strictement sous baseDir, sans remontee `..`.
+    const rel = relative(this.baseDir, target);
+    if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) {
       throw new Error(`Cle de stockage invalide (hors du repertoire de base) : ${key}`);
     }
     return target;
