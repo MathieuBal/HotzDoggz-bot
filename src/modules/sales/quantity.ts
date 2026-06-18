@@ -29,6 +29,17 @@ function toInt(raw: string | undefined): number | null {
 }
 
 /**
+ * Parse une quantite saisie directement (modal de validation/correction).
+ * Tolere espaces et points comme separateurs de milliers ; entier strictement
+ * positif requis.
+ */
+export function parseQuantityField(input: string): number | null {
+  const normalized = (input ?? '').replace(ODD_SPACES, ' ').trim();
+  if (!/^[\d .]+$/.test(normalized)) return null;
+  return toInt(normalized);
+}
+
+/**
  * @returns la quantite (> 0) ou null si aucun format reconnu.
  */
 export function extractQuantity(title: string, content: string): number | null {

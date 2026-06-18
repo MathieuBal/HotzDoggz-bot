@@ -1,4 +1,4 @@
-import { AttachmentType, ForumTagKey, Prisma } from '@prisma/client';
+import { AttachmentType, ForumTagKey, Prisma, SaleStatus } from '@prisma/client';
 import { ChannelType, type AnyThreadChannel, type ForumChannel, type Message } from 'discord.js';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../infrastructure/database/client.js';
@@ -311,6 +311,7 @@ export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
             declaredQuantity: quantity,
             submittedAt: new Date(),
             casierThreadUrl: casierThreadUrl(guild.id, thread.id),
+            status: SaleStatus.SOUMISE,
             gradeWarning,
           },
           mentionDirection(config),

@@ -14,14 +14,14 @@ roadmap par phases.
 
 ## État d'avancement
 
-| Phase                         | Contenu                                                                                                                                  | Statut          |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| **1 — Fondations techniques** | TypeScript · discord.js · PostgreSQL · Prisma · Docker Compose · schéma + migrations + seed · connexion bot · diagnostic · logs · CI     | ✅ **en place** |
-| **2 — Détection & ingestion** | association employé-casier, `threadCreate` + fallback `messageCreate`, contrôles, idempotence, copie durable des preuves, fiche contrôle | ✅ **en place** |
-| 3 — Workflow de validation    | boutons/modals direction, synchronisation des tags, validation/complément/refus/correction, audit                                        | ⏳              |
-| 4 — Comptabilité temps réel   | journal financier, tableaux permanents, classement & prime                                                                               | ⏳              |
-| 5 — Clôture & paies           | clôture stricte/forcée, fiches de paie, paiements, exports                                                                               | ⏳              |
-| 6 — Durcissement & prod       | tests de charge, sauvegardes/restauration, déploiement permanent                                                                         | ⏳              |
+| Phase                          | Contenu                                                                                                                                  | Statut          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| **1 — Fondations techniques**  | TypeScript · discord.js · PostgreSQL · Prisma · Docker Compose · schéma + migrations + seed · connexion bot · diagnostic · logs · CI     | ✅ **en place** |
+| **2 — Détection & ingestion**  | association employé-casier, `threadCreate` + fallback `messageCreate`, contrôles, idempotence, copie durable des preuves, fiche contrôle | ✅ **en place** |
+| **3 — Workflow de validation** | boutons/modals direction, synchronisation des tags, validation/complément/refus/correction, audit                                        | ✅ **en place** |
+| 4 — Comptabilité temps réel    | journal financier, tableaux permanents, classement & prime                                                                               | ⏳              |
+| 5 — Clôture & paies            | clôture stricte/forcée, fiches de paie, paiements, exports                                                                               | ⏳              |
+| 6 — Durcissement & prod        | tests de charge, sauvegardes/restauration, déploiement permanent                                                                         | ⏳              |
 
 ## Décisions métier figées
 
@@ -125,6 +125,28 @@ Lorsqu'un employé crée un post dans son casier (`threadCreate`, fallback
 
 Au démarrage, le bot **réconcilie** les posts actifs des casiers créés
 pendant qu'il était hors ligne (sans doublon).
+
+## Workflow de validation (Phase 3)
+
+La fiche de contrôle porte des boutons (réservés à la direction), actifs selon
+le statut de la vente (machine à états §4.8) :
+
+- **Prendre en charge** — assigne le contrôleur (`SOUMISE`→`EN_VERIFICATION`),
+  avec verrou optimiste : en cas de double clic, un seul réussit (§11).
+- **Demander un complément** — modal motif → `INCOMPLETE`, casier en « À
+  compléter », aucun effet financier.
+- **Valider** — modal (quantité validée, note PC, commentaire). **Bloqué** si
+  anomalie de grade (corriger les rôles d'abord, §11). Transaction unique :
+  fige quantité + snapshots, écrit le **journal financier** (`SALE_REVENUE` +
+  `SALARY_LIABILITY`), historise et audite (§9.4).
+- **Refuser** — modal motif obligatoire → `REFUSEE`, dossier conservé.
+- **Corriger** (avant clôture) — nouvelle quantité validée ; ancien et nouveau
+  montants conservés, écriture d'`ADJUSTMENT`. Le recalcul des tableaux de
+  semaine sera branché en Phase 4 (les totaux restent dérivés des ventes
+  validées, §6.1).
+
+Chaque action rafraîchit la fiche, synchronise le tag du casier et répond à
+l'employé. Toutes les transitions interdites sont refusées et tracées.
 
 ## Scripts npm
 
