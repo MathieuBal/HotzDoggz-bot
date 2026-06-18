@@ -98,3 +98,51 @@ export function computeWeekReport(
     bestTie: top.length > 1,
   };
 }
+
+export interface PersonalView {
+  quantity: number;
+  salary: number;
+  eligible: boolean;
+  /** Rang dans la course a la prime (employes eligibles uniquement), ou null si direction. */
+  rankAmongEligible: number | null;
+  /** Meilleur employe eligible (hors direction/co-patron). */
+  best: { nomRP: string; quantity: number } | null;
+  /** Unites manquantes pour egaler le meilleur (0 si en tete). */
+  gapToBest: number;
+  isLeader: boolean;
+  tieAtTop: boolean;
+}
+
+/**
+ * Vue personnelle d'un employe (CDC §7.4 : suivi individuel). L'ecart est mesure
+ * vis-a-vis du meilleur employe ELIGIBLE — la direction et le co-patron sont
+ * exclus de la reference, pour motiver sans fausser la comparaison.
+ */
+export function personalView(report: WeekReport, employeeId: string): PersonalView {
+  const line = report.employees.find((e) => e.employeeId === employeeId);
+  const quantity = line?.quantity ?? 0;
+  const salary = line?.salary ?? 0;
+  const eligible = line?.eligible ?? true;
+
+  const rankAmongEligible = eligible
+    ? report.employees.filter((e) => e.eligible && e.quantity > quantity).length + 1
+    : null;
+
+  const best = report.bestEmployee
+    ? { nomRP: report.bestEmployee.nomRP, quantity: report.bestEmployee.quantity }
+    : null;
+
+  const gapToBest = best ? Math.max(0, best.quantity - quantity) : 0;
+  const isLeader = eligible && best !== null && quantity > 0 && quantity >= best.quantity;
+
+  return {
+    quantity,
+    salary,
+    eligible,
+    rankAmongEligible,
+    best,
+    gapToBest,
+    isLeader,
+    tieAtTop: isLeader && report.bestTie,
+  };
+}

@@ -8,6 +8,11 @@ export function getGuildConfigByGuildId(guildId: string): Promise<GuildConfig | 
   return prisma.guildConfig.findUnique({ where: { guildId } });
 }
 
+/** Employe associe a un compte Discord (actif ou archive). */
+export function getEmployeeByDiscordId(discordUserId: string): Promise<Employee | null> {
+  return prisma.employee.findUnique({ where: { discordUserId } });
+}
+
 /**
  * Casier actif associe a un Forum (CDC §2.4 / §5.2).
  * Retourne null si le Forum n'est pas un casier, ou si l'employe est archive.

@@ -109,6 +109,8 @@ docker compose up --build      # PostgreSQL + bot (migrations appliquées au dé
   reprend les posts en attente et publie les tableaux (direction).
 - `/semaine voir` — affiche le rapport de la semaine ouverte (éphémère).
 - `/tableau publier` — (re)crée ou actualise les tableaux permanents (direction).
+- `/macompta` — fiche perso (privée) : production, salaire provisoire, rang et
+  **écart au meilleur employé** (calculé hors direction/co-patron, pour motiver).
 
 ## Flux d'ingestion (Phase 2)
 

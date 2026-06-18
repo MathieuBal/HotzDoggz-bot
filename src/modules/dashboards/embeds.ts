@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import type { WeekReport } from '../accounting/weekReport.js';
+import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
 const money = (n: number): string => `${nf.format(n)} $`;
@@ -63,6 +63,48 @@ export function buildAccountingBoard(
       { name: 'Dossiers en attente', value: String(pendingCount), inline: true },
     )
     .setFooter({ text: 'Provisoire — paies finalisees a la cloture (Phase 5)' })
+    .setTimestamp(new Date());
+}
+
+/** Message motivant selon la position de l'employe vis-a-vis du meilleur. */
+function objectiveMessage(view: PersonalView): string {
+  if (!view.eligible) {
+    return 'Tu produis pour l’equipe (direction : hors prime du meilleur employe).';
+  }
+  if (!view.best) {
+    return 'Sois le premier a vendre cette semaine !';
+  }
+  if (view.isLeader) {
+    return view.tieAtTop
+      ? '🤝 Egalite en tete — accelere pour prendre le large !'
+      : '🏆 Tu es en tete ! Garde le rythme.';
+  }
+  return `Plus que **${qty(view.gapToBest)} u** pour ravir la premiere place a ${view.best.nomRP} !`;
+}
+
+/** Fiche perso de suivi de compta d'un employe (CDC §7.4). */
+export function buildPersonalBoard(
+  nomRP: string,
+  view: PersonalView,
+  startAt: Date,
+  endAt: Date,
+): EmbedBuilder {
+  const rank =
+    view.rankAmongEligible !== null ? `#${view.rankAmongEligible}` : '— (hors prime, direction)';
+  const best = view.best ? `${view.best.nomRP} — ${qty(view.best.quantity)} u` : '—';
+
+  return new EmbedBuilder()
+    .setTitle(`Ta comptabilite — ${nomRP}`)
+    .setDescription(dateRange(startAt, endAt))
+    .setColor(view.isLeader ? 0xf1c40f : 0xff7a00)
+    .addFields(
+      { name: 'Production validee', value: `${qty(view.quantity)} u`, inline: true },
+      { name: 'Salaire provisoire', value: money(view.salary), inline: true },
+      { name: 'Rang (course a la prime)', value: rank, inline: true },
+      { name: 'Meilleur employe', value: best, inline: true },
+      { name: 'Objectif', value: objectiveMessage(view) },
+    )
+    .setFooter({ text: 'Provisoire — definitif a la cloture' })
     .setTimestamp(new Date());
 }
 

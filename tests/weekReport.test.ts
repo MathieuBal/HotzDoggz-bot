@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeWeekReport,
+  personalView,
   type ValidatedSaleInput,
 } from '../src/modules/accounting/weekReport.js';
 
@@ -83,6 +84,52 @@ describe('computeWeekReport', () => {
       [DIR, CODIR],
     );
     expect(r.bestTie).toBe(true);
+  });
+
+  it('vue perso : ecart au meilleur calcule hors direction', () => {
+    const report = computeWeekReport(
+      [
+        sale({
+          employeeId: 'D',
+          nomRP: 'Patron',
+          validatedQuantity: 9000,
+          gradeRoleId: DIR,
+          salaryRate: 185,
+        }),
+        sale({ employeeId: 'A', nomRP: 'Alice', validatedQuantity: 2000 }),
+        sale({ employeeId: 'B', nomRP: 'Bob', validatedQuantity: 1200 }),
+      ],
+      [DIR, CODIR],
+    );
+
+    // Bob se compare a Alice (meilleur eligible), pas au patron (9000).
+    const bob = personalView(report, 'B');
+    expect(bob.best?.nomRP).toBe('Alice');
+    expect(bob.gapToBest).toBe(800);
+    expect(bob.rankAmongEligible).toBe(2);
+    expect(bob.isLeader).toBe(false);
+
+    // Alice est en tete des eligibles.
+    const alice = personalView(report, 'A');
+    expect(alice.isLeader).toBe(true);
+    expect(alice.gapToBest).toBe(0);
+    expect(alice.rankAmongEligible).toBe(1);
+
+    // Le patron est hors prime.
+    const patron = personalView(report, 'D');
+    expect(patron.eligible).toBe(false);
+    expect(patron.rankAmongEligible).toBeNull();
+  });
+
+  it('vue perso : employe sans vente cette semaine', () => {
+    const report = computeWeekReport(
+      [sale({ employeeId: 'A', nomRP: 'Alice', validatedQuantity: 1500 })],
+      [DIR, CODIR],
+    );
+    const newbie = personalView(report, 'Z');
+    expect(newbie.quantity).toBe(0);
+    expect(newbie.gapToBest).toBe(1500);
+    expect(newbie.isLeader).toBe(false);
   });
 
   it('additionne plusieurs ventes d’un meme employe (promotion mi-semaine)', () => {
