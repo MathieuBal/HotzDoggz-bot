@@ -98,6 +98,8 @@ docker compose up --build      # PostgreSQL + bot (migrations appliquées au dé
 
 ## Commandes disponibles
 
+- `/config roles` / `/config salons` — lie les rôles et les salons au bot
+  directement depuis Discord (gestionnaires du serveur), sans copier d'IDs.
 - `/hotzdogz diagnostic` — vérifie rôles, salons, permissions du bot, tags,
   tarifs de grade, casiers, messages permanents et semaine comptable ouverte
   (réponse éphémère).
@@ -201,6 +203,9 @@ Les totaux sont **dérivés des ventes validées** (jamais des messages, §6.1) 
   clôturée.
 
 ## Mise en route sur un serveur Discord (test)
+
+> 📘 **Guide pas-à-pas complet (clé en main)** : [`docs/GUIDE-INSTALLATION.md`](docs/GUIDE-INSTALLATION.md)
+> — création du bot, structure des salons, liaison via `/config`, scénario de test.
 
 1. **Application Discord** — sur le [Developer Portal](https://discord.com/developers/applications) :
    créer une application, onglet _Bot_ → copier le **token** ; activer
