@@ -23,11 +23,13 @@ function normalize(name: string): string {
     .trim();
 }
 
+// Mots-cles tolerants (singulier/pluriel, verbe/nom : "verifier"/"verification",
+// "completer"/"complete", "paye"/"payee"...).
 const MATCHERS: Array<{ key: ForumTagKey; test: (n: string) => boolean }> = [
   { key: ForumTagKey.NOUVELLE_VENTE, test: (n) => n.includes('nouvelle') },
-  { key: ForumTagKey.A_VERIFIER, test: (n) => n.includes('verifier') },
-  { key: ForumTagKey.A_COMPLETER, test: (n) => n.includes('completer') },
-  { key: ForumTagKey.REFUSEE, test: (n) => n.startsWith('refus') },
+  { key: ForumTagKey.A_VERIFIER, test: (n) => n.includes('verifi') },
+  { key: ForumTagKey.A_COMPLETER, test: (n) => n.includes('complet') },
+  { key: ForumTagKey.REFUSEE, test: (n) => n.includes('refus') },
   { key: ForumTagKey.VALIDEE, test: (n) => n.includes('valid') },
   { key: ForumTagKey.PAYEE, test: (n) => n.includes('paye') },
 ];
