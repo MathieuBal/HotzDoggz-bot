@@ -98,6 +98,15 @@ docker compose up --build      # PostgreSQL + bot (migrations appliquées au dé
 
 ## Commandes disponibles
 
+> **Accès :** les commandes de gestion sont **masquées aux membres normaux**
+> (permission « Gérer le serveur ») ; `/vendre` et `/macompta` restent ouvertes à
+> tous les employés. Pour autoriser un rôle (ex. Co-directeur sans « Gérer le
+> serveur ») : Paramètres du serveur → Intégrations → HotzDoggz → Permissions des
+> commandes.
+
+- `/vendre <quantite> <preuve_avant> <preuve_apres> [commentaire]` — **déclaration
+  assistée** : le bot crée le post au bon format dans le casier de l'employé et
+  enregistre la vente (format garanti). Ouvert à tout employé.
 - `/config roles` / `/config salons` — lie les rôles et les salons au bot
   directement depuis Discord (gestionnaires du serveur), sans copier d'IDs.
 - `/hotzdogz diagnostic` — vérifie rôles, salons, permissions du bot, tags,
@@ -117,6 +126,8 @@ docker compose up --build      # PostgreSQL + bot (migrations appliquées au dé
   (refusée s'il reste des ventes en cours) (direction).
 - `/semaine cloturer-force` — clôture forcée : modal motif + double confirmation,
   **Directeur uniquement**, intégralement auditée.
+- `/semaine reset` — supprime la semaine ouverte et ses ventes/paies (tests),
+  avec confirmation (direction).
 - `/paie voir` — paies de la dernière semaine clôturée (direction).
 - `/paie marquer-payee <membre>` — confirme le versement en jeu (anti-double
   paiement) (direction).

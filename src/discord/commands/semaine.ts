@@ -186,12 +186,7 @@ export const semaineCommand: SlashCommand = {
     }
 
     if (sub === 'reset') {
-      if (
-        !(await isDirecteurMember(interaction.guild, interaction.user.id, config.roleDirecteur))
-      ) {
-        await interaction.editReply('Reinitialisation reservee au Directeur.');
-        return;
-      }
+      // Accessible a toute la direction (la garde isDirection ci-dessus suffit).
       if (!(await getOpenWeek(config.id))) {
         await interaction.editReply('Aucune semaine ouverte a reinitialiser.');
         return;

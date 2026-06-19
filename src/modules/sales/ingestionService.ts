@@ -1,5 +1,12 @@
 import { AttachmentType, ForumTagKey, Prisma, SaleStatus } from '@prisma/client';
-import { ChannelType, type AnyThreadChannel, type ForumChannel, type Message } from 'discord.js';
+import {
+  ChannelType,
+  type AnyThreadChannel,
+  type Attachment,
+  type ForumChannel,
+  type Guild,
+  type Message,
+} from 'discord.js';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
@@ -159,6 +166,10 @@ async function ingestThreadInner(thread: AnyThreadChannel): Promise<void> {
     logger.warn({ threadId: thread.id }, 'Message initial introuvable — fallback messageCreate');
     return;
   }
+
+  // Les posts crees par le bot (declaration assistee /vendre) sont enregistres
+  // directement par la commande : on ne les retraite pas ici.
+  if (starter.author.id === thread.client.user?.id) return;
 
   // On est engage a traiter ce post : on memorise pour court-circuiter le doublon.
   recentlyHandled.set(thread.id, Date.now() + DEDUP_TTL_MS);
@@ -365,4 +376,124 @@ async function ingestThreadInner(thread: AnyThreadChannel): Promise<void> {
     .catch((err) => log.warn({ err }, 'reponse casier KO'));
 
   log.info({ reference: result.reference, controlThreadId }, 'Vente ingeree');
+}
+
+export interface AssistedSaleParams {
+  thread: AnyThreadChannel; // post cree dans le casier par le bot
+  guild: Guild;
+  config: {
+    id: string;
+    channelControl: string | null;
+    channelLogs: string | null;
+    roleDirecteur: string | null;
+    roleCoDirecteur: string | null;
+    pnjUnitPrice: number;
+  };
+  employee: { id: string; nomRP: string; discordUserId: string };
+  weekId: string;
+  quantity: number;
+  starterMessageId: string;
+  attachmentPlein: Attachment;
+  attachmentVide: Attachment;
+  gradeLabel: string | null;
+  gradeRoleId: string | null;
+  salaryRate: number | null;
+  gradeWarning: string | null;
+}
+
+/**
+ * Declaration assistee (commande /vendre) : la vente est enregistree directement,
+ * attribuee a l'employe, a partir d'un post que le bot a cree au bon format dans
+ * le casier. L'esprit du CDC est respecte : l'employe fournit quantite + 2 preuves,
+ * le bot ne fait que la mise en forme et le travail administratif.
+ */
+export async function ingestAssistedSale(
+  params: AssistedSaleParams,
+): Promise<{ ok: true; reference: string } | { ok: false; reason: string }> {
+  const { thread, guild, config, employee } = params;
+  const parentId = thread.parentId;
+  if (!parentId) return { ok: false, reason: 'Casier introuvable.' };
+  const correlationId = randomUUID();
+
+  let stored: StoredAttachment[];
+  try {
+    stored = await Promise.all([
+      downloadAndStore({
+        guildId: guild.id,
+        threadId: thread.id,
+        type: AttachmentType.COFFRE_PLEIN,
+        messageId: params.starterMessageId,
+        attachment: params.attachmentPlein,
+      }),
+      downloadAndStore({
+        guildId: guild.id,
+        threadId: thread.id,
+        type: AttachmentType.COFFRE_VIDE,
+        messageId: params.starterMessageId,
+        attachment: params.attachmentVide,
+      }),
+    ]);
+  } catch (err) {
+    logger.error({ err, threadId: thread.id }, 'Copie des preuves (assistee) echouee');
+    return { ok: false, reason: 'Echec de la copie des preuves. Reessaie.' };
+  }
+
+  const result = await persistSale({
+    guildConfigId: config.id,
+    weekId: params.weekId,
+    employeeId: employee.id,
+    threadId: thread.id,
+    declaredQuantity: params.quantity,
+    declaredAt: new Date(),
+    gradeLabel: params.gradeLabel,
+    gradeRoleId: params.gradeRoleId,
+    salaryRate: params.salaryRate,
+    pnjUnitPrice: config.pnjUnitPrice,
+    attachments: stored,
+    correlationId,
+    authorDiscordId: employee.discordUserId,
+  });
+  if (result === 'already_ingested') {
+    return { ok: false, reason: 'Cette vente est deja enregistree.' };
+  }
+
+  if (config.channelControl) {
+    try {
+      const controlChannel = await guild.channels.fetch(config.channelControl);
+      if (controlChannel?.type === ChannelType.GuildForum) {
+        const controlThread = await createControlPost(
+          controlChannel as ForumChannel,
+          {
+            reference: result.reference,
+            nomRP: employee.nomRP,
+            gradeLabel: params.gradeLabel,
+            salaryRate: params.salaryRate,
+            declaredQuantity: params.quantity,
+            submittedAt: new Date(),
+            casierThreadUrl: casierThreadUrl(guild.id, thread.id),
+            status: SaleStatus.SOUMISE,
+            gradeWarning: params.gradeWarning,
+          },
+          mentionDirection(config),
+        );
+        await prisma.sale.update({
+          where: { id: result.saleId },
+          data: { controlThreadId: controlThread.id },
+        });
+      }
+    } catch (err) {
+      logger.error({ err }, 'Fiche de controle (assistee) echouee');
+      await postToLogs(guild, config, {
+        content: `${mentionDirection(config)} Vente ${result.reference} enregistree mais fiche de controle non creee.`,
+      });
+    }
+  }
+
+  await setCasierTag(thread, parentId, ForumTagKey.A_VERIFIER);
+  const note = params.gradeWarning ? `\n⚠️ ${params.gradeWarning}` : '';
+  await thread
+    .send(`✅ Vente enregistree — reference **${result.reference}**.\nStatut : A verifier.${note}`)
+    .catch(() => undefined);
+
+  return { ok: true, reference: result.reference };
 }

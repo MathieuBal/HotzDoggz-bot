@@ -7,7 +7,7 @@ import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { finalizeClosure } from '../closure/finalize.js';
 import { WeekButtonId } from '../components/ids.js';
-import { isDirecteurMember, isDirectionMember } from '../permissions.js';
+import { isDirectionMember } from '../permissions.js';
 
 const KNOWN = new Set<string>([
   WeekButtonId.CLOSE_CONFIRM,
@@ -40,9 +40,9 @@ export async function handleWeekButton(interaction: ButtonInteraction): Promise<
   }
 
   if (interaction.customId === WeekButtonId.RESET_CONFIRM) {
-    if (!(await isDirecteurMember(interaction.guild, interaction.user.id, config.roleDirecteur))) {
+    if (!(await isDirectionMember(interaction.guild, interaction.user.id, config))) {
       await interaction.reply({
-        content: 'Action reservee au Directeur.',
+        content: 'Action reservee a la direction.',
         flags: MessageFlags.Ephemeral,
       });
       return true;
