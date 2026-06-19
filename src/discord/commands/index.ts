@@ -1,4 +1,5 @@
 import { Collection } from 'discord.js';
+import { commandeCommand } from './commande.js';
 import { configCommand } from './config.js';
 import { diagnosticCommand } from './diagnostic.js';
 import { employeCommand } from './employe.js';
@@ -11,6 +12,7 @@ import { vendreCommand } from './vendre.js';
 import type { SlashCommand } from './types.js';
 
 const all: SlashCommand[] = [
+  commandeCommand,
   configCommand,
   diagnosticCommand,
   employeCommand,
