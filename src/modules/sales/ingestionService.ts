@@ -1,8 +1,16 @@
-import { AttachmentType, ForumTagKey, Prisma, SaleStatus } from '@prisma/client';
-import { ChannelType, type AnyThreadChannel, type ForumChannel, type Message } from 'discord.js';
+import { AttachmentType, ForumTagKey, Prisma, SaleRisk, SaleStatus } from '@prisma/client';
+import {
+  ChannelType,
+  type AnyThreadChannel,
+  type Attachment,
+  type ForumChannel,
+  type Guild,
+  type Message,
+} from 'discord.js';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
+import { KeyedSerialQueue } from '../../infrastructure/scheduling/debouncer.js';
 import { mentionDirection, postToLogs } from '../../discord/notify.js';
 import { writeAudit } from '../audit/auditService.js';
 import {
@@ -13,6 +21,9 @@ import {
 import { setCasierTag } from '../lockers/casierTags.js';
 import { createControlPost } from '../verification/controlPost.js';
 import { downloadAndStore, isImageAttachment, type StoredAttachment } from './attachments.js';
+import { riskBadge } from './fraud.js';
+import { evaluateFraud } from './fraudService.js';
+import { recordGradeResolution } from './gradeTracking.js';
 import { extractQuantity } from './quantity.js';
 import { allocateReference } from './referenceService.js';
 import { evaluateSubmission } from './submission.js';
@@ -57,6 +68,8 @@ interface PersistInput {
   salaryRate: number | null;
   pnjUnitPrice: number;
   attachments: StoredAttachment[];
+  riskLevel: SaleRisk;
+  riskReasons: string | null;
   correlationId: string;
   authorDiscordId: string;
 }
@@ -86,6 +99,8 @@ async function persistSale(input: PersistInput): Promise<PersistResult> {
             gradeRoleIdSnapshot: input.gradeRoleId,
             salaryRateSnapshot: input.salaryRate,
             pnjUnitPriceSnapshot: input.pnjUnitPrice,
+            riskLevel: input.riskLevel,
+            riskReasons: input.riskReasons,
             status: 'SOUMISE',
           },
         });
@@ -117,12 +132,23 @@ async function persistSale(input: PersistInput): Promise<PersistResult> {
   throw new Error('Allocation de reference impossible apres plusieurs tentatives');
 }
 
+// Serialisation par post : threadCreate et messageCreate ne traitent jamais le
+// meme post en parallele. + fenetre anti-doublon pour les issues non persistees
+// (incomplet / refus technique / en attente), qui n'ont pas de garde-fou en base.
+const ingestionQueue = new KeyedSerialQueue();
+const recentlyHandled = new Map<string, number>();
+const DEDUP_TTL_MS = 30_000;
+
 /**
- * Ingestion d'un post de casier (CDC Annexe C).
+ * Ingestion d'un post de casier (CDC Annexe C). Point d'entree serialise par post.
  * Idempotent (cle : threadId). Ne cree jamais la vente a la place de l'employe :
  * il detecte, controle, copie les preuves, cree la fiche et notifie la direction.
  */
-export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
+export function ingestThread(thread: AnyThreadChannel, force = false): Promise<void> {
+  return ingestionQueue.enqueue(thread.id, () => ingestThreadInner(thread, force));
+}
+
+async function ingestThreadInner(thread: AnyThreadChannel, force: boolean): Promise<void> {
   const parentId = thread.parentId;
   if (!parentId) return;
 
@@ -137,10 +163,30 @@ export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
   const existing = await prisma.sale.findUnique({ where: { threadId: thread.id } });
   if (existing) return;
 
+  // Anti double-traitement : un evenement quasi simultane (threadCreate +
+  // messageCreate) ne doit pas reproduire la meme reponse/alerte.
+  // `force` (re-analyse explicite : tag ajoute, message edite) court-circuite
+  // cette fenetre pour permettre une nouvelle evaluation immediate.
+  if (!force) {
+    const handledUntil = recentlyHandled.get(thread.id);
+    if (handledUntil && Date.now() < handledUntil) return;
+  }
+
   const starter = await fetchStarter(thread);
   if (!starter) {
     logger.warn({ threadId: thread.id }, 'Message initial introuvable — fallback messageCreate');
     return;
+  }
+
+  // Les posts crees par le bot (declaration assistee /vendre) sont enregistres
+  // directement par la commande : on ne les retraite pas ici.
+  if (starter.author.id === thread.client.user?.id) return;
+
+  // On est engage a traiter ce post : on memorise pour court-circuiter le doublon.
+  recentlyHandled.set(thread.id, Date.now() + DEDUP_TTL_MS);
+  if (recentlyHandled.size > 500) {
+    const now = Date.now();
+    for (const [key, expiry] of recentlyHandled) if (expiry < now) recentlyHandled.delete(key);
   }
 
   const correlationId = randomUUID();
@@ -274,6 +320,25 @@ export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
     return;
   }
 
+  // Controle d'integrite anti-fraude (§10.3) : signale, ne bloque pas.
+  const risk = await evaluateFraud({
+    guildConfigId: config.id,
+    employeeId: locker.id,
+    quantity,
+    hashes: stored.map((s) => s.sha256),
+  });
+
+  // Suivi des promotions (alimente le tableau "Developpement de l'entreprise").
+  if (gradeRoleId && gradeLabel && salaryRate !== null) {
+    await recordGradeResolution({
+      guildConfigId: config.id,
+      employeeId: locker.id,
+      roleId: gradeRoleId,
+      label: gradeLabel,
+      rate: salaryRate,
+    }).catch((err) => log.warn({ err }, 'Suivi de grade KO'));
+  }
+
   const result = await persistSale({
     guildConfigId: config.id,
     weekId: week.id,
@@ -286,6 +351,8 @@ export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
     salaryRate,
     pnjUnitPrice: config.pnjUnitPrice,
     attachments: stored,
+    riskLevel: risk.level,
+    riskReasons: risk.reasons.length > 0 ? risk.reasons.join(' ') : null,
     correlationId,
     authorDiscordId: authorId,
   });
@@ -313,6 +380,8 @@ export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
             casierThreadUrl: casierThreadUrl(guild.id, thread.id),
             status: SaleStatus.SOUMISE,
             gradeWarning,
+            riskLevel: risk.level,
+            riskReasons: risk.reasons.length > 0 ? risk.reasons.join(' ') : null,
           },
           mentionDirection(config),
         );
@@ -332,6 +401,22 @@ export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
     }
   }
 
+  // Alerte direction si la vente est signalee par le controle d'integrite.
+  if (risk.level !== SaleRisk.CLEAN) {
+    await postToLogs(guild, config, {
+      content: `${mentionDirection(config)} ${riskBadge(risk.level)} Vente ${result.reference} signalee sur <#${thread.id}> : ${risk.reasons.join(' ')}`,
+    });
+    await writeAudit(prisma, {
+      guildConfigId: config.id,
+      action: 'SALE_RISK_FLAGGED',
+      authorDiscordId: authorId,
+      entityType: 'Sale',
+      entityId: result.saleId,
+      reason: risk.reasons.join(' '),
+      correlationId,
+    });
+  }
+
   await setCasierTag(thread, parentId, ForumTagKey.A_VERIFIER);
   const note = gradeWarning ? `\n⚠️ ${gradeWarning}` : '';
   await thread
@@ -340,5 +425,152 @@ export async function ingestThread(thread: AnyThreadChannel): Promise<void> {
     )
     .catch((err) => log.warn({ err }, 'reponse casier KO'));
 
-  log.info({ reference: result.reference, controlThreadId }, 'Vente ingeree');
+  log.info({ reference: result.reference, controlThreadId, risk: risk.level }, 'Vente ingeree');
+}
+
+export interface AssistedSaleParams {
+  thread: AnyThreadChannel; // post cree dans le casier par le bot
+  guild: Guild;
+  config: {
+    id: string;
+    channelControl: string | null;
+    channelLogs: string | null;
+    roleDirecteur: string | null;
+    roleCoDirecteur: string | null;
+    pnjUnitPrice: number;
+  };
+  employee: { id: string; nomRP: string; discordUserId: string };
+  weekId: string;
+  quantity: number;
+  starterMessageId: string;
+  attachmentPlein: Attachment;
+  attachmentVide: Attachment;
+  gradeLabel: string | null;
+  gradeRoleId: string | null;
+  salaryRate: number | null;
+  gradeWarning: string | null;
+}
+
+/**
+ * Declaration assistee (commande /vendre) : la vente est enregistree directement,
+ * attribuee a l'employe, a partir d'un post que le bot a cree au bon format dans
+ * le casier. L'esprit du CDC est respecte : l'employe fournit quantite + 2 preuves,
+ * le bot ne fait que la mise en forme et le travail administratif.
+ */
+export async function ingestAssistedSale(
+  params: AssistedSaleParams,
+): Promise<{ ok: true; reference: string } | { ok: false; reason: string }> {
+  const { thread, guild, config, employee } = params;
+  const parentId = thread.parentId;
+  if (!parentId) return { ok: false, reason: 'Casier introuvable.' };
+  const correlationId = randomUUID();
+
+  let stored: StoredAttachment[];
+  try {
+    stored = await Promise.all([
+      downloadAndStore({
+        guildId: guild.id,
+        threadId: thread.id,
+        type: AttachmentType.COFFRE_PLEIN,
+        messageId: params.starterMessageId,
+        attachment: params.attachmentPlein,
+      }),
+      downloadAndStore({
+        guildId: guild.id,
+        threadId: thread.id,
+        type: AttachmentType.COFFRE_VIDE,
+        messageId: params.starterMessageId,
+        attachment: params.attachmentVide,
+      }),
+    ]);
+  } catch (err) {
+    logger.error({ err, threadId: thread.id }, 'Copie des preuves (assistee) echouee');
+    return { ok: false, reason: 'Echec de la copie des preuves. Reessaie.' };
+  }
+
+  const risk = await evaluateFraud({
+    guildConfigId: config.id,
+    employeeId: employee.id,
+    quantity: params.quantity,
+    hashes: stored.map((s) => s.sha256),
+  });
+
+  if (params.gradeRoleId && params.gradeLabel && params.salaryRate !== null) {
+    await recordGradeResolution({
+      guildConfigId: config.id,
+      employeeId: employee.id,
+      roleId: params.gradeRoleId,
+      label: params.gradeLabel,
+      rate: params.salaryRate,
+    }).catch((err) => logger.warn({ err }, 'Suivi de grade (assistee) KO'));
+  }
+
+  const result = await persistSale({
+    guildConfigId: config.id,
+    weekId: params.weekId,
+    employeeId: employee.id,
+    threadId: thread.id,
+    declaredQuantity: params.quantity,
+    declaredAt: new Date(),
+    gradeLabel: params.gradeLabel,
+    gradeRoleId: params.gradeRoleId,
+    salaryRate: params.salaryRate,
+    pnjUnitPrice: config.pnjUnitPrice,
+    attachments: stored,
+    riskLevel: risk.level,
+    riskReasons: risk.reasons.length > 0 ? risk.reasons.join(' ') : null,
+    correlationId,
+    authorDiscordId: employee.discordUserId,
+  });
+  if (result === 'already_ingested') {
+    return { ok: false, reason: 'Cette vente est deja enregistree.' };
+  }
+
+  if (config.channelControl) {
+    try {
+      const controlChannel = await guild.channels.fetch(config.channelControl);
+      if (controlChannel?.type === ChannelType.GuildForum) {
+        const controlThread = await createControlPost(
+          controlChannel as ForumChannel,
+          {
+            reference: result.reference,
+            nomRP: employee.nomRP,
+            gradeLabel: params.gradeLabel,
+            salaryRate: params.salaryRate,
+            declaredQuantity: params.quantity,
+            submittedAt: new Date(),
+            casierThreadUrl: casierThreadUrl(guild.id, thread.id),
+            status: SaleStatus.SOUMISE,
+            gradeWarning: params.gradeWarning,
+            riskLevel: risk.level,
+            riskReasons: risk.reasons.length > 0 ? risk.reasons.join(' ') : null,
+          },
+          mentionDirection(config),
+        );
+        await prisma.sale.update({
+          where: { id: result.saleId },
+          data: { controlThreadId: controlThread.id },
+        });
+      }
+    } catch (err) {
+      logger.error({ err }, 'Fiche de controle (assistee) echouee');
+      await postToLogs(guild, config, {
+        content: `${mentionDirection(config)} Vente ${result.reference} enregistree mais fiche de controle non creee.`,
+      });
+    }
+  }
+
+  if (risk.level !== SaleRisk.CLEAN) {
+    await postToLogs(guild, config, {
+      content: `${mentionDirection(config)} ${riskBadge(risk.level)} Vente ${result.reference} signalee sur <#${thread.id}> : ${risk.reasons.join(' ')}`,
+    });
+  }
+
+  await setCasierTag(thread, parentId, ForumTagKey.A_VERIFIER);
+  const note = params.gradeWarning ? `\n⚠️ ${params.gradeWarning}` : '';
+  await thread
+    .send(`✅ Vente enregistree — reference **${result.reference}**.\nStatut : A verifier.${note}`)
+    .catch(() => undefined);
+
+  return { ok: true, reference: result.reference };
 }

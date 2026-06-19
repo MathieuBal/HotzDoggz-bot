@@ -34,6 +34,8 @@ export async function loadFicheData(
     status: sale.status,
     controllerId: sale.controllerDiscordId,
     validatedQuantity: sale.validatedQuantity,
+    riskLevel: sale.riskLevel,
+    riskReasons: sale.riskReasons,
   };
 }
 

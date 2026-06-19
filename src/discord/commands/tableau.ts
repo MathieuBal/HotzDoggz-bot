@@ -1,4 +1,9 @@
-import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import {
+  MessageFlags,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  type ChatInputCommandInteraction,
+} from 'discord.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { isDirection } from '../permissions.js';
@@ -8,6 +13,7 @@ export const tableauCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('tableau')
     .setDescription('Tableaux permanents du bot')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) =>
       s
         .setName('publier')

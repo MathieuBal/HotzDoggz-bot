@@ -7,6 +7,7 @@ import { macomptaCommand } from './macompta.js';
 import { paieCommand } from './paie.js';
 import { semaineCommand } from './semaine.js';
 import { tableauCommand } from './tableau.js';
+import { vendreCommand } from './vendre.js';
 import type { SlashCommand } from './types.js';
 
 const all: SlashCommand[] = [
@@ -18,6 +19,7 @@ const all: SlashCommand[] = [
   paieCommand,
   semaineCommand,
   tableauCommand,
+  vendreCommand,
 ];
 
 /** Registre nom -> commande, consulte par le handler interactionCreate. */

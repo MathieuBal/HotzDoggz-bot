@@ -43,6 +43,16 @@ avec :
 > ⚠️ Sur le **Forum `controle-des-ventes`**, NE COCHE PAS « Obliger à choisir un
 > tag pour publier » (sinon le bot ne peut pas créer les fiches).
 
+Et **un salon côté employés** (catégorie visible par toute l'équipe + le bot) :
+
+| Salon           | Type  | Rôle dans le bot                                               |
+| --------------- | ----- | -------------------------------------------------------------- |
+| `developpement` | Texte | Tableau « Développement de l'entreprise » (croissance, public) |
+
+> 💡 Ce salon ne montre que la croissance (ventes, CA, nouveaux, promotions,
+> top vendeurs) — **jamais** les marges ni les salaires/primes de direction. Le
+> bot n'a besoin que d'y **voir + écrire + intégrer des liens**.
+
 ### 1.3 Les casiers employés (Forums privés)
 
 Chaque employé a **un salon Forum privé** (son casier), visible par lui + la
@@ -146,7 +156,11 @@ Dans ton serveur (les réponses sont privées) :
    ```
    /config salons controle:#controle-des-ventes comptabilite:#comptabilite
            paies:#paies logs:#logs-et-archives tableau:#tableau-de-bord-hebdo
+           developpement:#developpement
    ```
+
+   (`developpement` est le salon employés du tableau de croissance ; si tu ne le
+   renseignes pas, ce tableau retombe dans `tableau-de-bord-hebdo`)
 
 3. **Associer un employé à son casier** :
 
@@ -168,7 +182,8 @@ Dans ton serveur (les réponses sont privées) :
    ```
    /semaine ouvrir
    ```
-   (les tableaux permanents apparaissent dans `tableau-de-bord-hebdo` et `comptabilite`)
+   (les tableaux permanents apparaissent dans `tableau-de-bord-hebdo`,
+   `comptabilite` et `developpement`)
 
 ---
 
@@ -206,6 +221,7 @@ Dans ton serveur (les réponses sont privées) :
 | Forum `controle-des-ventes` | Voir, Créer des posts, Envoyer dans les fils, Gérer les fils, Joindre, Embed |
 | Casiers (Forums)            | Voir, Envoyer dans les fils, Gérer les fils, Lire l'historique               |
 | Salons texte (compta, etc.) | Voir, Envoyer des messages, Embed, Joindre des fichiers                      |
+| `developpement` (employés)  | Voir, Envoyer des messages, Embed                                            |
 
 ---
 
@@ -223,10 +239,29 @@ Dans ton serveur (les réponses sont privées) :
 
 ---
 
+## 8.bis Fonctions automatiques (rien à configurer)
+
+Ces trois mécanismes tournent tout seuls une fois le bot lancé :
+
+- **🛡️ Contrôle d'intégrité (anti-fraude).** À chaque vente, le bot repère les
+  preuves déjà utilisées (🔴), les volumes anormaux et les rafales de
+  déclarations (🟠). Le repère s'affiche sur la fiche de contrôle et la
+  direction est alertée dans `logs-et-archives`. Le bot **signale**, il ne
+  bloque jamais : c'est la direction qui tranche.
+- **📊 Tableau « Développement de l'entreprise ».** Un message permanent dans le
+  salon employés `developpement` (ou, à défaut, dans `tableau-de-bord-hebdo`) :
+  hot dogs vendus, chiffre d'affaires, ventes, vendeurs actifs, nouveaux
+  employés, promotions et top vendeurs — comparés à la semaine précédente.
+  Aucune donnée de répartition (marges, salaires/primes de direction) n'y figure.
+- **🔔 Relances automatiques.** Le bot rappelle les ventes en attente de
+  validation depuis plus de 24 h, propose de clôturer le dimanche soir si la
+  semaine est encore ouverte, et envoie à chaque employé sa **fiche de paie en
+  message privé** à la clôture.
+
 ## 9. Checklist finale
 
 - [ ] Rôles créés et liés (`/config roles`)
-- [ ] Salons de gestion créés et liés (`/config salons`)
+- [ ] Salons de gestion créés et liés (`/config salons`, dont `developpement`)
 - [ ] Au moins un casier (Forum) avec les 6 tags, employé associé
 - [ ] `/hotzdogz diagnostic` tout au vert
 - [ ] `/semaine ouvrir` effectué, tableaux visibles

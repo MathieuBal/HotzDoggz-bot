@@ -1,4 +1,9 @@
-import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import {
+  MessageFlags,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  type ChatInputCommandInteraction,
+} from 'discord.js';
 import { randomUUID } from 'node:crypto';
 import { buildPayrollList } from '../../modules/dashboards/embeds.js';
 import {
@@ -15,6 +20,7 @@ export const paieCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('paie')
     .setDescription('Paies hebdomadaires')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) =>
       s.setName('voir').setDescription('Affiche les paies de la derniere semaine cloturee'),
     )

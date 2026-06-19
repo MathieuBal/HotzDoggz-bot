@@ -27,4 +27,19 @@ describe('mapForumTags', () => {
     expect(map[ForumTagKey.NOUVELLE_VENTE]).toBe('t1');
     expect(map[ForumTagKey.VALIDEE]).toBeUndefined();
   });
+
+  it('tolere les variantes de nommage (verbe/nom, singulier)', () => {
+    const map = mapForumTags([
+      { id: 't1', name: 'Vérification' },
+      { id: 't2', name: 'Complété' },
+      { id: 't3', name: 'Validé' },
+      { id: 't4', name: 'Payé' },
+      { id: 't5', name: 'À refuser' },
+    ]);
+    expect(map[ForumTagKey.A_VERIFIER]).toBe('t1');
+    expect(map[ForumTagKey.A_COMPLETER]).toBe('t2');
+    expect(map[ForumTagKey.VALIDEE]).toBe('t3');
+    expect(map[ForumTagKey.PAYEE]).toBe('t4');
+    expect(map[ForumTagKey.REFUSEE]).toBe('t5');
+  });
 });

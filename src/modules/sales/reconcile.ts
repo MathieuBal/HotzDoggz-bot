@@ -30,6 +30,12 @@ export async function reconcileActiveThreads(client: Client): Promise<number> {
       if (!active) continue;
       for (const thread of active.threads.values()) {
         scanned++;
+        // Anti re-spam : si le dernier message du post vient du bot, c'est qu'il
+        // a deja repondu (reception, « a completer », refus technique...). Les
+        // verdicts non persistes (incomplet/refus/attente) n'ont pas de garde-fou
+        // en base ; sans ce filtre, le redemarrage re-poste la meme reponse.
+        const last = await thread.messages.fetch({ limit: 1 }).catch(() => null);
+        if (last?.first()?.author.id === client.user?.id) continue;
         await ingestThread(thread).catch((err) =>
           logger.error({ err, threadId: thread.id }, 'Reconciliation : ingestion KO'),
         );

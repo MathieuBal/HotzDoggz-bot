@@ -1,6 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
 import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
+import type { CompanyBoardData } from './companyBoard.js';
 import type { PayrollLine } from '../payroll/payrollService.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
@@ -107,6 +108,56 @@ export function buildPersonalBoard(
       { name: 'Objectif', value: objectiveMessage(view) },
     )
     .setFooter({ text: 'Provisoire — definitif a la cloture' })
+    .setTimestamp(new Date());
+}
+
+/**
+ * Variation par rapport a la semaine precedente, formatee pour affichage.
+ * Pure (testable) : `(+12 %)`, `(-5 %)`, `(=)`, ou `(nouveau)` si pas de reference.
+ */
+export function formatDelta(current: number, previous: number | null): string {
+  if (previous === null) return '';
+  if (previous === 0) return current > 0 ? ' _(nouveau)_' : '';
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return ' (=)';
+  return pct > 0 ? ` (+${pct} %)` : ` (${pct} %)`;
+}
+
+/** Tableau "Developpement de l'entreprise" (cote employes) — croissance & activite. */
+export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
+  const prev = data.previous;
+  const activity = [
+    `🌭 Hot dogs vendus : **${qty(data.current.units)}**${formatDelta(data.current.units, prev?.units ?? null)}`,
+    `💰 Chiffre d'affaires : **${money(data.current.revenue)}**${formatDelta(data.current.revenue, prev?.revenue ?? null)}`,
+    `🧾 Ventes validees : **${data.current.salesCount}**${formatDelta(data.current.salesCount, prev?.salesCount ?? null)}`,
+    `👥 Vendeurs actifs : **${data.current.activeSellers}**`,
+  ].join('\n');
+
+  const embed = new EmbedBuilder()
+    .setTitle('📊 HotzDogz — Developpement de l’entreprise')
+    .setDescription(`${dateRange(data.weekStart, data.weekEnd)}\n\n${activity}`)
+    .setColor(0xff7a00);
+
+  const news: string[] = [];
+  if (data.newEmployees.length > 0) {
+    news.push(`🆕 Bienvenue a : ${data.newEmployees.join(', ')}`);
+  }
+  for (const p of data.promotions) {
+    news.push(`🎉 Promotion : **${p.nomRP}** → ${p.toLabel}`);
+  }
+  if (news.length > 0) {
+    embed.addFields({ name: 'Du nouveau cette semaine', value: news.join('\n') });
+  }
+
+  if (data.topSellers.length > 0) {
+    const top = data.topSellers
+      .map((e, i) => `${MEDALS[i] ?? `**${i + 1}.**`} **${e.nomRP}** — ${qty(e.quantity)} u`)
+      .join('\n');
+    embed.addFields({ name: '🏆 Top vendeurs', value: top });
+  }
+
+  return embed
+    .setFooter({ text: 'Mis a jour en direct — comparaison avec la semaine precedente' })
     .setTimestamp(new Date());
 }
 

@@ -1,6 +1,7 @@
 import {
   AttachmentBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from 'discord.js';
@@ -15,6 +16,7 @@ export const exportCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('export')
     .setDescription('Exports comptables')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) =>
       s
         .setName('semaine')
