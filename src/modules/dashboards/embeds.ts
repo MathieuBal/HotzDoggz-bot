@@ -2,6 +2,7 @@ import { EmbedBuilder } from 'discord.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
 import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
 import type { CompanyBoardData } from './companyBoard.js';
+import type { OrderSummary } from '../orders/orderService.js';
 import type { PayrollLine } from '../payroll/payrollService.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
@@ -158,6 +159,41 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
 
   return embed
     .setFooter({ text: 'Mis a jour en direct — comparaison avec la semaine precedente' })
+    .setTimestamp(new Date());
+}
+
+/** Tableau "commandes client a realiser" (cote direction). */
+export function buildOrdersBoard(orders: readonly OrderSummary[], timezone: string): EmbedBuilder {
+  const fmtDeadline = (d: Date | null): string =>
+    d
+      ? d.toLocaleDateString('fr-FR', { timeZone: timezone, day: '2-digit', month: '2-digit' })
+      : '—';
+
+  const blocks = orders.slice(0, 15).map((o) => {
+    const head = o.status === 'LIVREE' ? '📦' : '🟡';
+    const contrib =
+      o.contributors.length > 0
+        ? o.contributors.map((c) => `${c.nomRP} ${qty(c.quantity)}`).join(', ')
+        : 'aucune';
+    const tag = o.status === 'LIVREE' ? ' — _livré, à encaisser_' : '';
+    return (
+      `${head} **${o.reference}** · ${o.clientName}${tag}\n` +
+      `Production ${qty(o.producedQuantity)}/${qty(o.targetQuantity)} u · ${money(o.negotiatedPrice)} · échéance ${fmtDeadline(o.deadline)}\n` +
+      `Contrib : ${contrib}`
+    );
+  });
+
+  const description =
+    blocks.length > 0
+      ? blocks.join('\n\n') +
+        (orders.length > 15 ? `\n\n_… et ${orders.length - 15} autre(s)._` : '')
+      : '_Aucune commande en cours._';
+
+  return new EmbedBuilder()
+    .setTitle('📋 Commandes client — à réaliser')
+    .setColor(0x2e86de)
+    .setDescription(description)
+    .setFooter({ text: 'Mis à jour en direct · /commande pour gérer' })
     .setTimestamp(new Date());
 }
 

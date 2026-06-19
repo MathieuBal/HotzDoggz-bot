@@ -32,13 +32,14 @@ Crée/identifie ces rôles (Paramètres du serveur → Rôles) :
 Crée une catégorie privée (ex. **DIRECTION**) visible par la direction + le bot,
 avec :
 
-| Salon                   | Type      | Rôle dans le bot                      |
-| ----------------------- | --------- | ------------------------------------- |
-| `controle-des-ventes`   | **Forum** | Fiches de contrôle (1 post par vente) |
-| `comptabilite`          | Texte     | Tableau comptable + bilan de clôture  |
-| `paies`                 | Texte     | (réservé aux paies)                   |
-| `logs-et-archives`      | Texte     | Alertes et journal lisible            |
-| `tableau-de-bord-hebdo` | Texte     | Tableau employés + grille salariale   |
+| Salon                   | Type      | Rôle dans le bot                        |
+| ----------------------- | --------- | --------------------------------------- |
+| `controle-des-ventes`   | **Forum** | Fiches de contrôle (1 post par vente)   |
+| `comptabilite`          | Texte     | Tableau comptable + bilan de clôture    |
+| `paies`                 | Texte     | (réservé aux paies)                     |
+| `logs-et-archives`      | Texte     | Alertes et journal lisible              |
+| `tableau-de-bord-hebdo` | Texte     | Tableau employés + grille salariale     |
+| `commandes`             | Texte     | Tableau « commandes client à réaliser » |
 
 > ⚠️ Sur le **Forum `controle-des-ventes`**, NE COCHE PAS « Obliger à choisir un
 > tag pour publier » (sinon le bot ne peut pas créer les fiches).
@@ -156,11 +157,12 @@ Dans ton serveur (les réponses sont privées) :
    ```
    /config salons controle:#controle-des-ventes comptabilite:#comptabilite
            paies:#paies logs:#logs-et-archives tableau:#tableau-de-bord-hebdo
-           developpement:#developpement
+           developpement:#developpement commandes:#commandes
    ```
 
    (`developpement` est le salon employés du tableau de croissance ; si tu ne le
-   renseignes pas, ce tableau retombe dans `tableau-de-bord-hebdo`)
+   renseignes pas, ce tableau retombe dans `tableau-de-bord-hebdo`. `commandes`
+   accueille le tableau des commandes client à réaliser, côté direction.)
 
 3. **Associer un employé à son casier** :
 
@@ -214,6 +216,27 @@ Dans ton serveur (les réponses sont privées) :
 
 ---
 
+## 6.bis Commandes client (ventes B2C négociées)
+
+Pour les vraies commandes de joueurs/orgs (le client ouvre un ticket, la
+**direction négocie**), tout se pilote avec `/commande` (réservé à la direction) :
+
+1. **Créer** : `/commande creer client:Vagos volume:500 prix:125000 echeance:25/06/2026`
+   → la commande apparaît dans le salon `commandes` (🟡 progression `0/500`).
+2. **Faire produire à plusieurs** : pour chaque employé qui produit,
+   `/commande contribuer commande:CMD-2026-0001 employe:@Alex quantite:250 preuve_avant: preuve_apres:`
+   → ses unités comptent dans **son salaire** (tarif de son grade) **et son
+   classement**, exactement comme du PNJ. La progression se met à jour.
+3. **Livrer** : `/commande livrer commande:CMD-2026-0001` (📦 en attente de paiement).
+4. **Encaisser** : `/commande payer commande:CMD-2026-0001 preuve:` → le **prix
+   négocié rejoint le CA de la semaine** et les salaires de production sont actés.
+5. `/commande voir` (état + contributeurs) · `/commande annuler` (hors payée).
+
+> 💡 Le bot relance la direction si une commande est **livrée mais pas encaissée**
+> depuis +24 h, ou si une commande **dépasse son échéance**.
+
+---
+
 ## 7. Permissions du bot par salon (récap)
 
 | Salon                       | Permissions du bot                                                           |
@@ -222,6 +245,7 @@ Dans ton serveur (les réponses sont privées) :
 | Casiers (Forums)            | Voir, Envoyer dans les fils, Gérer les fils, Lire l'historique               |
 | Salons texte (compta, etc.) | Voir, Envoyer des messages, Embed, Joindre des fichiers                      |
 | `developpement` (employés)  | Voir, Envoyer des messages, Embed                                            |
+| `commandes` (direction)     | Voir, Envoyer des messages, Embed                                            |
 
 ---
 
@@ -261,7 +285,7 @@ Ces trois mécanismes tournent tout seuls une fois le bot lancé :
 ## 9. Checklist finale
 
 - [ ] Rôles créés et liés (`/config roles`)
-- [ ] Salons de gestion créés et liés (`/config salons`, dont `developpement`)
+- [ ] Salons de gestion créés et liés (`/config salons`, dont `developpement` et `commandes`)
 - [ ] Au moins un casier (Forum) avec les 6 tags, employé associé
 - [ ] `/hotzdogz diagnostic` tout au vert
 - [ ] `/semaine ouvrir` effectué, tableaux visibles

@@ -296,6 +296,7 @@ export const commandeCommand: SlashCommand = {
       await interaction.editReply(
         `✅ ${nf.format(quantity)} u de **${employee.nomRP}** enregistrées sur **${order.reference}** — production ${nf.format(produced)}/${nf.format(order.targetQuantity)}.${warn}`,
       );
+      scheduleDashboardUpdate(interaction.client, config.id);
       return;
     }
 
@@ -307,6 +308,7 @@ export const commandeCommand: SlashCommand = {
         return;
       }
       const res = await deliverOrder(order.id, interaction.user.id);
+      if (res.ok) scheduleDashboardUpdate(interaction.client, config.id);
       await interaction.editReply(
         res.ok
           ? `📦 Commande **${res.data.reference}** marquée livrée. En attente de paiement.`
@@ -371,6 +373,7 @@ export const commandeCommand: SlashCommand = {
         return;
       }
       const res = await cancelOrder(order.id, interaction.user.id, motif);
+      if (res.ok) scheduleDashboardUpdate(interaction.client, config.id);
       await interaction.editReply(
         res.ok ? `🚫 Commande **${res.data.reference}** annulée.` : `Échec : ${res.reason}`,
       );
