@@ -137,11 +137,11 @@ const DEDUP_TTL_MS = 30_000;
  * Idempotent (cle : threadId). Ne cree jamais la vente a la place de l'employe :
  * il detecte, controle, copie les preuves, cree la fiche et notifie la direction.
  */
-export function ingestThread(thread: AnyThreadChannel): Promise<void> {
-  return ingestionQueue.enqueue(thread.id, () => ingestThreadInner(thread));
+export function ingestThread(thread: AnyThreadChannel, force = false): Promise<void> {
+  return ingestionQueue.enqueue(thread.id, () => ingestThreadInner(thread, force));
 }
 
-async function ingestThreadInner(thread: AnyThreadChannel): Promise<void> {
+async function ingestThreadInner(thread: AnyThreadChannel, force: boolean): Promise<void> {
   const parentId = thread.parentId;
   if (!parentId) return;
 
@@ -158,8 +158,12 @@ async function ingestThreadInner(thread: AnyThreadChannel): Promise<void> {
 
   // Anti double-traitement : un evenement quasi simultane (threadCreate +
   // messageCreate) ne doit pas reproduire la meme reponse/alerte.
-  const handledUntil = recentlyHandled.get(thread.id);
-  if (handledUntil && Date.now() < handledUntil) return;
+  // `force` (re-analyse explicite : tag ajoute, message edite) court-circuite
+  // cette fenetre pour permettre une nouvelle evaluation immediate.
+  if (!force) {
+    const handledUntil = recentlyHandled.get(thread.id);
+    if (handledUntil && Date.now() < handledUntil) return;
+  }
 
   const starter = await fetchStarter(thread);
   if (!starter) {
