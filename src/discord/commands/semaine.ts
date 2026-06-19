@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from 'discord.js';
@@ -27,6 +28,7 @@ export const semaineCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('semaine')
     .setDescription('Gestion de la semaine comptable')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) =>
       s.setName('ouvrir').setDescription('Ouvre une semaine comptable si aucune n’est ouverte'),
     )
@@ -42,6 +44,11 @@ export const semaineCommand: SlashCommand = {
       s
         .setName('cloturer-force')
         .setDescription('Cloture forcee malgre des ventes en cours (Directeur uniquement)'),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('reset')
+        .setDescription('Supprime la semaine ouverte et ses ventes (tests, Directeur uniquement)'),
     )
     .toJSON(),
 
@@ -173,6 +180,38 @@ export const semaineCommand: SlashCommand = {
             snapshot.pendingCount,
           ),
         ],
+        components: [row],
+      });
+      return;
+    }
+
+    if (sub === 'reset') {
+      if (
+        !(await isDirecteurMember(interaction.guild, interaction.user.id, config.roleDirecteur))
+      ) {
+        await interaction.editReply('Reinitialisation reservee au Directeur.');
+        return;
+      }
+      if (!(await getOpenWeek(config.id))) {
+        await interaction.editReply('Aucune semaine ouverte a reinitialiser.');
+        return;
+      }
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(WeekButtonId.RESET_CONFIRM)
+          .setLabel('Supprimer la semaine')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(WeekButtonId.RESET_CANCEL)
+          .setLabel('Annuler')
+          .setStyle(ButtonStyle.Secondary),
+      );
+      await interaction.editReply({
+        content:
+          '⚠️ **Action irreversible.** Cela supprime la semaine ouverte et **toutes** ses ' +
+          'ventes, preuves et paies (la configuration et les employes sont conserves). ' +
+          'Pense aussi a supprimer les posts de test dans les casiers, sinon ils seront ' +
+          're-detectes a la prochaine ouverture.',
         components: [row],
       });
     }

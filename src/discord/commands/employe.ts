@@ -2,6 +2,7 @@ import {
   ChannelType,
   EmbedBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
   type ForumChannel,
@@ -35,6 +36,7 @@ export const employeCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('employe')
     .setDescription('Gestion des employes et casiers')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) =>
       sub
         .setName('associer')

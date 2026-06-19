@@ -1,5 +1,6 @@
 import { type AccountingWeek, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
+import { writeAudit } from '../audit/auditService.js';
 import { computeIsoWeekBounds } from './week.js';
 import { computeWeekReport, type WeekReport } from './weekReport.js';
 
@@ -87,4 +88,52 @@ export async function openWeek(
   } catch {
     return { ok: false, reason: 'Impossible d’ouvrir la semaine (conflit de verrou).' };
   }
+}
+
+export interface ResetResult {
+  ok: boolean;
+  reason?: string;
+  deletedSales?: number;
+}
+
+/**
+ * Reinitialise la semaine OUVERTE : supprime la semaine et toutes ses donnees
+ * (ventes, preuves, historiques, journal, paies). Conserve la configuration,
+ * les employes et la grille. Destructif — reserve au Directeur, pour les tests.
+ */
+export async function resetOpenWeek(
+  guildConfigId: string,
+  actorId: string,
+  correlationId: string,
+): Promise<ResetResult> {
+  return prisma.$transaction(async (tx) => {
+    const week = await tx.accountingWeek.findFirst({ where: { guildConfigId, status: 'OPEN' } });
+    if (!week) return { ok: false, reason: 'Aucune semaine ouverte.' };
+
+    const sales = await tx.sale.findMany({ where: { weekId: week.id }, select: { id: true } });
+    const saleIds = sales.map((s) => s.id);
+
+    if (saleIds.length > 0) {
+      await tx.saleAttachment.deleteMany({ where: { saleId: { in: saleIds } } });
+      await tx.saleStatusHistory.deleteMany({ where: { saleId: { in: saleIds } } });
+    }
+    await tx.ledgerEntry.deleteMany({
+      where: { OR: [{ weekId: week.id }, { saleId: { in: saleIds } }] },
+    });
+    await tx.payroll.deleteMany({ where: { weekId: week.id } });
+    await tx.sale.deleteMany({ where: { weekId: week.id } });
+    await tx.accountingWeek.delete({ where: { id: week.id } });
+
+    await writeAudit(tx, {
+      guildConfigId,
+      action: 'WEEK_RESET',
+      authorDiscordId: actorId,
+      entityType: 'AccountingWeek',
+      entityId: week.id,
+      before: { sales: saleIds.length },
+      correlationId,
+    });
+
+    return { ok: true, deletedSales: saleIds.length };
+  });
 }

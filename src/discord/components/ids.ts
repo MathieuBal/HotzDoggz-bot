@@ -25,6 +25,8 @@ export const SaleFieldId = {
 export const WeekButtonId = {
   CLOSE_CONFIRM: 'week:close:confirm',
   CLOSE_CANCEL: 'week:close:cancel',
+  RESET_CONFIRM: 'week:reset:confirm',
+  RESET_CANCEL: 'week:reset:cancel',
 } as const;
 
 export const WeekModalId = {

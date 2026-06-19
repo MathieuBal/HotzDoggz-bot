@@ -1,6 +1,7 @@
 import {
   EmbedBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   PermissionsBitField,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
@@ -80,6 +81,7 @@ export const diagnosticCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('hotzdogz')
     .setDescription('Bot de gestion HotzDogz')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) =>
       sub
         .setName('diagnostic')
