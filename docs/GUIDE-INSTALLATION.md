@@ -223,6 +223,25 @@ Dans ton serveur (les réponses sont privées) :
 
 ---
 
+## 8.bis Fonctions automatiques (rien à configurer)
+
+Ces trois mécanismes tournent tout seuls une fois le bot lancé :
+
+- **🛡️ Contrôle d'intégrité (anti-fraude).** À chaque vente, le bot repère les
+  preuves déjà utilisées (🔴), les volumes anormaux et les rafales de
+  déclarations (🟠). Le repère s'affiche sur la fiche de contrôle et la
+  direction est alertée dans `logs-et-archives`. Le bot **signale**, il ne
+  bloque jamais : c'est la direction qui tranche.
+- **📊 Tableau « Développement de l'entreprise ».** Un 4ᵉ message permanent
+  apparaît dans le salon du tableau de bord hebdo (côté employés) : hot dogs
+  vendus, chiffre d'affaires, ventes, vendeurs actifs, nouveaux employés,
+  promotions et top vendeurs — comparés à la semaine précédente. Aucune donnée
+  de répartition (marges, salaires/primes de direction) n'y figure.
+- **🔔 Relances automatiques.** Le bot rappelle les ventes en attente de
+  validation depuis plus de 24 h, propose de clôturer le dimanche soir si la
+  semaine est encore ouverte, et envoie à chaque employé sa **fiche de paie en
+  message privé** à la clôture.
+
 ## 9. Checklist finale
 
 - [ ] Rôles créés et liés (`/config roles`)

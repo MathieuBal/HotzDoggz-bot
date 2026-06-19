@@ -3,6 +3,7 @@ import type { ClosureSummary } from '../../modules/accounting/closureService.js'
 import { prisma } from '../../infrastructure/database/client.js';
 import { postClosureReport } from '../../modules/dashboards/dashboardService.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
+import { sendPayslips } from '../../modules/notifications/proactive.js';
 
 /**
  * Apres une cloture : publie le bilan final dans comptabilite et reinitialise
@@ -20,5 +21,7 @@ export async function finalizeClosure(
   const label = week ? week.startAt.toISOString().slice(0, 10) : '';
   await postClosureReport(client, guildConfigId, summary, label);
   await updateDashboardsNow(client, guildConfigId);
+  // Fiche de paie individuelle en DM a chaque employe (CDC §6.7).
+  await sendPayslips(client, guildConfigId).catch(() => undefined);
   return label;
 }

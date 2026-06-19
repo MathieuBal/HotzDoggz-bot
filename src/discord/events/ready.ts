@@ -2,6 +2,7 @@ import { Events, type Client } from 'discord.js';
 import { loadEnv } from '../../config/env.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
+import { startProactiveNotifications } from '../../modules/notifications/scheduler.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { reconcileActiveThreads } from '../../modules/sales/reconcile.js';
 import { commandData } from '../commands/index.js';
@@ -42,5 +43,8 @@ export function registerReady(client: Client): void {
         );
       }
     }
+
+    // Notifications proactives (relances, rappel de cloture) — CDC §5.6.
+    startProactiveNotifications(c);
   });
 }

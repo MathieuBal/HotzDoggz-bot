@@ -1,4 +1,4 @@
-import { SaleStatus } from '@prisma/client';
+import { SaleRisk, SaleStatus } from '@prisma/client';
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -8,6 +8,7 @@ import {
   type ThreadChannel,
 } from 'discord.js';
 import { SaleButtonId } from '../../discord/components/ids.js';
+import { riskBadge } from '../sales/fraud.js';
 import { controlLabel } from '../sales/statusLabels.js';
 
 /** Donnees affichees sur la fiche de controle (CDC §4.5). */
@@ -23,6 +24,8 @@ export interface ControlFicheData {
   controllerId?: string | null;
   validatedQuantity?: number | null;
   gradeWarning?: string | null;
+  riskLevel?: SaleRisk | null;
+  riskReasons?: string | null;
 }
 
 function formatDate(d: Date): string {
@@ -69,6 +72,15 @@ export function buildControlEmbed(data: ControlFicheData): EmbedBuilder {
   }
   if (data.gradeWarning) {
     embed.addFields({ name: '⚠️ Anomalie de grade', value: data.gradeWarning });
+  }
+  const risk = data.riskLevel ?? SaleRisk.CLEAN;
+  if (risk !== SaleRisk.CLEAN) {
+    embed.addFields({
+      name: `${riskBadge(risk)} Controle d'integrite`,
+      value: data.riskReasons || 'Vente a verifier.',
+    });
+    // Rouge si preuve recyclee : la fiche doit sauter aux yeux.
+    if (risk === SaleRisk.FLAGGED) embed.setColor(0xcc0000);
   }
   return embed;
 }

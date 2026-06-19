@@ -16,6 +16,7 @@ import {
   getGuildConfigByGuildId,
 } from '../../modules/employees/employeeService.js';
 import { mapForumTags } from '../../modules/lockers/forumTags.js';
+import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import { isDirection } from '../permissions.js';
 import type { SlashCommand } from './types.js';
 
@@ -137,6 +138,8 @@ export const employeCommand: SlashCommand = {
         });
       }
       await interaction.editReply({ embeds: [embed] });
+      // Rafraichit le tableau "Developpement de l'entreprise" (nouvel employe).
+      scheduleDashboardUpdate(interaction.client, config.id);
       logger.info({ employeeId: employee.id, tagCount }, 'Employe associe');
       return;
     }

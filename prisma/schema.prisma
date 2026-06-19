@@ -44,6 +44,14 @@ enum PayrollStatus {
   PAID
 }
 
+/// Niveau de risque anti-fraude d'une vente (CDC §10.3 : controle d'integrite).
+/// Affiche un repere visuel sur la fiche de controle pour prioriser l'attention.
+enum SaleRisk {
+  CLEAN // 🟢 rien a signaler
+  SUSPECT // 🟠 a regarder (volume eleve, cadence rapprochee)
+  FLAGGED // 🔴 alerte forte (preuve deja utilisee)
+}
+
 /// Type de preuve jointe (CDC §4.1).
 enum AttachmentType {
   COFFRE_PLEIN // avant la vente
@@ -101,6 +109,7 @@ model GuildConfig {
   msgAccounting      String?
   msgPayroll         String?
   msgSalaryGrid      String?
+  msgCompanyBoard    String? // tableau "Developpement de l'entreprise" (cote employes)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
@@ -109,14 +118,15 @@ model GuildConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employees  Employee[]
-  gradeRates GradeRate[]
-  forumTags  ForumTag[]
-  weeks      AccountingWeek[]
-  sales      Sale[]
-  payrolls   Payroll[]
-  ledger     LedgerEntry[]
-  auditLogs  AuditLog[]
+  employees   Employee[]
+  gradeRates  GradeRate[]
+  forumTags   ForumTag[]
+  weeks       AccountingWeek[]
+  sales       Sale[]
+  payrolls    Payroll[]
+  ledger      LedgerEntry[]
+  auditLogs   AuditLog[]
+  gradeEvents EmployeeGradeEvent[]
 }
 
 /// Historique des tarifs salariaux par role (CDC §6.2 : instantanes financiers).
@@ -158,11 +168,38 @@ model Employee {
   nomRP         String
   casierForumId String?        @unique // Forum prive de l'employe (CDC §2.4)
   status        EmployeeStatus @default(ACTIVE)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
 
-  sales    Sale[]
-  payrolls Payroll[]
+  // Dernier grade salarial connu (resolu a l'ingestion) : sert a detecter les
+  // promotions sans re-alerter a chaque vente.
+  lastGradeRoleId String?
+  lastGradeLabel  String?
+  lastGradeRate   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales       Sale[]
+  payrolls    Payroll[]
+  gradeEvents EmployeeGradeEvent[]
+}
+
+/// Changement de grade d'un employe (CDC §7 : evolutions). Alimente le tableau
+/// "Developpement de l'entreprise" (promotions de la semaine). Append-only.
+model EmployeeGradeEvent {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  employee      Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId    String
+  fromLabel     String? // null = premier grade connu (embauche, pas une promotion)
+  fromRate      Int?
+  toLabel       String
+  toRate        Int
+  roleId        String
+  createdAt     DateTime    @default(now())
+
+  @@index([guildConfigId, createdAt])
+  @@index([employeeId])
 }
 
 // ── Semaine comptable ───────────────────────────────────────────────────────
@@ -200,13 +237,13 @@ model AccountingWeek {
 // ── Ventes ──────────────────────────────────────────────────────────────────
 
 model Sale {
-  id            String      @id @default(cuid())
-  reference     String      @unique // ex. HD-2026-0042
-  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  reference     String         @unique // ex. HD-2026-0042
+  guildConfig   GuildConfig    @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
   guildConfigId String
   week          AccountingWeek @relation(fields: [weekId], references: [id])
   weekId        String
-  employee      Employee    @relation(fields: [employeeId], references: [id])
+  employee      Employee       @relation(fields: [employeeId], references: [id])
   employeeId    String
 
   threadId        String  @unique // post du casier (cle d'idempotence - CDC §4.2)
@@ -222,6 +259,10 @@ model Sale {
   pnjUnitPriceSnapshot Int?
 
   status SaleStatus @default(SOUMISE)
+
+  // Controle d'integrite anti-fraude (CDC §10.3), evalue a l'ingestion.
+  riskLevel   SaleRisk @default(CLEAN)
+  riskReasons String? // motifs concatenes, affiches sur la fiche de controle
 
   declaredAt           DateTime
   submittedAt          DateTime  @default(now())
@@ -260,6 +301,7 @@ model SaleAttachment {
   createdAt           DateTime       @default(now())
 
   @@index([saleId])
+  @@index([sha256]) // detection de preuves recyclees (anti-fraude, CDC §10.3)
 }
 
 /// Historique des statuts append-only (CDC §9.2).

@@ -3,9 +3,11 @@ import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
 import { getOpenWeekSnapshot } from '../accounting/accountingService.js';
+import { getCompanyBoardData } from './companyBoard.js';
 import {
   buildAccountingBoard,
   buildClosureSummary,
+  buildCompanyBoard,
   buildEmployeeBoard,
   buildSalaryGrid,
 } from './embeds.js';
@@ -83,16 +85,23 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   });
   const gridEmbed = buildSalaryGrid(rates, config.pnjUnitPrice);
 
-  const [emp, acc, grid] = await Promise.all([
+  const companyData = await getCompanyBoardData(guildConfigId);
+  const companyEmbed = companyData
+    ? buildCompanyBoard(companyData)
+    : placeholder('📊 HotzDogz — Developpement de l’entreprise');
+
+  const [emp, acc, grid, company] = await Promise.all([
     ensureMessage(client, config.channelWeeklyBoard, config.msgWeeklyEmployees, employeeEmbed),
     ensureMessage(client, config.channelAccounting, config.msgAccounting, accountingEmbed),
     ensureMessage(client, config.channelWeeklyBoard, config.msgSalaryGrid, gridEmbed),
+    ensureMessage(client, config.channelWeeklyBoard, config.msgCompanyBoard, companyEmbed),
   ]);
 
   const data: Record<string, string> = {};
   if (emp.changed && emp.messageId) data.msgWeeklyEmployees = emp.messageId;
   if (acc.changed && acc.messageId) data.msgAccounting = acc.messageId;
   if (grid.changed && grid.messageId) data.msgSalaryGrid = grid.messageId;
+  if (company.changed && company.messageId) data.msgCompanyBoard = company.messageId;
   if (Object.keys(data).length > 0) {
     await prisma.guildConfig.update({ where: { id: guildConfigId }, data });
   }
