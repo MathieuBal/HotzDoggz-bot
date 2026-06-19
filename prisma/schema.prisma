@@ -58,6 +58,20 @@ enum AttachmentType {
   COFFRE_VIDE // apres la vente
 }
 
+/// Cycle de vie d'une commande client (negociee par la direction).
+enum ClientOrderStatus {
+  OUVERTE // en cours de production (accepte des contributions)
+  LIVREE // livree au client, en attente de paiement
+  PAYEE // payee : revenu integre a la semaine, cloturee
+  ANNULEE
+}
+
+/// Etat d'une contribution de production a une commande client.
+enum OrderContributionStatus {
+  ACTIVE
+  ANNULEE
+}
+
 /// Ecritures du journal financier append-only (CDC §6.3).
 enum LedgerEntryType {
   SALE_REVENUE
@@ -104,6 +118,7 @@ model GuildConfig {
   channelLogs         String? // logs-et-archives
   channelWeeklyBoard  String? // tableau-de-bord-hebdo
   channelCompanyBoard String? // salon employe "Developpement de l'entreprise"
+  channelOrders       String? // salon direction "commandes client a realiser"
 
   // Messages permanents edites par le bot (CDC §5.5 / §7.4)
   msgWeeklyEmployees String?
@@ -111,6 +126,7 @@ model GuildConfig {
   msgPayroll         String?
   msgSalaryGrid      String?
   msgCompanyBoard    String? // tableau "Developpement de l'entreprise" (cote employes)
+  msgOrdersBoard     String? // tableau "commandes client a realiser" (direction)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
@@ -119,15 +135,16 @@ model GuildConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employees   Employee[]
-  gradeRates  GradeRate[]
-  forumTags   ForumTag[]
-  weeks       AccountingWeek[]
-  sales       Sale[]
-  payrolls    Payroll[]
-  ledger      LedgerEntry[]
-  auditLogs   AuditLog[]
-  gradeEvents EmployeeGradeEvent[]
+  employees    Employee[]
+  gradeRates   GradeRate[]
+  forumTags    ForumTag[]
+  weeks        AccountingWeek[]
+  sales        Sale[]
+  payrolls     Payroll[]
+  ledger       LedgerEntry[]
+  auditLogs    AuditLog[]
+  gradeEvents  EmployeeGradeEvent[]
+  clientOrders ClientOrder[]
 }
 
 /// Historique des tarifs salariaux par role (CDC §6.2 : instantanes financiers).
@@ -179,9 +196,10 @@ model Employee {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sales       Sale[]
-  payrolls    Payroll[]
-  gradeEvents EmployeeGradeEvent[]
+  sales              Sale[]
+  payrolls           Payroll[]
+  gradeEvents        EmployeeGradeEvent[]
+  orderContributions OrderContribution[]
 }
 
 /// Changement de grade d'un employe (CDC §7 : evolutions). Alimente le tableau
@@ -230,9 +248,102 @@ model AccountingWeek {
   closedByDiscordId String?
   createdAt         DateTime  @default(now())
 
-  sales    Sale[]
-  payrolls Payroll[]
-  ledger   LedgerEntry[]
+  sales        Sale[]
+  payrolls     Payroll[]
+  ledger       LedgerEntry[]
+  clientOrders ClientOrder[]
+}
+
+// ── Commandes client ────────────────────────────────────────────────────────
+
+/// Commande client negociee par la direction (CDC : ventes B2C, hors PNJ).
+/// Le prix est libre (negociation) ; le revenu rejoint le CA de la semaine au
+/// moment du paiement. La production est realisee a plusieurs (contributions).
+model ClientOrder {
+  id            String      @id @default(cuid())
+  reference     String      @unique // CMD-AAAA-NNNN
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+
+  clientName      String
+  description     String?
+  targetQuantity  Int // objectif de production (hot dogs)
+  negotiatedPrice Int // prix total negocie (entier, $)
+  deadline        DateTime?
+
+  status ClientOrderStatus @default(OUVERTE)
+
+  // Livraison & paiement (CDC : suivi simple paye/non-paye + preuve)
+  deliveredAt                 DateTime?
+  deliveredByDiscordId        String?
+  paidAt                      DateTime?
+  paymentCollectedByDiscordId String?
+  paymentProofKey             String? // cle stockage objet de la preuve de paiement
+
+  // Rattachement comptable : la semaine OUVERTE au moment du paiement.
+  week   AccountingWeek? @relation(fields: [weekId], references: [id])
+  weekId String?
+
+  createdByDiscordId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  contributions OrderContribution[]
+
+  @@index([guildConfigId, status])
+  @@index([weekId])
+}
+
+/// Contribution de production d'un employe a une commande (CDC : multi-employes).
+/// Saisie par la direction avec preuves. Les unites comptent dans la production
+/// et le salaire de l'employe (au tarif de son grade), une fois la commande payee.
+model OrderContribution {
+  id            String      @id @default(cuid())
+  order         ClientOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId       String
+  guildConfigId String // denormalise pour les requetes par serveur
+  employee      Employee    @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  quantity Int
+  status   OrderContributionStatus @default(ACTIVE)
+
+  // Instantanes financiers figes a la saisie (comme une vente).
+  gradeSnapshot       String?
+  gradeRoleIdSnapshot String?
+  salaryRateSnapshot  Int?
+
+  // Controle d'integrite (preuves recyclees, etc.).
+  riskLevel   SaleRisk @default(CLEAN)
+  riskReasons String?
+
+  recordedByDiscordId String?
+  createdAt           DateTime @default(now())
+
+  attachments OrderContributionAttachment[]
+
+  @@index([orderId])
+  @@index([employeeId])
+}
+
+/// Preuves d'une contribution (copie durable obligatoire, comme les ventes §5.3).
+model OrderContributionAttachment {
+  id                  String            @id @default(cuid())
+  contribution        OrderContribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  contributionId      String
+  type                AttachmentType
+  discordMessageId    String
+  discordAttachmentId String
+  fileName            String
+  size                Int
+  mimeType            String
+  sha256              String
+  storageKey          String
+  discordUrl          String?
+  createdAt           DateTime          @default(now())
+
+  @@index([contributionId])
+  @@index([sha256])
 }
 
 // ── Ventes ──────────────────────────────────────────────────────────────────

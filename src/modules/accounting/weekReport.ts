@@ -38,6 +38,7 @@ export interface WeekReport extends ProfitDistribution {
 export function computeWeekReport(
   sales: readonly ValidatedSaleInput[],
   directionRoleIds: readonly string[],
+  extraRevenue = 0,
 ): WeekReport {
   const directionRoles = new Set(directionRoleIds.filter(Boolean));
 
@@ -78,7 +79,10 @@ export function computeWeekReport(
     .map(({ topRate: _topRate, isDirection: _isDirection, ...line }) => line)
     .sort((a, b) => b.quantity - a.quantity || a.nomRP.localeCompare(b.nomRP));
 
-  const totalRevenue = employees.reduce((s, e) => s + e.revenue, 0);
+  // `extraRevenue` : CA des commandes client payees (prix negocie, hors PNJ).
+  // Les contributions a ces commandes arrivent dans `sales` avec pnjUnitPrice=0,
+  // donc elles n'ajoutent que du salaire ; leur revenu est porte ici, une fois.
+  const totalRevenue = employees.reduce((s, e) => s + e.revenue, 0) + extraRevenue;
   const totalSalaries = employees.reduce((s, e) => s + e.salary, 0);
   const distribution = distributeWeek(totalRevenue, totalSalaries);
 
