@@ -27,6 +27,7 @@ const CHANNEL_MAP = [
   { opt: 'paies', field: 'channelPayroll' },
   { opt: 'logs', field: 'channelLogs' },
   { opt: 'tableau', field: 'channelWeeklyBoard' },
+  { opt: 'developpement', field: 'channelCompanyBoard' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -74,6 +75,12 @@ export const configCommand: SlashCommand = {
           o
             .setName('tableau')
             .setDescription('Salon tableau-de-bord-hebdo')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('developpement')
+            .setDescription("Salon employe 'Developpement de l'entreprise'")
             .addChannelTypes(ChannelType.GuildText),
         ),
     )

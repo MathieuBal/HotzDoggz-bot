@@ -89,12 +89,14 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   const companyEmbed = companyData
     ? buildCompanyBoard(companyData)
     : placeholder('📊 HotzDogz — Developpement de l’entreprise');
+  // Salon employe dedie si configure, sinon repli sur le tableau hebdo.
+  const companyChannel = config.channelCompanyBoard ?? config.channelWeeklyBoard;
 
   const [emp, acc, grid, company] = await Promise.all([
     ensureMessage(client, config.channelWeeklyBoard, config.msgWeeklyEmployees, employeeEmbed),
     ensureMessage(client, config.channelAccounting, config.msgAccounting, accountingEmbed),
     ensureMessage(client, config.channelWeeklyBoard, config.msgSalaryGrid, gridEmbed),
-    ensureMessage(client, config.channelWeeklyBoard, config.msgCompanyBoard, companyEmbed),
+    ensureMessage(client, companyChannel, config.msgCompanyBoard, companyEmbed),
   ]);
 
   const data: Record<string, string> = {};

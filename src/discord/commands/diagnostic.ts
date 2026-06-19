@@ -143,6 +143,11 @@ export const diagnosticCommand: SlashCommand = {
       channelLine(guild, 'Paies', config.channelPayroll, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Logs & archives', config.channelLogs, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Tableau hebdo', config.channelWeeklyBoard, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Developpement (employes)', config.channelCompanyBoard, [
+        VIEW,
+        SEND,
+        EMBED,
+      ]),
     ]);
 
     // Tarifs de grade
@@ -173,6 +178,12 @@ export const diagnosticCommand: SlashCommand = {
       messageLine(guild, 'Tableau comptable', config.channelAccounting, config.msgAccounting),
       messageLine(guild, 'Tableau paies', config.channelPayroll, config.msgPayroll),
       messageLine(guild, 'Grille salariale', config.channelWeeklyBoard, config.msgSalaryGrid),
+      messageLine(
+        guild,
+        'Developpement entreprise',
+        config.channelCompanyBoard ?? config.channelWeeklyBoard,
+        config.msgCompanyBoard,
+      ),
     ]);
 
     // Semaine comptable ouverte

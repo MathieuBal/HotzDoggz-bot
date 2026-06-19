@@ -98,11 +98,12 @@ model GuildConfig {
   roleStagiaire   String?
 
   // Salons (IDs Discord)
-  channelControl     String? // Forum prive de controle (1 fiche / vente)
-  channelAccounting  String? // comptabilite
-  channelPayroll     String? // paies
-  channelLogs        String? // logs-et-archives
-  channelWeeklyBoard String? // tableau-de-bord-hebdo
+  channelControl      String? // Forum prive de controle (1 fiche / vente)
+  channelAccounting   String? // comptabilite
+  channelPayroll      String? // paies
+  channelLogs         String? // logs-et-archives
+  channelWeeklyBoard  String? // tableau-de-bord-hebdo
+  channelCompanyBoard String? // salon employe "Developpement de l'entreprise"
 
   // Messages permanents edites par le bot (CDC §5.5 / §7.4)
   msgWeeklyEmployees String?
