@@ -5,6 +5,7 @@ import { logger } from '../../infrastructure/logging/logger.js';
 import { mentionDirection, postToLogs } from '../../discord/notify.js';
 import { getGuildConfigByGuildId } from '../employees/employeeService.js';
 import { getLatestClosedPayrolls } from '../payroll/payrollService.js';
+import { isClosureReminderWindow, localWeekdayHour } from './timeWindow.js';
 
 /**
  * Notifications proactives (CDC §5.6 / §6.7) : le bot ne se contente pas de
@@ -24,33 +25,6 @@ const closureReminderSentForWeek = new Set<string>();
 
 const nf = new Intl.NumberFormat('fr-FR');
 const money = (n: number): string => `${nf.format(n)} $`;
-
-/** Jour (0=lundi..6=dimanche) et heure locale dans un fuseau donne. */
-export function localWeekdayHour(now: Date, timeZone: string): { weekday: number; hour: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    weekday: 'short',
-    hour: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const wd = parts.find((p) => p.type === 'weekday')?.value ?? 'Mon';
-  const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
-  const index: Record<string, number> = {
-    Mon: 0,
-    Tue: 1,
-    Wed: 2,
-    Thu: 3,
-    Fri: 4,
-    Sat: 5,
-    Sun: 6,
-  };
-  return { weekday: index[wd] ?? 0, hour };
-}
-
-/** Fenetre de rappel de cloture : dimanche soir (20h–22h59 local). Pure/testable. */
-export function isClosureReminderWindow(weekday: number, hour: number): boolean {
-  return weekday === 6 && hour >= 20 && hour < 23;
-}
 
 /** Rappel des ventes en attente depuis plus de 24 h (digest, throttle 12 h). */
 async function checkPendingValidations(client: Client, guildConfigId: string): Promise<void> {

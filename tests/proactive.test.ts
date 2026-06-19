@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isClosureReminderWindow,
   localWeekdayHour,
-} from '../src/modules/notifications/proactive.js';
+} from '../src/modules/notifications/timeWindow.js';
 
 describe('isClosureReminderWindow', () => {
   it('declenche le dimanche soir (20h-22h)', () => {

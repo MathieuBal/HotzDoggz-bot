@@ -21,7 +21,8 @@ import {
 import { setCasierTag } from '../lockers/casierTags.js';
 import { createControlPost } from '../verification/controlPost.js';
 import { downloadAndStore, isImageAttachment, type StoredAttachment } from './attachments.js';
-import { evaluateFraud, riskBadge } from './fraud.js';
+import { riskBadge } from './fraud.js';
+import { evaluateFraud } from './fraudService.js';
 import { recordGradeResolution } from './gradeTracking.js';
 import { extractQuantity } from './quantity.js';
 import { allocateReference } from './referenceService.js';

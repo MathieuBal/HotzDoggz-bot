@@ -1,10 +1,10 @@
 import { SaleRisk } from '@prisma/client';
-import { prisma } from '../../infrastructure/database/client.js';
 
 /**
- * Controle d'integrite anti-fraude (CDC §10.3). Le bot ne bloque jamais une
- * vente sur ce seul motif : il la *signale* a la direction, qui tranche. Trois
- * signaux, du plus grave au plus benin :
+ * Regles pures du controle d'integrite anti-fraude (CDC §10.3). Sans I/O, donc
+ * testables et importables sans tirer la connexion base. Le bot ne bloque jamais
+ * une vente sur ce seul motif : il la *signale* a la direction, qui tranche.
+ * Trois signaux, du plus grave au plus benin :
  *   - preuve deja utilisee sur une autre vente  → 🔴 FLAGGED
  *   - volume declare anormalement eleve         → 🟠 SUSPECT
  *   - rafale de declarations rapprochees         → 🟠 SUSPECT
@@ -60,37 +60,4 @@ export function classifyRisk(input: RiskInput): RiskVerdict {
 /** Repere visuel du niveau de risque (fiche de controle / alertes). */
 export function riskBadge(level: SaleRisk): string {
   return level === SaleRisk.FLAGGED ? '🔴' : level === SaleRisk.SUSPECT ? '🟠' : '🟢';
-}
-
-export interface EvaluateFraudParams {
-  guildConfigId: string;
-  employeeId: string;
-  quantity: number;
-  /** Hash SHA-256 des preuves de cette vente. */
-  hashes: readonly string[];
-}
-
-/**
- * Evalue le risque d'une vente avant sa persistance : recherche de preuves
- * recyclees (meme hash, autre vente du serveur) et de rafale de declarations.
- */
-export async function evaluateFraud(params: EvaluateFraudParams): Promise<RiskVerdict> {
-  const { guildConfigId, employeeId, quantity, hashes } = params;
-
-  const duplicates =
-    hashes.length === 0
-      ? []
-      : await prisma.saleAttachment.findMany({
-          where: { sha256: { in: [...hashes] }, sale: { guildConfigId } },
-          select: { sale: { select: { reference: true } } },
-          distinct: ['sha256'],
-        });
-  const duplicateRefs = [...new Set(duplicates.map((d) => d.sale.reference))];
-
-  const since = new Date(Date.now() - FRAUD.BURST_WINDOW_MINUTES * 60_000);
-  const recentCount = await prisma.sale.count({
-    where: { guildConfigId, employeeId, createdAt: { gte: since } },
-  });
-
-  return classifyRisk({ duplicateRefs, recentCount, quantity });
 }
