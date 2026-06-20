@@ -2,6 +2,7 @@ import { type AccountingWeek, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
 import { computeIsoWeekBounds } from './week.js';
+import { collectWeekReportInputs } from './weekInputs.js';
 import { computeWeekReport, type WeekReport } from './weekReport.js';
 
 /** Statuts de vente "en cours" (en attente de decision) pour la semaine. */
@@ -30,31 +31,8 @@ export async function getOpenWeekSnapshot(guildConfigId: string): Promise<WeekSn
     (id): id is string => Boolean(id),
   );
 
-  const sales = await prisma.sale.findMany({
-    where: { weekId: week.id, status: SaleStatus.VALIDEE },
-    select: {
-      employeeId: true,
-      validatedQuantity: true,
-      salaryRateSnapshot: true,
-      pnjUnitPriceSnapshot: true,
-      gradeRoleIdSnapshot: true,
-      gradeSnapshot: true,
-      employee: { select: { nomRP: true } },
-    },
-  });
-
-  const report = computeWeekReport(
-    sales.map((s) => ({
-      employeeId: s.employeeId,
-      nomRP: s.employee.nomRP,
-      validatedQuantity: s.validatedQuantity ?? 0,
-      salaryRate: s.salaryRateSnapshot ?? 0,
-      pnjUnitPrice: s.pnjUnitPriceSnapshot ?? 0,
-      gradeRoleId: s.gradeRoleIdSnapshot,
-      gradeLabel: s.gradeSnapshot,
-    })),
-    directionRoleIds,
-  );
+  const { lines, extraRevenue } = await collectWeekReportInputs(prisma, week.id);
+  const report = computeWeekReport(lines, directionRoleIds, extraRevenue);
 
   const pendingCount = await prisma.sale.count({
     where: { weekId: week.id, status: { in: PENDING_STATUSES } },

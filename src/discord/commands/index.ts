@@ -1,9 +1,12 @@
 import { Collection } from 'discord.js';
+import { commandeCommand } from './commande.js';
 import { configCommand } from './config.js';
 import { diagnosticCommand } from './diagnostic.js';
 import { employeCommand } from './employe.js';
 import { exportCommand } from './export.js';
+import { gestionCommand } from './gestion.js';
 import { macomptaCommand } from './macompta.js';
+import { menuCommand } from './menu.js';
 import { paieCommand } from './paie.js';
 import { semaineCommand } from './semaine.js';
 import { tableauCommand } from './tableau.js';
@@ -11,11 +14,14 @@ import { vendreCommand } from './vendre.js';
 import type { SlashCommand } from './types.js';
 
 const all: SlashCommand[] = [
+  commandeCommand,
   configCommand,
   diagnosticCommand,
   employeCommand,
   exportCommand,
+  gestionCommand,
   macomptaCommand,
+  menuCommand,
   paieCommand,
   semaineCommand,
   tableauCommand,

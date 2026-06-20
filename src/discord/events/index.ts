@@ -2,6 +2,7 @@ import { Events, type Client } from 'discord.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { registerInteractionCreate } from './interactionCreate.js';
 import { registerMessageCreate } from './messageCreate.js';
+import { registerMessageDelete } from './messageDelete.js';
 import { registerMessageUpdate } from './messageUpdate.js';
 import { registerReady } from './ready.js';
 import { registerThreadCreate } from './threadCreate.js';
@@ -15,6 +16,7 @@ export function registerEvents(client: Client): void {
   registerThreadUpdate(client);
   registerMessageCreate(client);
   registerMessageUpdate(client);
+  registerMessageDelete(client);
 
   // Observabilite (CDC §10.5 / Annexe A : error/shardError/invalidated)
   client.on(Events.Error, (err) => logger.error({ err }, 'Erreur client Discord'));

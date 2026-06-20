@@ -1,6 +1,7 @@
 import { LedgerEntryType, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
+import { collectWeekReportInputs } from './weekInputs.js';
 import { computeBonusShares, computeWeekReport } from './weekReport.js';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; reason: string };
@@ -63,31 +64,8 @@ export async function closeWeek(
       (id): id is string => Boolean(id),
     );
 
-    const sales = await tx.sale.findMany({
-      where: { weekId: week.id, status: SaleStatus.VALIDEE },
-      select: {
-        employeeId: true,
-        validatedQuantity: true,
-        salaryRateSnapshot: true,
-        pnjUnitPriceSnapshot: true,
-        gradeRoleIdSnapshot: true,
-        gradeSnapshot: true,
-        employee: { select: { nomRP: true } },
-      },
-    });
-
-    const report = computeWeekReport(
-      sales.map((s) => ({
-        employeeId: s.employeeId,
-        nomRP: s.employee.nomRP,
-        validatedQuantity: s.validatedQuantity ?? 0,
-        salaryRate: s.salaryRateSnapshot ?? 0,
-        pnjUnitPrice: s.pnjUnitPriceSnapshot ?? 0,
-        gradeRoleId: s.gradeRoleIdSnapshot,
-        gradeLabel: s.gradeSnapshot,
-      })),
-      directionRoleIds,
-    );
+    const { lines, extraRevenue } = await collectWeekReportInputs(tx, week.id);
+    const report = computeWeekReport(lines, directionRoleIds, extraRevenue);
     const bonusShares = computeBonusShares(report);
 
     // Verrouille les totaux sur la semaine et libere le verrou d'ouverture.
@@ -164,8 +142,12 @@ export async function closeWeek(
       ],
     });
 
-    // Integre les ventes validees a la paie.
+    // Integre les ventes validees a la paie (PNJ + main en main).
     await tx.sale.updateMany({
+      where: { weekId: week.id, status: SaleStatus.VALIDEE },
+      data: { status: SaleStatus.INTEGREE_A_LA_PAIE },
+    });
+    await tx.directSale.updateMany({
       where: { weekId: week.id, status: SaleStatus.VALIDEE },
       data: { status: SaleStatus.INTEGREE_A_LA_PAIE },
     });

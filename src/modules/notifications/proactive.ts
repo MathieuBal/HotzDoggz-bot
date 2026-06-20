@@ -1,4 +1,4 @@
-import { SaleStatus } from '@prisma/client';
+import { ClientOrderStatus, SaleStatus } from '@prisma/client';
 import { type Client, EmbedBuilder } from 'discord.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
@@ -19,8 +19,11 @@ const PENDING_AGE_HOURS = 24;
 const PENDING_REMINDER_COOLDOWN_MS = 12 * 3_600_000;
 const PENDING_STATUSES = [SaleStatus.SOUMISE, SaleStatus.EN_VERIFICATION, SaleStatus.INCOMPLETE];
 
+const DELIVERED_UNPAID_AGE_HOURS = 24;
+
 // Etat anti-spam en memoire (reset au redemarrage : au pire un rappel de plus).
 const lastPendingReminderAt = new Map<string, number>();
+const lastOrdersReminderAt = new Map<string, number>();
 const closureReminderSentForWeek = new Set<string>();
 
 const nf = new Intl.NumberFormat('fr-FR');
@@ -70,6 +73,45 @@ async function checkClosureReminder(client: Client, guildConfigId: string): Prom
   closureReminderSentForWeek.add(week.id);
 }
 
+/**
+ * Rappel sur les commandes client : livrees mais pas encore encaissees depuis
+ * plus de 24 h, ou ouvertes dont l'echeance est depassee (digest, throttle 12 h).
+ */
+async function checkOrders(client: Client, guildConfigId: string): Promise<void> {
+  const config = await prisma.guildConfig.findUnique({ where: { id: guildConfigId } });
+  if (!config?.channelLogs) return;
+
+  const deliveredCutoff = new Date(Date.now() - DELIVERED_UNPAID_AGE_HOURS * 3_600_000);
+  const [unpaid, overdue] = await Promise.all([
+    prisma.clientOrder.count({
+      where: {
+        guildConfigId,
+        status: ClientOrderStatus.LIVREE,
+        deliveredAt: { lt: deliveredCutoff },
+      },
+    }),
+    prisma.clientOrder.count({
+      where: { guildConfigId, status: ClientOrderStatus.OUVERTE, deadline: { lt: new Date() } },
+    }),
+  ]);
+  if (unpaid === 0 && overdue === 0) return;
+
+  const last = lastOrdersReminderAt.get(guildConfigId) ?? 0;
+  if (Date.now() - last < PENDING_REMINDER_COOLDOWN_MS) return;
+
+  const guild = await client.guilds.fetch(config.guildId).catch(() => null);
+  if (!guild) return;
+  const parts: string[] = [];
+  if (unpaid > 0) {
+    parts.push(`💸 **${unpaid}** commande(s) livrée(s) non encaissée(s) (\`/commande payer\`)`);
+  }
+  if (overdue > 0) parts.push(`⏳ **${overdue}** commande(s) ouverte(s) en retard sur l'échéance`);
+  await postToLogs(guild, config, {
+    content: `${mentionDirection(config)} ${parts.join(' · ')}.`,
+  });
+  lastOrdersReminderAt.set(guildConfigId, Date.now());
+}
+
 /** Boucle periodique : passe en revue chaque serveur configure. */
 export async function runProactiveChecks(client: Client): Promise<void> {
   for (const guild of client.guilds.cache.values()) {
@@ -80,6 +122,9 @@ export async function runProactiveChecks(client: Client): Promise<void> {
     );
     await checkClosureReminder(client, config.id).catch((err) =>
       logger.warn({ err, guildConfigId: config.id }, 'Rappel de cloture KO'),
+    );
+    await checkOrders(client, config.id).catch((err) =>
+      logger.warn({ err, guildConfigId: config.id }, 'Rappel commandes KO'),
     );
   }
 }
