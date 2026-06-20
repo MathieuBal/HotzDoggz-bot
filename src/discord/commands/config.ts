@@ -9,6 +9,10 @@ import {
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../../modules/audit/auditService.js';
 import { upsertGradeRate } from '../../modules/employees/employeeService.js';
+import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
+import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
+import { publishDirectionGuide } from '../guides/directionGuide.js';
+import { logger } from '../../infrastructure/logging/logger.js';
 import type { SlashCommand } from './types.js';
 
 // Liaison option -> champ GuildConfig + libelle/tarif du grade.
@@ -204,12 +208,52 @@ export const configCommand: SlashCommand = {
         authorDiscordId: interaction.user.id,
         after: fields,
       });
+
+      // Republication immediate dans les salons concernes (plus besoin de
+      // redemarrer le bot). On ne touche qu'aux supports lies au(x) salon(s)
+      // qui viennent d'etre configures.
+      const published: string[] = [];
+      const touched = new Set(Object.keys(fields));
+      const dashboardFields = [
+        'channelWeeklyBoard',
+        'channelAccounting',
+        'channelPayroll',
+        'channelCompanyBoard',
+        'channelOrders',
+        'channelPartnerships',
+      ];
+      const tasks: Array<Promise<unknown>> = [];
+      if (dashboardFields.some((f) => touched.has(f))) {
+        tasks.push(updateDashboardsNow(interaction.client, config.id));
+        published.push('tableaux de bord');
+      }
+      if (touched.has('channelReviews')) {
+        tasks.push(updateReviewBoard(interaction.client, config.id));
+        published.push('bandeau avis clients');
+      }
+      if (touched.has('channelGuideDirection')) {
+        tasks.push(publishDirectionGuide(interaction.client, config.id));
+        published.push('guide direction');
+      }
+      const results = await Promise.allSettled(tasks);
+      const failed = results.filter((r) => r.status === 'rejected');
+      for (const r of failed) {
+        logger.warn({ err: (r as PromiseRejectedResult).reason }, 'Republication post-config KO');
+      }
+
+      const footer =
+        published.length > 0
+          ? failed.length > 0
+            ? `\n\n⚠️ Publication tentée (${published.join(', ')}) mais au moins un support a échoué — vérifie les permissions du bot puis relance \`/hotzdogz diagnostic\`.`
+            : `\n\n📢 Publié automatiquement : ${published.join(', ')}.`
+          : '';
+
       await interaction.editReply({
         embeds: [
           new EmbedBuilder()
             .setTitle('Salons configures')
-            .setColor(0x2ecc71)
-            .setDescription(summary.join('\n')),
+            .setColor(failed.length > 0 ? 0xe67e22 : 0x2ecc71)
+            .setDescription(summary.join('\n') + footer),
         ],
       });
     }
