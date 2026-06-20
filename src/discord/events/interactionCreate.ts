@@ -2,14 +2,17 @@ import { Events, MessageFlags, type Client, type Interaction } from 'discord.js'
 import { randomUUID } from 'node:crypto';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { handleDirectSaleButton } from '../buttons/directSaleButtons.js';
+import { handlePanelButton } from '../buttons/panelButtons.js';
 import { handleReviewButton } from '../buttons/reviewButtons.js';
 import { handleSaleButton } from '../buttons/saleButtons.js';
 import { handleWeekButton } from '../buttons/weekButtons.js';
 import { commands } from '../commands/index.js';
 import { handleDirectSaleModal } from '../modals/directSaleModalHandlers.js';
+import { handlePanelModal } from '../modals/panelModalHandlers.js';
 import { handleReviewModal } from '../modals/reviewModalHandlers.js';
 import { handleSaleModal } from '../modals/saleModalHandlers.js';
 import { handleWeekModal } from '../modals/weekModalHandlers.js';
+import { handlePanelSelect } from '../selects/panelSelect.js';
 
 async function notifyError(interaction: Interaction): Promise<void> {
   if (!interaction.isRepliable()) return;
@@ -37,13 +40,19 @@ export function registerInteractionCreate(client: Client): void {
 
     try {
       if (interaction.isButton()) {
+        if (await handlePanelButton(interaction)) return;
         if (await handleReviewButton(interaction)) return;
         if (await handleDirectSaleButton(interaction)) return;
         if (await handleSaleButton(interaction)) return;
         await handleWeekButton(interaction);
         return;
       }
+      if (interaction.isStringSelectMenu()) {
+        await handlePanelSelect(interaction);
+        return;
+      }
       if (interaction.isModalSubmit()) {
+        if (await handlePanelModal(interaction)) return;
         if (await handleReviewModal(interaction)) return;
         if (await handleDirectSaleModal(interaction)) return;
         if (await handleSaleModal(interaction)) return;

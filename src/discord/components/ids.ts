@@ -70,3 +70,32 @@ export const DirectSaleFieldId = {
   NOTE: 'note',
   REASON: 'reason',
 } as const;
+
+export const PanelButtonId = {
+  OPEN_WEEK: 'panel:openweek',
+  REFRESH: 'panel:refresh',
+} as const;
+
+export const PanelSelectId = {
+  EDIT: 'panel:edit',
+} as const;
+
+export const PanelEditValue = {
+  SALAIRE: 'salaire',
+  MENU: 'menu',
+  PARTENAIRE: 'partenaire',
+} as const;
+
+export const PanelModalId = {
+  SALAIRE: 'panel:salaire:modal',
+  MENU: 'panel:menu:modal',
+  PARTENAIRE: 'panel:partenaire:modal',
+} as const;
+
+export const PanelFieldId = {
+  GRADE: 'grade',
+  MONTANT: 'montant',
+  NOM: 'nom',
+  PRIX: 'prix',
+  OBJECTIF: 'objectif',
+} as const;

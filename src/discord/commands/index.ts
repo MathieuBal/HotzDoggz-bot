@@ -9,6 +9,7 @@ import { gestionCommand } from './gestion.js';
 import { macomptaCommand } from './macompta.js';
 import { menuCommand } from './menu.js';
 import { paieCommand } from './paie.js';
+import { panelCommand } from './panel.js';
 import { partenaireCommand } from './partenaire.js';
 import { semaineCommand } from './semaine.js';
 import { tableauCommand } from './tableau.js';
@@ -26,6 +27,7 @@ const all: SlashCommand[] = [
   macomptaCommand,
   menuCommand,
   paieCommand,
+  panelCommand,
   partenaireCommand,
   semaineCommand,
   tableauCommand,
