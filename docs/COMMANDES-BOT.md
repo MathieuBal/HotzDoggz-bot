@@ -11,6 +11,7 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 | Commande    | À quoi ça sert                                                                                                                                                |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/vendre`   | Déclarer une vente PNJ. L'employé donne la quantité + 2 captures (coffre plein, coffre vide) ; le bot crée le post au bon format et l'envoie en vérification. |
+| `/facture`  | Déclarer une vente **main en main** : produits du menu (autocomplétion) + quantités + **photo de la facture**. Le bot crée une fiche que la direction valide. |
 | `/macompta` | Voir sa propre production de la semaine, son salaire provisoire et son écart au meilleur employé (motivation).                                                |
 
 ---
@@ -27,6 +28,14 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 | `/commande payer`      | Encaisser (+ preuve de paiement) → le prix rejoint le chiffre d'affaires de la semaine.                                 |
 | `/commande voir`       | Afficher l'état d'une commande (progression, contributeurs).                                                            |
 | `/commande annuler`    | Annuler une commande (tant qu'elle n'est pas payée).                                                                    |
+
+### Menu des produits (ventes main en main)
+
+| Commande        | À quoi ça sert                                           |
+| --------------- | -------------------------------------------------------- |
+| `/menu ajouter` | Ajouter un produit ou changer son prix (ex. Simple 350). |
+| `/menu retirer` | Retirer un produit du menu.                              |
+| `/menu voir`    | Afficher le menu actuel.                                 |
 
 ### Comptabilité de la semaine
 
@@ -51,6 +60,18 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 | ------------------- | ------------------------------------------------------------ |
 | `/employe associer` | Lier un membre Discord à son casier (nom RP + salon casier). |
 | `/employe archiver` | Archiver un employé qui quitte (garde son historique).       |
+
+### Correction de la comptabilité (en cas d'erreur)
+
+| Commande                    | À quoi ça sert                                                         |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `/gestion voir`             | Détail chiffré de la semaine pour repérer une entrée erronée.          |
+| `/gestion rouvrir-semaine`  | Rouvrir la dernière semaine clôturée pour corriger (puis re-clôturer). |
+| `/gestion annuler-commande` | Annuler une commande erronée (même payée).                             |
+| `/gestion annuler-vente`    | Annuler une vente erronée (PNJ `HD-` ou main en main `VD-`).           |
+
+> Tout est tracé (audit) et la compta est recalculée depuis la source. Workflow type :
+> `rouvrir-semaine` → `annuler-…` → `/semaine cloturer`.
 
 ### Outils & réglages
 

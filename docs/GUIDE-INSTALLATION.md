@@ -257,6 +257,22 @@ formulaire (note /5, commentaire, employé qui l'a servi) → le bot publie une
 
 ---
 
+## 6.quater Ventes main en main (facture)
+
+Pour les ventes directes à un joueur, avec un **menu de produits** :
+
+1. **La direction crée le menu** : `/menu ajouter nom:Simple prix:350`,
+   `/menu ajouter nom:Halal prix:450`, `/menu ajouter nom:Truffe prix:550`
+   (prix modifiables à tout moment ; `/menu voir` pour l'afficher).
+2. **L'employé déclare** : `/facture produit1:Simple quantite1:2 produit2:Truffe
+quantite2:1 facture:<photo>` (le bot propose les produits en autocomplétion).
+3. Une **fiche de contrôle** apparaît dans `controle-des-ventes` → la direction
+   **Prend en charge → Valide** (en ajustant la quantité par produit si besoin,
+   après vérif sur le PC). Le CA (prix du menu) et le salaire (tarif du grade)
+   rejoignent la semaine.
+
+---
+
 ## 7. Permissions du bot par salon (récap)
 
 | Salon                       | Permissions du bot                                                           |
