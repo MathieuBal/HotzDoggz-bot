@@ -45,25 +45,25 @@ export const factureCommand: SlashCommand = {
     const b = new SlashCommandBuilder()
       .setName('facture')
       .setDescription('Déclarer une vente main en main (facture)');
-    for (const i of LINE_SLOTS) {
-      b.addStringOption((o) =>
-        o
-          .setName(`produit${i}`)
-          .setDescription(`Produit ${i}`)
-          .setAutocomplete(true)
-          .setRequired(i === 1),
-      );
-      b.addIntegerOption((o) =>
-        o
-          .setName(`quantite${i}`)
-          .setDescription(`Quantité du produit ${i}`)
-          .setMinValue(1)
-          .setRequired(i === 1),
-      );
-    }
+    // Discord impose : toutes les options OBLIGATOIRES avant les optionnelles.
+    // Donc produit1 + quantite1 + facture (requis) d'abord, puis le reste.
+    b.addStringOption((o) =>
+      o.setName('produit1').setDescription('Produit 1').setAutocomplete(true).setRequired(true),
+    );
+    b.addIntegerOption((o) =>
+      o.setName('quantite1').setDescription('Quantité du produit 1').setMinValue(1).setRequired(true),
+    );
     b.addAttachmentOption((o) =>
       o.setName('facture').setDescription('Photo de la facture in-game').setRequired(true),
     );
+    for (const i of [2, 3] as const) {
+      b.addStringOption((o) =>
+        o.setName(`produit${i}`).setDescription(`Produit ${i}`).setAutocomplete(true),
+      );
+      b.addIntegerOption((o) =>
+        o.setName(`quantite${i}`).setDescription(`Quantité du produit ${i}`).setMinValue(1),
+      );
+    }
     b.addStringOption((o) =>
       o.setName('client').setDescription('Nom RP du client (optionnel)').setRequired(false),
     );
