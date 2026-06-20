@@ -54,3 +54,19 @@ export const ReviewFieldId = {
   COMMENT: 'comment',
   EMPLOYEE: 'employee',
 } as const;
+
+export const DirectSaleButtonId = {
+  TAKE: 'direct:take',
+  VALIDATE: 'direct:validate',
+  REFUSE: 'direct:refuse',
+} as const;
+
+export const DirectSaleModalId = {
+  VALIDATE: 'direct:validate:modal',
+  REFUSE: 'direct:refuse:modal',
+} as const;
+
+export const DirectSaleFieldId = {
+  NOTE: 'note',
+  REASON: 'reason',
+} as const;

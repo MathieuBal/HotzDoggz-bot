@@ -156,6 +156,10 @@ export interface ValidateDirectSaleInput {
   /** Quantites validees par ligne (defaut : quantite declaree). */
   lineQuantities: { lineId: string; validatedQuantity: number }[];
   note: string;
+  // Grade re-resolu a la validation (fige le tarif comme le PNJ).
+  gradeLabel: string;
+  gradeRoleId: string;
+  salaryRate: number;
   correlationId: string;
 }
 
@@ -190,7 +194,7 @@ export async function validateDirectSale(
       quantity: overrides.get(l.id) ?? l.declaredQuantity,
     }));
     const { totalQuantity, revenue } = computeDirectSaleTotals(validatedLines);
-    const salaryAmount = totalQuantity * (sale.salaryRateSnapshot ?? 0);
+    const salaryAmount = totalQuantity * input.salaryRate;
 
     const upd = await tx.directSale.updateMany({
       where: { id: input.saleId, status: sale.status },
@@ -200,6 +204,9 @@ export async function validateDirectSale(
         validatedByDiscordId: input.actorId,
         validatedAt: new Date(),
         verificationNote: input.note,
+        gradeSnapshot: input.gradeLabel,
+        gradeRoleIdSnapshot: input.gradeRoleId,
+        salaryRateSnapshot: input.salaryRate,
       },
     });
     if (upd.count !== 1) return fail('Conflit : le dossier a change de statut.');

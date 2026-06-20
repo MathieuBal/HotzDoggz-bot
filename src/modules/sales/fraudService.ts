@@ -12,7 +12,7 @@ async function findDuplicateRefs(
 ): Promise<string[]> {
   if (hashes.length === 0) return [];
   const list = [...hashes];
-  const [inSales, inOrders] = await Promise.all([
+  const [inSales, inOrders, inDirect] = await Promise.all([
     prisma.saleAttachment.findMany({
       where: { sha256: { in: list }, sale: { guildConfigId } },
       select: { sale: { select: { reference: true } } },
@@ -23,11 +23,17 @@ async function findDuplicateRefs(
       select: { contribution: { select: { order: { select: { reference: true } } } } },
       distinct: ['sha256'],
     }),
+    prisma.directSaleAttachment.findMany({
+      where: { sha256: { in: list }, directSale: { guildConfigId } },
+      select: { directSale: { select: { reference: true } } },
+      distinct: ['sha256'],
+    }),
   ]);
   return [
     ...new Set([
       ...inSales.map((s) => s.sale.reference),
       ...inOrders.map((o) => o.contribution.order.reference),
+      ...inDirect.map((d) => d.directSale.reference),
     ]),
   ];
 }
@@ -62,6 +68,16 @@ export async function evaluateFraud(params: EvaluateFraudParams): Promise<RiskVe
  * meme seuil de volume ; la rafale est sans objet (saisie par la direction).
  */
 export async function evaluateOrderContributionFraud(params: {
+  guildConfigId: string;
+  quantity: number;
+  hashes: readonly string[];
+}): Promise<RiskVerdict> {
+  const duplicateRefs = await findDuplicateRefs(params.guildConfigId, params.hashes);
+  return classifyRisk({ duplicateRefs, recentCount: 0, quantity: params.quantity });
+}
+
+/** Evalue le risque d'une vente main en main (facture recyclee, volume). */
+export async function evaluateDirectSaleFraud(params: {
   guildConfigId: string;
   quantity: number;
   hashes: readonly string[];
