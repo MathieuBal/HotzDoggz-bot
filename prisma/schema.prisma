@@ -154,6 +154,24 @@ model GuildConfig {
   gradeEvents  EmployeeGradeEvent[]
   clientOrders ClientOrder[]
   reviews      Review[]
+  products     Product[]
+}
+
+/// Catalogue de produits vendus en main en main (CDC : menu). Prix de detail
+/// editable par la direction ; chaque vente fige le prix du moment (snapshot),
+/// donc modifier un prix ne reecrit jamais les ventes passees.
+model Product {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  name          String
+  retailPrice   Int // prix de detail au joueur (entier, $)
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([guildConfigId, name])
+  @@index([guildConfigId, active])
 }
 
 /// Historique des tarifs salariaux par role (CDC §6.2 : instantanes financiers).
