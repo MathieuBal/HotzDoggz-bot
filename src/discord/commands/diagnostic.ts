@@ -155,6 +155,7 @@ export const diagnosticCommand: SlashCommand = {
         SEND,
         EMBED,
       ]),
+      channelLine(guild, 'Guide direction', config.channelGuideDirection, [VIEW, SEND, EMBED]),
     ]);
 
     // Tarifs de grade

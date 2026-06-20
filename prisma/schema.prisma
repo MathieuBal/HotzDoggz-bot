@@ -118,15 +118,17 @@ model GuildConfig {
   roleStagiaire   String?
 
   // Salons (IDs Discord)
-  channelControl      String? // Forum prive de controle (1 fiche / vente)
-  channelAccounting   String? // comptabilite
-  channelPayroll      String? // paies
-  channelLogs         String? // logs-et-archives
-  channelWeeklyBoard  String? // tableau-de-bord-hebdo
-  channelCompanyBoard String? // salon employe "Developpement de l'entreprise"
-  channelOrders       String? // salon direction "commandes client a realiser"
-  channelReviews      String? // salon public "avis clients"
-  channelPartnerships String? // salon employe "objectifs partenariats" (live)
+  channelControl        String? // Forum prive de controle (1 fiche / vente)
+  channelAccounting     String? // comptabilite
+  channelPayroll        String? // paies
+  channelLogs           String? // logs-et-archives
+  channelWeeklyBoard    String? // tableau-de-bord-hebdo
+  channelCompanyBoard   String? // salon employe "Developpement de l'entreprise"
+  channelOrders         String? // salon direction "commandes client a realiser"
+  channelReviews        String? // salon public "avis clients"
+  channelPartnerships   String? // salon employe "objectifs partenariats" (live)
+  channelGuideDirection String? // salon tuto direction (guide des commandes)
+  channelGuideEmployee  String? // salon tuto employes (process)
 
   // Messages permanents edites par le bot (CDC §5.5 / §7.4)
   msgWeeklyEmployees  String?
@@ -137,6 +139,8 @@ model GuildConfig {
   msgOrdersBoard      String? // tableau "commandes client a realiser" (direction)
   msgReviewBoard      String? // bandeau "avis clients" (note moyenne + bouton)
   msgPartnershipBoard String? // tableau "objectifs partenariats" (cote employes)
+  msgGuideDirection   String? // guide tuto direction (permanent)
+  msgGuideEmployee    String? // guide tuto employes (permanent)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)

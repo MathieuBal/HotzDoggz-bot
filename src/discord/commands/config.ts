@@ -31,6 +31,8 @@ const CHANNEL_MAP = [
   { opt: 'commandes', field: 'channelOrders' },
   { opt: 'avis', field: 'channelReviews' },
   { opt: 'partenariats', field: 'channelPartnerships' },
+  { opt: 'guide_direction', field: 'channelGuideDirection' },
+  { opt: 'guide_equipe', field: 'channelGuideEmployee' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -102,6 +104,18 @@ export const configCommand: SlashCommand = {
           o
             .setName('partenariats')
             .setDescription("Salon employe 'objectifs partenariats'")
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('guide_direction')
+            .setDescription('Salon tuto direction (guide des commandes)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('guide_equipe')
+            .setDescription('Salon tuto employes (process)')
             .addChannelTypes(ChannelType.GuildText),
         ),
     )
