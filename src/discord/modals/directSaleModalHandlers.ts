@@ -10,8 +10,10 @@ import {
   getGuildConfigByGuildId,
   resolveMemberGrade,
 } from '../../modules/employees/employeeService.js';
+import { SaleStatus } from '@prisma/client';
 import { DirectSaleFieldId, DirectSaleModalId } from '../components/ids.js';
 import { refreshDirectFiche } from '../directSales/fiche.js';
+import { applyCasierEffects } from '../verification/ficheHelpers.js';
 import { isDirectionMember } from '../permissions.js';
 
 const KNOWN = new Set<string>(Object.values(DirectSaleModalId));
@@ -61,6 +63,14 @@ export async function handleDirectSaleModal(interaction: ModalSubmitInteraction)
       return true;
     }
     await refreshDirectFiche(thread, sale.id);
+    if (sale.threadId) {
+      await applyCasierEffects(interaction.client, {
+        threadId: sale.threadId,
+        casierForumId: sale.employee.casierForumId,
+        status: SaleStatus.REFUSEE,
+        message: `❌ Vente **${res.data.reference}** refusée.\nMotif : ${reason}`,
+      }).catch(() => undefined);
+    }
     await interaction.editReply(`Vente ${res.data.reference} refusée.`);
     return true;
   }
@@ -113,6 +123,14 @@ export async function handleDirectSaleModal(interaction: ModalSubmitInteraction)
     return true;
   }
   await refreshDirectFiche(thread, sale.id);
+  if (sale.threadId) {
+    await applyCasierEffects(interaction.client, {
+      threadId: sale.threadId,
+      casierForumId: sale.employee.casierForumId,
+      status: SaleStatus.VALIDEE,
+      message: `✅ Vente **${res.data.reference}** validée — CA ${res.data.revenue} $, salaire ${res.data.salaryAmount} $.`,
+    }).catch(() => undefined);
+  }
   scheduleDashboardUpdate(interaction.client, config.id);
   await interaction.editReply(
     `Vente ${res.data.reference} validée — CA ${res.data.revenue} $, salaire ${res.data.salaryAmount} $.`,

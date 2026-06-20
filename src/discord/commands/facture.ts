@@ -22,9 +22,11 @@ import {
   getDirectSaleById,
   type DirectSaleLineInput,
 } from '../../modules/directSales/directSaleService.js';
+import { ForumTagKey } from '@prisma/client';
 import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
 import { evaluateDirectSaleFraud } from '../../modules/sales/fraudService.js';
 import { riskBadge } from '../../modules/sales/fraud.js';
+import { setCasierTag } from '../../modules/lockers/casierTags.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { mentionDirection, postToLogs } from '../notify.js';
@@ -207,6 +209,37 @@ export const factureCommand: SlashCommand = {
     if (!created.ok) {
       await interaction.editReply(`Échec : ${created.reason}`);
       return;
+    }
+
+    // Trace dans le casier de l'employe (parite avec les ventes PNJ).
+    if (employee.casierForumId) {
+      try {
+        const casier = await interaction.guild.channels.fetch(employee.casierForumId);
+        if (casier?.type === ChannelType.GuildForum) {
+          const revenue = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
+          const linesTxt = lines
+            .map(
+              (l) =>
+                `• ${l.productName} ×${l.quantity} @ ${l.unitPrice} $ = ${l.unitPrice * l.quantity} $`,
+            )
+            .join('\n');
+          const content =
+            `**Vente main en main — ${created.data.reference}**\n${linesTxt}\n` +
+            `Total : ${totalQty} produit(s) — ${revenue} $` +
+            (buyer ? `\nClient : ${buyer}` : '');
+          const thread = await (casier as ForumChannel).threads.create({
+            name: `${created.data.reference} — main en main`,
+            message: { content, files: [facture] },
+          });
+          await prisma.directSale.update({
+            where: { id: created.data.id },
+            data: { threadId: thread.id },
+          });
+          await setCasierTag(thread, employee.casierForumId, ForumTagKey.A_VERIFIER);
+        }
+      } catch (err) {
+        logger.warn({ err }, 'Post casier vente directe KO (non bloquant)');
+      }
     }
 
     // Fiche de controle dans le Forum de controle.
