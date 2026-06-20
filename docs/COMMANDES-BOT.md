@@ -37,6 +37,19 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 | `/menu retirer` | Retirer un produit du menu.                              |
 | `/menu voir`    | Afficher le menu actuel.                                 |
 
+### Partenariats & objectifs
+
+| Commande               | À quoi ça sert                                               |
+| ---------------------- | ------------------------------------------------------------ |
+| `/partenaire creer`    | Créer un partenaire (autre org/business).                    |
+| `/partenaire objectif` | Fixer son objectif de quantité à fournir (ex. Vagos : 5000). |
+| `/partenaire retirer`  | Retirer un partenaire.                                       |
+| `/partenaire voir`     | Voir les partenaires et leur progression.                    |
+
+> Pour qu'une commande compte dans l'objectif d'un partenaire, rattache-la :
+> `/commande creer … partenaire:Vagos`. La progression s'affiche **en live** dans
+> le salon `partenariats` (visible par les employés) dès que la commande est payée.
+
 ### Comptabilité de la semaine
 
 | Commande                  | À quoi ça sert                                                                     |

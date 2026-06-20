@@ -51,6 +51,7 @@ serveur pour `avis-clients`) :
 | --------------- | ----- | -------------------------------------------------------------- |
 | `developpement` | Texte | Tableau « Développement de l'entreprise » (croissance, public) |
 | `avis-clients`  | Texte | Avis clients (bouton « Laisser un avis » + note moyenne)       |
+| `partenariats`  | Texte | Tableau « Objectifs partenariats » (progression en live)       |
 
 > 💡 `developpement` ne montre que la croissance (ventes, CA, nouveaux,
 > promotions, top vendeurs) — **jamais** les marges ni les salaires/primes de
@@ -165,6 +166,7 @@ Dans ton serveur (les réponses sont privées) :
    /config salons controle:#controle-des-ventes comptabilite:#comptabilite
            paies:#paies logs:#logs-et-archives tableau:#tableau-de-bord-hebdo
            developpement:#developpement commandes:#commandes avis:#avis-clients
+           partenariats:#partenariats
    ```
 
    (`developpement` = tableau de croissance employés ; `commandes` = commandes
@@ -270,6 +272,21 @@ quantite2:1 facture:<photo>` (le bot propose les produits en autocomplétion).
    **Prend en charge → Valide** (en ajustant la quantité par produit si besoin,
    après vérif sur le PC). Le CA (prix du menu) et le salaire (tarif du grade)
    rejoignent la semaine.
+
+---
+
+## 6.quinquies Partenariats & objectifs
+
+Pour suivre des objectifs avec des partenaires (autres orgs), avec un tableau
+**live visible par les employés** :
+
+1. **Crée un partenaire** : `/partenaire creer nom:Vagos`.
+2. **Fixe son objectif** : `/partenaire objectif nom:Vagos quantite:5000`.
+3. **Rattache les commandes** : `/commande creer client:Vagos volume:… prix:…
+partenaire:Vagos`. Dès que la commande est **payée**, sa production fait monter
+   la barre du partenaire.
+4. Le tableau **Objectifs partenariats** (salon `partenariats`) se met à jour en
+   direct ; ✅ quand l'objectif est atteint.
 
 ---
 
