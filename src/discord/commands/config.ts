@@ -30,6 +30,7 @@ const CHANNEL_MAP = [
   { opt: 'developpement', field: 'channelCompanyBoard' },
   { opt: 'commandes', field: 'channelOrders' },
   { opt: 'avis', field: 'channelReviews' },
+  { opt: 'partenariats', field: 'channelPartnerships' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -95,6 +96,12 @@ export const configCommand: SlashCommand = {
           o
             .setName('avis')
             .setDescription("Salon public 'avis clients'")
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('partenariats')
+            .setDescription("Salon employe 'objectifs partenariats'")
             .addChannelTypes(ChannelType.GuildText),
         ),
     )

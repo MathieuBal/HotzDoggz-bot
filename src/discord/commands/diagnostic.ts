@@ -150,6 +150,11 @@ export const diagnosticCommand: SlashCommand = {
       ]),
       channelLine(guild, 'Commandes (direction)', config.channelOrders, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Avis clients (public)', config.channelReviews, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Partenariats (employes)', config.channelPartnerships, [
+        VIEW,
+        SEND,
+        EMBED,
+      ]),
     ]);
 
     // Tarifs de grade
@@ -188,6 +193,12 @@ export const diagnosticCommand: SlashCommand = {
       ),
       messageLine(guild, 'Commandes a realiser', config.channelOrders, config.msgOrdersBoard),
       messageLine(guild, 'Bandeau avis clients', config.channelReviews, config.msgReviewBoard),
+      messageLine(
+        guild,
+        'Objectifs partenariats',
+        config.channelPartnerships ?? config.channelCompanyBoard ?? config.channelWeeklyBoard,
+        config.msgPartnershipBoard,
+      ),
     ]);
 
     // Semaine comptable ouverte

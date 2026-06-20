@@ -3,6 +3,7 @@ import type { ClosureSummary } from '../accounting/closureService.js';
 import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
 import type { CompanyBoardData } from './companyBoard.js';
 import type { OrderSummary } from '../orders/orderService.js';
+import type { PartnerProgress } from '../partners/partnerService.js';
 import type { PayrollLine } from '../payroll/payrollService.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
@@ -194,6 +195,38 @@ export function buildOrdersBoard(orders: readonly OrderSummary[], timezone: stri
     .setColor(0x2e86de)
     .setDescription(description)
     .setFooter({ text: 'Mis à jour en direct · /commande pour gérer' })
+    .setTimestamp(new Date());
+}
+
+/** Barre de progression textuelle (pure, testable). Ex. 52 % → █████░░░░░. */
+export function progressBar(current: number, target: number, width = 10): string {
+  if (target <= 0) return '░'.repeat(width);
+  const ratio = Math.max(0, Math.min(1, current / target));
+  const filled = Math.round(ratio * width);
+  return '█'.repeat(filled) + '░'.repeat(width - filled);
+}
+
+/** Tableau "Objectifs partenariats" (cote employes, live). */
+export function buildPartnershipBoard(rows: readonly PartnerProgress[]): EmbedBuilder {
+  const lines = rows
+    .map((r) => {
+      if (r.target === null) {
+        return `🤝 **${r.name}** — ${qty(r.delivered)} u livrées _(pas d'objectif)_`;
+      }
+      const pct = r.target > 0 ? Math.round((r.delivered / r.target) * 100) : 0;
+      const mark = r.reached ? ' ✅' : '';
+      return (
+        `🤝 **${r.name}**${mark}\n` +
+        `${progressBar(r.delivered, r.target)} ${qty(r.delivered)}/${qty(r.target)} u (${pct} %)`
+      );
+    })
+    .join('\n\n');
+
+  return new EmbedBuilder()
+    .setTitle('🤝 Objectifs partenariats')
+    .setColor(0x9b59b6)
+    .setDescription(rows.length > 0 ? lines : '_Aucun partenaire pour le moment._')
+    .setFooter({ text: 'Mis à jour en direct' })
     .setTimestamp(new Date());
 }
 
