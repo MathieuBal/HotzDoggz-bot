@@ -8,10 +8,10 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 
 ## 👥 Pour tous les employés
 
-| Commande    | À quoi ça sert                                                                 |
-| ----------- | ------------------------------------------------------------------------------ |
+| Commande    | À quoi ça sert                                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/vendre`   | Déclarer une vente PNJ. L'employé donne la quantité + 2 captures (coffre plein, coffre vide) ; le bot crée le post au bon format et l'envoie en vérification. |
-| `/macompta` | Voir sa propre production de la semaine, son salaire provisoire et son écart au meilleur employé (motivation). |
+| `/macompta` | Voir sa propre production de la semaine, son salaire provisoire et son écart au meilleur employé (motivation).                                                |
 
 ---
 
@@ -19,48 +19,48 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 
 ### Commandes client (les vraies commandes de joueurs)
 
-| Commande                | À quoi ça sert                                                        |
-| ----------------------- | --------------------------------------------------------------------- |
-| `/commande creer`       | Enregistrer une commande négociée : client, volume, prix, échéance.   |
-| `/commande contribuer`  | Noter la production d'un employé sur la commande (+ 2 preuves). Ses unités comptent dans son salaire et son classement. |
-| `/commande livrer`      | Marquer la commande comme livrée au client (en attente de paiement).  |
-| `/commande payer`       | Encaisser (+ preuve de paiement) → le prix rejoint le chiffre d'affaires de la semaine. |
-| `/commande voir`        | Afficher l'état d'une commande (progression, contributeurs).          |
-| `/commande annuler`     | Annuler une commande (tant qu'elle n'est pas payée).                  |
+| Commande               | À quoi ça sert                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `/commande creer`      | Enregistrer une commande négociée : client, volume, prix, échéance.                                                     |
+| `/commande contribuer` | Noter la production d'un employé sur la commande (+ 2 preuves). Ses unités comptent dans son salaire et son classement. |
+| `/commande livrer`     | Marquer la commande comme livrée au client (en attente de paiement).                                                    |
+| `/commande payer`      | Encaisser (+ preuve de paiement) → le prix rejoint le chiffre d'affaires de la semaine.                                 |
+| `/commande voir`       | Afficher l'état d'une commande (progression, contributeurs).                                                            |
+| `/commande annuler`    | Annuler une commande (tant qu'elle n'est pas payée).                                                                    |
 
 ### Comptabilité de la semaine
 
-| Commande                  | À quoi ça sert                                                      |
-| ------------------------- | ------------------------------------------------------------------- |
-| `/semaine ouvrir`         | Démarrer une nouvelle semaine comptable.                            |
-| `/semaine voir`           | Voir le rapport de la semaine en cours (CA, salaires, classement).  |
+| Commande                  | À quoi ça sert                                                                     |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `/semaine ouvrir`         | Démarrer une nouvelle semaine comptable.                                           |
+| `/semaine voir`           | Voir le rapport de la semaine en cours (CA, salaires, classement).                 |
 | `/semaine cloturer`       | Clôturer la semaine : fige les chiffres, crée les fiches de paie, publie le bilan. |
-| `/semaine cloturer-force` | Clôturer même s'il reste des ventes en attente (Directeur, avec motif). |
-| `/semaine reset`          | Effacer la semaine en cours (⚠️ pour les tests uniquement).         |
+| `/semaine cloturer-force` | Clôturer même s'il reste des ventes en attente (Directeur, avec motif).            |
+| `/semaine reset`          | Effacer la semaine en cours (⚠️ pour les tests uniquement).                        |
 
 ### Paies
 
-| Commande               | À quoi ça sert                                              |
-| ---------------------- | ----------------------------------------------------------- |
-| `/paie voir`           | Voir les paies de la dernière semaine clôturée.             |
-| `/paie marquer-payee`  | Marquer un employé comme payé (une fois l'argent versé en jeu). |
+| Commande              | À quoi ça sert                                                  |
+| --------------------- | --------------------------------------------------------------- |
+| `/paie voir`          | Voir les paies de la dernière semaine clôturée.                 |
+| `/paie marquer-payee` | Marquer un employé comme payé (une fois l'argent versé en jeu). |
 
 ### Gestion des employés
 
-| Commande            | À quoi ça sert                                              |
-| ------------------- | ----------------------------------------------------------- |
+| Commande            | À quoi ça sert                                               |
+| ------------------- | ------------------------------------------------------------ |
 | `/employe associer` | Lier un membre Discord à son casier (nom RP + salon casier). |
 | `/employe archiver` | Archiver un employé qui quitte (garde son historique).       |
 
 ### Outils & réglages
 
-| Commande              | À quoi ça sert                                                  |
-| --------------------- | --------------------------------------------------------------- |
-| `/export semaine`     | Exporter ventes + paies en fichiers (CSV) pour archivage.       |
-| `/tableau publier`    | Forcer la (re)publication des tableaux permanents.              |
-| `/hotzdogz diagnostic`| Vérifier que tout est bien réglé (rôles, salons, permissions).  |
-| `/config roles`       | Lier les rôles de grade et de direction.                        |
-| `/config salons`      | Lier les salons utilisés par le bot.                            |
+| Commande               | À quoi ça sert                                                 |
+| ---------------------- | -------------------------------------------------------------- |
+| `/export semaine`      | Exporter ventes + paies en fichiers (CSV) pour archivage.      |
+| `/tableau publier`     | Forcer la (re)publication des tableaux permanents.             |
+| `/hotzdogz diagnostic` | Vérifier que tout est bien réglé (rôles, salons, permissions). |
+| `/config roles`        | Lier les rôles de grade et de direction.                       |
+| `/config salons`       | Lier les salons utilisés par le bot.                           |
 
 ---
 
@@ -74,6 +74,15 @@ La direction la traite avec des **boutons** sur la fiche :
 - **Valider** — j'accepte (je saisis la quantité validée + une note).
 - **Refuser** — je rejette (motif obligatoire).
 - **Corriger** — ajuster une vente déjà validée avant la clôture.
+
+---
+
+## ⭐ Avis clients (salon public, sans commande)
+
+Dans le salon `avis-clients`, un bouton **« Laisser un avis »** permet à
+n'importe qui de noter le resto (1 à 5 ⭐ + commentaire, et qui l'a servi). Le bot
+affiche les avis et la **note moyenne**. Pour retirer un avis déplacé, il suffit
+de **supprimer son message** : la moyenne se recalcule toute seule.
 
 ---
 

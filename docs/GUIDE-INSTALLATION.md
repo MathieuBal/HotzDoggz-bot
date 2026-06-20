@@ -44,15 +44,22 @@ avec :
 > ⚠️ Sur le **Forum `controle-des-ventes`**, NE COCHE PAS « Obliger à choisir un
 > tag pour publier » (sinon le bot ne peut pas créer les fiches).
 
-Et **un salon côté employés** (catégorie visible par toute l'équipe + le bot) :
+Et des **salons côté public / employés** (visibles par l'équipe — et tout le
+serveur pour `avis-clients`) :
 
 | Salon           | Type  | Rôle dans le bot                                               |
 | --------------- | ----- | -------------------------------------------------------------- |
 | `developpement` | Texte | Tableau « Développement de l'entreprise » (croissance, public) |
+| `avis-clients`  | Texte | Avis clients (bouton « Laisser un avis » + note moyenne)       |
 
-> 💡 Ce salon ne montre que la croissance (ventes, CA, nouveaux, promotions,
-> top vendeurs) — **jamais** les marges ni les salaires/primes de direction. Le
-> bot n'a besoin que d'y **voir + écrire + intégrer des liens**.
+> 💡 `developpement` ne montre que la croissance (ventes, CA, nouveaux,
+> promotions, top vendeurs) — **jamais** les marges ni les salaires/primes de
+> direction.
+>
+> 💡 `avis-clients` est **public** : tout le monde peut cliquer pour laisser un
+> avis. Pour modérer, il suffit à la direction de **supprimer le message** d'un
+> avis déplacé (le bot recalcule la moyenne tout seul). Donne au bot **Gérer les
+> messages** sur ce salon pour qu'il garde le bandeau en bas.
 
 ### 1.3 Les casiers employés (Forums privés)
 
@@ -157,12 +164,12 @@ Dans ton serveur (les réponses sont privées) :
    ```
    /config salons controle:#controle-des-ventes comptabilite:#comptabilite
            paies:#paies logs:#logs-et-archives tableau:#tableau-de-bord-hebdo
-           developpement:#developpement commandes:#commandes
+           developpement:#developpement commandes:#commandes avis:#avis-clients
    ```
 
-   (`developpement` est le salon employés du tableau de croissance ; si tu ne le
-   renseignes pas, ce tableau retombe dans `tableau-de-bord-hebdo`. `commandes`
-   accueille le tableau des commandes client à réaliser, côté direction.)
+   (`developpement` = tableau de croissance employés ; `commandes` = commandes
+   client côté direction ; `avis` = salon public des avis clients. Tu peux n'en
+   renseigner qu'une partie.)
 
 3. **Associer un employé à son casier** :
 
@@ -237,6 +244,19 @@ Pour les vraies commandes de joueurs/orgs (le client ouvre un ticket, la
 
 ---
 
+## 6.ter Avis clients (salon public)
+
+Dans le salon `avis-clients`, le bot affiche un **bandeau** avec la **note
+moyenne** et un bouton **« Laisser un avis »**. N'importe qui clique → un petit
+formulaire (note /5, commentaire, employé qui l'a servi) → le bot publie une
+**carte d'avis** signée et met à jour la moyenne.
+
+- **Anti-spam** : 1 avis par personne toutes les 24 h.
+- **Modération** : pour retirer un avis, la direction **supprime simplement la
+  carte** ; la moyenne se recalcule automatiquement.
+
+---
+
 ## 7. Permissions du bot par salon (récap)
 
 | Salon                       | Permissions du bot                                                           |
@@ -246,6 +266,7 @@ Pour les vraies commandes de joueurs/orgs (le client ouvre un ticket, la
 | Salons texte (compta, etc.) | Voir, Envoyer des messages, Embed, Joindre des fichiers                      |
 | `developpement` (employés)  | Voir, Envoyer des messages, Embed                                            |
 | `commandes` (direction)     | Voir, Envoyer des messages, Embed                                            |
+| `avis-clients` (public)     | Voir, Envoyer des messages, Embed, Gérer les messages                        |
 
 ---
 
@@ -285,7 +306,7 @@ Ces trois mécanismes tournent tout seuls une fois le bot lancé :
 ## 9. Checklist finale
 
 - [ ] Rôles créés et liés (`/config roles`)
-- [ ] Salons de gestion créés et liés (`/config salons`, dont `developpement` et `commandes`)
+- [ ] Salons créés et liés (`/config salons`, dont `developpement`, `commandes`, `avis-clients`)
 - [ ] Au moins un casier (Forum) avec les 6 tags, employé associé
 - [ ] `/hotzdogz diagnostic` tout au vert
 - [ ] `/semaine ouvrir` effectué, tableaux visibles

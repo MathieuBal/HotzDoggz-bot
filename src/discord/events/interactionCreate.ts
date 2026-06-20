@@ -1,9 +1,11 @@
 import { Events, MessageFlags, type Client, type Interaction } from 'discord.js';
 import { randomUUID } from 'node:crypto';
 import { logger } from '../../infrastructure/logging/logger.js';
+import { handleReviewButton } from '../buttons/reviewButtons.js';
 import { handleSaleButton } from '../buttons/saleButtons.js';
 import { handleWeekButton } from '../buttons/weekButtons.js';
 import { commands } from '../commands/index.js';
+import { handleReviewModal } from '../modals/reviewModalHandlers.js';
 import { handleSaleModal } from '../modals/saleModalHandlers.js';
 import { handleWeekModal } from '../modals/weekModalHandlers.js';
 
@@ -33,11 +35,13 @@ export function registerInteractionCreate(client: Client): void {
 
     try {
       if (interaction.isButton()) {
+        if (await handleReviewButton(interaction)) return;
         if (await handleSaleButton(interaction)) return;
         await handleWeekButton(interaction);
         return;
       }
       if (interaction.isModalSubmit()) {
+        if (await handleReviewModal(interaction)) return;
         if (await handleSaleModal(interaction)) return;
         await handleWeekModal(interaction);
         return;

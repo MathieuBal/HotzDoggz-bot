@@ -40,3 +40,17 @@ export const WeekFieldId = {
 
 /** Mot a saisir pour confirmer une cloture forcee (double confirmation). */
 export const FORCE_CLOSE_WORD = 'CLOTURER';
+
+export const ReviewButtonId = {
+  OPEN: 'review:open',
+} as const;
+
+export const ReviewModalId = {
+  SUBMIT: 'review:submit',
+} as const;
+
+export const ReviewFieldId = {
+  RATING: 'rating',
+  COMMENT: 'comment',
+  EMPLOYEE: 'employee',
+} as const;
