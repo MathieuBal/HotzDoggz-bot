@@ -8,12 +8,13 @@ import {
 } from 'discord.js';
 import { writeAudit } from '../../modules/audit/auditService.js';
 import { prisma } from '../../infrastructure/database/client.js';
+import { getOpenWeek } from '../../modules/accounting/accountingService.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import {
   createPartner,
   deactivatePartner,
-  deliveredToPartner,
+  deliveredToPartnerInWeek,
   listActivePartners,
   setPartnerObjective,
 } from '../../modules/partners/partnerService.js';
@@ -135,7 +136,7 @@ export const partenaireCommand: SlashCommand = {
       });
       scheduleDashboardUpdate(interaction.client, config.id);
       await interaction.editReply(
-        `🎯 Objectif de **${res.data.name}** fixé à ${nf.format(quantite)} produits.`,
+        `🎯 Objectif **hebdomadaire** de **${res.data.name}** fixé à ${nf.format(quantite)} produits/semaine.`,
       );
       return;
     }
@@ -158,20 +159,21 @@ export const partenaireCommand: SlashCommand = {
       await interaction.editReply('Aucun partenaire. Crée-en un avec `/partenaire creer`.');
       return;
     }
+    const week = await getOpenWeek(config.id);
     const lines: string[] = [];
     for (const p of partners) {
-      const delivered = await deliveredToPartner(p.id);
+      const delivered = week ? await deliveredToPartnerInWeek(p.id, week.id) : 0;
       const target = p.objectiveTarget;
       lines.push(
         target === null
-          ? `• **${p.name}** — ${nf.format(delivered)} u (pas d’objectif)`
-          : `• **${p.name}** — ${nf.format(delivered)}/${nf.format(target)} u${delivered >= target ? ' ✅' : ''}`,
+          ? `• **${p.name}** — ${nf.format(delivered)} u cette semaine (pas d’objectif)`
+          : `• **${p.name}** — ${nf.format(delivered)}/${nf.format(target)} u/sem${delivered >= target ? ' ✅' : ''}`,
       );
     }
     await interaction.editReply({
       embeds: [
         new EmbedBuilder()
-          .setTitle('🤝 Partenaires')
+          .setTitle('🤝 Partenaires (objectifs hebdomadaires)')
           .setColor(0x9b59b6)
           .setDescription(lines.join('\n')),
       ],

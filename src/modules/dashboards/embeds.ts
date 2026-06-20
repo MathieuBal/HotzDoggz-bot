@@ -211,7 +211,7 @@ export function buildPartnershipBoard(rows: readonly PartnerProgress[]): EmbedBu
   const lines = rows
     .map((r) => {
       if (r.target === null) {
-        return `🤝 **${r.name}** — ${qty(r.delivered)} u livrées _(pas d'objectif)_`;
+        return `🤝 **${r.name}** — ${qty(r.delivered)} u cette semaine _(pas d'objectif)_`;
       }
       const pct = r.target > 0 ? Math.round((r.delivered / r.target) * 100) : 0;
       const mark = r.reached ? ' ✅' : '';
@@ -223,10 +223,10 @@ export function buildPartnershipBoard(rows: readonly PartnerProgress[]): EmbedBu
     .join('\n\n');
 
   return new EmbedBuilder()
-    .setTitle('🤝 Objectifs partenariats')
+    .setTitle('🤝 Objectifs partenariats (cette semaine)')
     .setColor(0x9b59b6)
     .setDescription(rows.length > 0 ? lines : '_Aucun partenaire pour le moment._')
-    .setFooter({ text: 'Mis à jour en direct' })
+    .setFooter({ text: 'Objectif hebdomadaire — se réinitialise chaque semaine' })
     .setTimestamp(new Date());
 }
 

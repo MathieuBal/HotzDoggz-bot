@@ -66,12 +66,12 @@ export async function deactivatePartner(
   return { ok: true, data: updated };
 }
 
-/** Total livre a un partenaire = unites produites sur ses commandes payees. */
-export async function deliveredToPartner(partnerId: string): Promise<number> {
+/** Total livre a un partenaire SUR UNE SEMAINE (commandes payees de la semaine). */
+export async function deliveredToPartnerInWeek(partnerId: string, weekId: string): Promise<number> {
   const agg = await prisma.orderContribution.aggregate({
     where: {
       status: OrderContributionStatus.ACTIVE,
-      order: { partnerId, status: ClientOrderStatus.PAYEE },
+      order: { partnerId, status: ClientOrderStatus.PAYEE, weekId },
     },
     _sum: { quantity: true },
   });
@@ -80,17 +80,25 @@ export async function deliveredToPartner(partnerId: string): Promise<number> {
 
 export interface PartnerProgress {
   name: string;
-  target: number | null;
-  delivered: number;
+  target: number | null; // objectif hebdomadaire
+  delivered: number; // livre cette semaine
   reached: boolean;
 }
 
-/** Donnees du tableau d'objectifs : progression de chaque partenaire actif. */
+/**
+ * Donnees du tableau d'objectifs : progression HEBDOMADAIRE de chaque partenaire
+ * actif (contrat recurrent qui se reinitialise chaque semaine). Si aucune semaine
+ * n'est ouverte, la progression vaut 0.
+ */
 export async function getPartnershipBoardData(guildConfigId: string): Promise<PartnerProgress[]> {
+  const week = await prisma.accountingWeek.findFirst({
+    where: { guildConfigId, status: 'OPEN' },
+    select: { id: true },
+  });
   const partners = await listActivePartners(guildConfigId);
   const rows: PartnerProgress[] = [];
   for (const p of partners) {
-    const delivered = await deliveredToPartner(p.id);
+    const delivered = week ? await deliveredToPartnerInWeek(p.id, week.id) : 0;
     rows.push({
       name: p.name,
       target: p.objectiveTarget,
