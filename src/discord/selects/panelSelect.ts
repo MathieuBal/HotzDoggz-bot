@@ -3,7 +3,11 @@ import { getGuildConfigByGuildId } from '../../modules/employees/employeeService
 import { PanelEditValue, PanelSelectId } from '../components/ids.js';
 import {
   buildPanelMenuModal,
+  buildPanelMenuRemoveModal,
+  buildPanelOrderCreateModal,
   buildPanelPartenaireModal,
+  buildPanelPartnerCreateModal,
+  buildPanelPnjPriceModal,
   buildPanelSalaireModal,
 } from '../modals/panelModals.js';
 import { isDirectionMember } from '../permissions.js';
@@ -32,8 +36,20 @@ export async function handlePanelSelect(
     case PanelEditValue.MENU:
       await interaction.showModal(buildPanelMenuModal());
       return true;
+    case PanelEditValue.MENU_RETIRER:
+      await interaction.showModal(buildPanelMenuRemoveModal());
+      return true;
+    case PanelEditValue.PNJ_PRIX:
+      await interaction.showModal(buildPanelPnjPriceModal());
+      return true;
+    case PanelEditValue.PARTENAIRE_CREER:
+      await interaction.showModal(buildPanelPartnerCreateModal());
+      return true;
     case PanelEditValue.PARTENAIRE:
       await interaction.showModal(buildPanelPartenaireModal());
+      return true;
+    case PanelEditValue.COMMANDE_CREER:
+      await interaction.showModal(buildPanelOrderCreateModal());
       return true;
     default:
       await interaction.reply({ content: 'Option inconnue.', flags: ephemeral });

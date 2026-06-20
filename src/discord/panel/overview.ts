@@ -22,7 +22,7 @@ function clamp(value: string, max = 1024): string {
 
 /** Construit le message du panneau de gestion (vue d'ensemble + controles). */
 export async function buildPanelMessage(guildConfigId: string): Promise<BaseMessageOptions> {
-  const [snapshot, orders, partners, products, rates] = await Promise.all([
+  const [snapshot, orders, partners, products, rates, gconfig] = await Promise.all([
     getOpenWeekSnapshot(guildConfigId),
     listActiveOrders(guildConfigId),
     getPartnershipBoardData(guildConfigId),
@@ -31,6 +31,10 @@ export async function buildPanelMessage(guildConfigId: string): Promise<BaseMess
       where: { guildConfigId, validTo: null },
       select: { label: true, ratePerUnit: true },
       orderBy: { ratePerUnit: 'desc' },
+    }),
+    prisma.guildConfig.findUnique({
+      where: { id: guildConfigId },
+      select: { pnjUnitPrice: true },
     }),
   ]);
 
@@ -94,15 +98,25 @@ export async function buildPanelMessage(guildConfigId: string): Promise<BaseMess
     ),
   });
 
-  embed.setFooter({ text: 'Menu « Modifier » pour éditer · boutons pour les actions rapides' });
+  embed.addFields({
+    name: '💵 Prix de vente PNJ',
+    value: money(gconfig?.pnjUnitPrice ?? 0),
+    inline: true,
+  });
+
+  embed.setFooter({ text: 'Menu « Gérer » pour éditer/créer · boutons pour les actions' });
 
   const select = new StringSelectMenuBuilder()
     .setCustomId(PanelSelectId.EDIT)
-    .setPlaceholder('✏️ Modifier un élément…')
+    .setPlaceholder('⚙️ Gérer / modifier / créer…')
     .addOptions(
       { label: 'Salaire d’un grade', value: PanelEditValue.SALAIRE, emoji: '💰' },
-      { label: 'Menu (ajouter / prix)', value: PanelEditValue.MENU, emoji: '🍴' },
+      { label: 'Menu : ajouter / modifier un prix', value: PanelEditValue.MENU, emoji: '🍴' },
+      { label: 'Menu : retirer un produit', value: PanelEditValue.MENU_RETIRER, emoji: '🗑️' },
+      { label: 'Prix de vente PNJ', value: PanelEditValue.PNJ_PRIX, emoji: '💵' },
+      { label: 'Créer un partenaire', value: PanelEditValue.PARTENAIRE_CREER, emoji: '🆕' },
       { label: 'Objectif d’un partenaire', value: PanelEditValue.PARTENAIRE, emoji: '🤝' },
+      { label: 'Créer une commande client', value: PanelEditValue.COMMANDE_CREER, emoji: '📦' },
     );
 
   const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -112,6 +126,17 @@ export async function buildPanelMessage(guildConfigId: string): Promise<BaseMess
       .setEmoji('📅')
       .setStyle(ButtonStyle.Success)
       .setDisabled(snapshot !== null),
+    new ButtonBuilder()
+      .setCustomId(PanelButtonId.CLOSE_WEEK)
+      .setLabel('Clôturer la semaine')
+      .setEmoji('🔒')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(snapshot === null),
+    new ButtonBuilder()
+      .setCustomId(PanelButtonId.REFRESH_BOARDS)
+      .setLabel('Rafraîchir les tableaux')
+      .setEmoji('📊')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId(PanelButtonId.REFRESH)
       .setLabel('Rafraîchir')
