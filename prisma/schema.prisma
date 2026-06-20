@@ -155,6 +155,7 @@ model GuildConfig {
   clientOrders ClientOrder[]
   reviews      Review[]
   products     Product[]
+  directSales  DirectSale[]
 }
 
 /// Catalogue de produits vendus en main en main (CDC : menu). Prix de detail
@@ -172,6 +173,89 @@ model Product {
 
   @@unique([guildConfigId, name])
   @@index([guildConfigId, active])
+}
+
+// ── Ventes main en main (facture) ───────────────────────────────────────────
+
+/// Vente directe a un joueur (CDC : main en main). Produits du menu + photo de
+/// facture, validee par la direction (verif sur le PC in-game). Le salaire suit
+/// le grade (comme les commandes) ; le CA = somme des prix de detail figes.
+model DirectSale {
+  id            String          @id @default(cuid())
+  reference     String          @unique // VD-AAAA-NNNN
+  guildConfig   GuildConfig     @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  week          AccountingWeek? @relation(fields: [weekId], references: [id])
+  weekId        String?
+  employee      Employee        @relation(fields: [employeeId], references: [id])
+  employeeId    String
+
+  buyerName       String? // nom RP du client (optionnel)
+  threadId        String? @unique // post du casier (si declaree par casier)
+  controlThreadId String? @unique // fiche de controle
+
+  status SaleStatus @default(SOUMISE)
+
+  // Instantanes financiers (salaire = grade * quantite totale)
+  gradeSnapshot       String?
+  gradeRoleIdSnapshot String?
+  salaryRateSnapshot  Int?
+
+  // Controle d'integrite (preuve recyclee...)
+  riskLevel   SaleRisk @default(CLEAN)
+  riskReasons String?
+
+  declaredAt           DateTime
+  submittedAt          DateTime  @default(now())
+  controllerDiscordId  String?
+  validatedByDiscordId String?
+  validatedAt          DateTime?
+  verificationNote     String?
+  refusalReason        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines       DirectSaleLine[]
+  attachments DirectSaleAttachment[]
+
+  @@index([weekId, status])
+  @@index([employeeId, weekId])
+}
+
+/// Ligne d'une vente main en main : un produit, son prix de detail fige, la
+/// quantite declaree puis validee (ajustable par la direction).
+model DirectSaleLine {
+  id                String     @id @default(cuid())
+  directSale        DirectSale @relation(fields: [directSaleId], references: [id], onDelete: Cascade)
+  directSaleId      String
+  productId         String? // null si le produit a ete retire du menu depuis
+  productName       String // libelle fige
+  unitPrice         Int // prix de detail fige
+  declaredQuantity  Int
+  validatedQuantity Int?
+
+  @@index([directSaleId])
+}
+
+/// Preuve (facture) d'une vente main en main (copie durable, comme §5.3).
+model DirectSaleAttachment {
+  id                  String         @id @default(cuid())
+  directSale          DirectSale     @relation(fields: [directSaleId], references: [id], onDelete: Cascade)
+  directSaleId        String
+  type                AttachmentType
+  discordMessageId    String
+  discordAttachmentId String
+  fileName            String
+  size                Int
+  mimeType            String
+  sha256              String
+  storageKey          String
+  discordUrl          String?
+  createdAt           DateTime       @default(now())
+
+  @@index([directSaleId])
+  @@index([sha256])
 }
 
 /// Historique des tarifs salariaux par role (CDC §6.2 : instantanes financiers).
@@ -228,6 +312,7 @@ model Employee {
   gradeEvents        EmployeeGradeEvent[]
   orderContributions OrderContribution[]
   reviews            Review[]
+  directSales        DirectSale[]
 }
 
 /// Avis client (RP) laisse via un bouton dans le salon public. Note 1-5 + texte,
@@ -301,6 +386,7 @@ model AccountingWeek {
   payrolls     Payroll[]
   ledger       LedgerEntry[]
   clientOrders ClientOrder[]
+  directSales  DirectSale[]
 }
 
 // ── Commandes client ────────────────────────────────────────────────────────

@@ -81,5 +81,37 @@ export async function collectWeekReportInputs(db: Db, weekId: string): Promise<W
     }
   }
 
-  return { lines: [...saleLines, ...orderLines], extraRevenue };
+  // Ventes main en main validees : CA = somme des prix de detail figes ;
+  // salaire = grade * quantite totale. Meme principe (revenu via extraRevenue).
+  const directSales = await db.directSale.findMany({
+    where: { weekId, status: SaleStatus.VALIDEE },
+    select: {
+      employeeId: true,
+      salaryRateSnapshot: true,
+      gradeRoleIdSnapshot: true,
+      gradeSnapshot: true,
+      employee: { select: { nomRP: true } },
+      lines: { select: { validatedQuantity: true, unitPrice: true } },
+    },
+  });
+  const directLines: ValidatedSaleInput[] = [];
+  for (const ds of directSales) {
+    let totalQty = 0;
+    for (const l of ds.lines) {
+      const q = l.validatedQuantity ?? 0;
+      totalQty += q;
+      extraRevenue += q * l.unitPrice;
+    }
+    directLines.push({
+      employeeId: ds.employeeId,
+      nomRP: ds.employee.nomRP,
+      validatedQuantity: totalQty,
+      salaryRate: ds.salaryRateSnapshot ?? 0,
+      pnjUnitPrice: 0,
+      gradeRoleId: ds.gradeRoleIdSnapshot,
+      gradeLabel: ds.gradeSnapshot,
+    });
+  }
+
+  return { lines: [...saleLines, ...orderLines, ...directLines], extraRevenue };
 }

@@ -142,8 +142,12 @@ export async function closeWeek(
       ],
     });
 
-    // Integre les ventes validees a la paie.
+    // Integre les ventes validees a la paie (PNJ + main en main).
     await tx.sale.updateMany({
+      where: { weekId: week.id, status: SaleStatus.VALIDEE },
+      data: { status: SaleStatus.INTEGREE_A_LA_PAIE },
+    });
+    await tx.directSale.updateMany({
       where: { weekId: week.id, status: SaleStatus.VALIDEE },
       data: { status: SaleStatus.INTEGREE_A_LA_PAIE },
     });
