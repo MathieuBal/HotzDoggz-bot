@@ -16,6 +16,7 @@ import { partenaireCommand } from './partenaire.js';
 import { semaineCommand } from './semaine.js';
 import { tableauCommand } from './tableau.js';
 import { vendreCommand } from './vendre.js';
+import { vitrineCommand } from './vitrine.js';
 import type { SlashCommand } from './types.js';
 
 const all: SlashCommand[] = [
@@ -36,6 +37,7 @@ const all: SlashCommand[] = [
   semaineCommand,
   tableauCommand,
   vendreCommand,
+  vitrineCommand,
 ];
 
 /** Registre nom -> commande, consulte par le handler interactionCreate. */

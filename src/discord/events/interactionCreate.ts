@@ -19,6 +19,7 @@ import {
   handleVerificationButton,
   handleVerificationModal,
 } from '../verification/verificationHandlers.js';
+import { handleVitrineModal } from '../vitrine/vitrineHandlers.js';
 
 async function notifyError(interaction: Interaction, correlationId: string): Promise<void> {
   if (!interaction.isRepliable()) return;
@@ -64,6 +65,7 @@ export function registerInteractionCreate(client: Client): void {
       }
       if (interaction.isModalSubmit()) {
         if (await handleVerificationModal(interaction)) return;
+        if (await handleVitrineModal(interaction)) return;
         if (await handlePanelModal(interaction)) return;
         if (await handleReviewModal(interaction)) return;
         if (await handleDirectSaleModal(interaction)) return;

@@ -14,6 +14,7 @@ import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { publishVerification } from '../verification/verificationBoard.js';
 import { publishMenuBoard } from '../menu/menuBoard.js';
+import { publishEventBoard, publishWelcomeBoard } from '../vitrine/vitrineBoards.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { renderWelcomeMessage } from '../../modules/welcome/welcomeMessage.js';
 import type { SlashCommand } from './types.js';
@@ -43,6 +44,7 @@ const CHANNEL_MAP = [
   { opt: 'accueil', field: 'channelWelcome' },
   { opt: 'reglement', field: 'channelReglement' },
   { opt: 'menu', field: 'channelMenuBoard' },
+  { opt: 'evenement', field: 'channelEvent' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -147,6 +149,12 @@ export const configCommand: SlashCommand = {
           o
             .setName('menu')
             .setDescription('Salon public menu & tarifs (maintenu par le bot)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('evenement')
+            .setDescription('Salon événement (vitrine maintenue par le bot)')
             .addChannelTypes(ChannelType.GuildText),
         ),
     )
@@ -354,6 +362,14 @@ export const configCommand: SlashCommand = {
       if (touched.has('channelMenuBoard')) {
         tasks.push(publishMenuBoard(interaction.client, config.id));
         published.push('menu & tarifs');
+      }
+      if (touched.has('channelWelcome')) {
+        tasks.push(publishWelcomeBoard(interaction.client, config.id));
+        published.push('vitrine bienvenue');
+      }
+      if (touched.has('channelEvent')) {
+        tasks.push(publishEventBoard(interaction.client, config.id));
+        published.push('vitrine événement');
       }
       const results = await Promise.allSettled(tasks);
       const failed = results.filter((r) => r.status === 'rejected');

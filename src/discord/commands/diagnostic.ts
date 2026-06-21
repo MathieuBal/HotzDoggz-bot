@@ -160,6 +160,7 @@ export const diagnosticCommand: SlashCommand = {
       channelLine(guild, 'Accueil (arrivants)', config.channelWelcome, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Règlement (sas)', config.channelReglement, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Menu & tarifs (public)', config.channelMenuBoard, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Événement (vitrine)', config.channelEvent, [VIEW, SEND, EMBED]),
     ]);
 
     // Tarifs de grade
@@ -206,6 +207,8 @@ export const diagnosticCommand: SlashCommand = {
       ),
       messageLine(guild, 'Sas règlement (bouton)', config.channelReglement, config.msgVerification),
       messageLine(guild, 'Menu & tarifs (public)', config.channelMenuBoard, config.msgMenuBoard),
+      messageLine(guild, 'Vitrine bienvenue', config.channelWelcome, config.msgWelcomeBoard),
+      messageLine(guild, 'Vitrine événement', config.channelEvent, config.msgEventBoard),
     ]);
 
     // Semaine comptable ouverte

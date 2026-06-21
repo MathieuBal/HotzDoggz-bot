@@ -67,6 +67,15 @@ export const VerificationFieldId = {
   NOM_RP: 'nom_rp',
 } as const;
 
+export const VitrineModalId = {
+  WELCOME: 'vitrine:welcome:modal',
+  EVENT: 'vitrine:event:modal',
+} as const;
+
+export const VitrineFieldId = {
+  TEXT: 'text',
+} as const;
+
 export const DirectSaleButtonId = {
   TAKE: 'direct:take',
   VALIDATE: 'direct:validate',
