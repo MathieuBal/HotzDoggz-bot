@@ -129,6 +129,7 @@ export const diagnosticCommand: SlashCommand = {
       roleLine(guild, 'Experimente', config.roleExperimente),
       roleLine(guild, 'Novice', config.roleNovice),
       roleLine(guild, 'Stagiaire', config.roleStagiaire),
+      roleLine(guild, 'Client (visiteurs)', config.roleClient),
     ];
 
     // Salons
@@ -157,6 +158,7 @@ export const diagnosticCommand: SlashCommand = {
       ]),
       channelLine(guild, 'Guide direction', config.channelGuideDirection, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Accueil (arrivants)', config.channelWelcome, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Règlement (sas)', config.channelReglement, [VIEW, SEND, EMBED]),
     ]);
 
     // Tarifs de grade
@@ -201,6 +203,7 @@ export const diagnosticCommand: SlashCommand = {
         config.channelPartnerships ?? config.channelCompanyBoard ?? config.channelWeeklyBoard,
         config.msgPartnershipBoard,
       ),
+      messageLine(guild, 'Sas règlement (bouton)', config.channelReglement, config.msgVerification),
     ]);
 
     // Semaine comptable ouverte

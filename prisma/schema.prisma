@@ -116,6 +116,7 @@ model GuildConfig {
   roleExperimente String?
   roleNovice      String?
   roleStagiaire   String?
+  roleClient      String? // role attribue aux visiteurs ayant accepte le reglement
 
   // Salons (IDs Discord)
   channelControl        String? // Forum prive de controle (1 fiche / vente)
@@ -130,6 +131,7 @@ model GuildConfig {
   channelGuideDirection String? // salon tuto direction (guide des commandes)
   channelGuideEmployee  String? // salon tuto employes (process)
   channelWelcome        String? // salon d'accueil des nouveaux arrivants
+  channelReglement      String? // salon reglement (porte le bouton de validation)
 
   // Message d'accueil RP personnalisable ({membre} = mention du nouveau)
   welcomeMessage String?
@@ -145,6 +147,7 @@ model GuildConfig {
   msgPartnershipBoard String? // tableau "objectifs partenariats" (cote employes)
   msgGuideDirection   String? // guide tuto direction (permanent)
   msgGuideEmployee    String? // guide tuto employes (permanent)
+  msgVerification     String? // message permanent "valider le reglement" (bouton)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)

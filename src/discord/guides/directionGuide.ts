@@ -80,8 +80,11 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
     .setTitle('⚙️ Réglages & automatismes')
     .setColor(0x7f8c8d)
     .setDescription(
-      '• **`/config roles`** / **`salons`** · **`/hotzdogz diagnostic`** · **`/tableau publier`**.\n\n' +
-        '🔔 **Le bot fait seul** : contrôle anti-fraude (preuves recyclées), relances ' +
+      '• **`/config roles`** (dont rôle **Client**) / **`salons`** (dont **accueil** & ' +
+        '**règlement**) · **`/config accueil`** (message de bienvenue) · ' +
+        '**`/hotzdogz diagnostic`** · **`/tableau publier`**.\n\n' +
+        '🔔 **Le bot fait seul** : accueil des arrivants + sas d’accès (bouton règlement → ' +
+        'rôle Client + pseudo RP), contrôle anti-fraude (preuves recyclées), relances ' +
         '(validations en attente, commandes livrées non payées, clôture du dimanche), ' +
         'fiches de paie en DM à la clôture, tableaux en direct, avis clients.',
     )

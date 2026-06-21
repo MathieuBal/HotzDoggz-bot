@@ -55,6 +55,18 @@ export const ReviewFieldId = {
   EMPLOYEE: 'employee',
 } as const;
 
+export const VerificationButtonId = {
+  ACCEPT: 'verify:accept',
+} as const;
+
+export const VerificationModalId = {
+  SUBMIT: 'verify:submit',
+} as const;
+
+export const VerificationFieldId = {
+  NOM_RP: 'nom_rp',
+} as const;
+
 export const DirectSaleButtonId = {
   TAKE: 'direct:take',
   VALIDATE: 'direct:validate',

@@ -15,6 +15,10 @@ import { handleSaleModal } from '../modals/saleModalHandlers.js';
 import { handleWeekModal } from '../modals/weekModalHandlers.js';
 import { handlePanelPick } from '../panel/pickers.js';
 import { handlePanelSelect } from '../selects/panelSelect.js';
+import {
+  handleVerificationButton,
+  handleVerificationModal,
+} from '../verification/verificationHandlers.js';
 
 async function notifyError(interaction: Interaction, correlationId: string): Promise<void> {
   if (!interaction.isRepliable()) return;
@@ -44,6 +48,7 @@ export function registerInteractionCreate(client: Client): void {
 
     try {
       if (interaction.isButton()) {
+        if (await handleVerificationButton(interaction)) return;
         if (await handlePanelConfirmButton(interaction)) return;
         if (await handlePanelButton(interaction)) return;
         if (await handleReviewButton(interaction)) return;
@@ -58,6 +63,7 @@ export function registerInteractionCreate(client: Client): void {
         return;
       }
       if (interaction.isModalSubmit()) {
+        if (await handleVerificationModal(interaction)) return;
         if (await handlePanelModal(interaction)) return;
         if (await handleReviewModal(interaction)) return;
         if (await handleDirectSaleModal(interaction)) return;
