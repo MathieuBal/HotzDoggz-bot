@@ -129,6 +129,10 @@ model GuildConfig {
   channelPartnerships   String? // salon employe "objectifs partenariats" (live)
   channelGuideDirection String? // salon tuto direction (guide des commandes)
   channelGuideEmployee  String? // salon tuto employes (process)
+  channelWelcome        String? // salon d'accueil des nouveaux arrivants
+
+  // Message d'accueil RP personnalisable ({membre} = mention du nouveau)
+  welcomeMessage String?
 
   // Messages permanents edites par le bot (CDC §5.5 / §7.4)
   msgWeeklyEmployees  String?

@@ -1,5 +1,6 @@
 import { Events, type Client } from 'discord.js';
 import { logger } from '../../infrastructure/logging/logger.js';
+import { registerGuildMemberAdd } from './guildMemberAdd.js';
 import { registerInteractionCreate } from './interactionCreate.js';
 import { registerMessageCreate } from './messageCreate.js';
 import { registerMessageDelete } from './messageDelete.js';
@@ -12,6 +13,7 @@ import { registerThreadUpdate } from './threadUpdate.js';
 export function registerEvents(client: Client): void {
   registerReady(client);
   registerInteractionCreate(client);
+  registerGuildMemberAdd(client);
   registerThreadCreate(client);
   registerThreadUpdate(client);
   registerMessageCreate(client);

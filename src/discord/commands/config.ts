@@ -13,6 +13,7 @@ import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { logger } from '../../infrastructure/logging/logger.js';
+import { renderWelcomeMessage } from '../../modules/welcome/welcomeMessage.js';
 import type { SlashCommand } from './types.js';
 
 // Liaison option -> champ GuildConfig + libelle/tarif du grade.
@@ -37,6 +38,7 @@ const CHANNEL_MAP = [
   { opt: 'partenariats', field: 'channelPartnerships' },
   { opt: 'guide_direction', field: 'channelGuideDirection' },
   { opt: 'guide_equipe', field: 'channelGuideEmployee' },
+  { opt: 'accueil', field: 'channelWelcome' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -121,6 +123,29 @@ export const configCommand: SlashCommand = {
             .setName('guide_equipe')
             .setDescription('Salon tuto employes (process)')
             .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('accueil')
+            .setDescription('Salon d’accueil des nouveaux arrivants')
+            .addChannelTypes(ChannelType.GuildText),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('accueil')
+        .setDescription('Personnaliser le message de bienvenue (placeholders {membre} {serveur})')
+        .addStringOption((o) =>
+          o
+            .setName('message')
+            .setDescription('Texte RP. Laisse vide pour voir/réinitialiser. {membre} = mention.')
+            .setRequired(false),
+        )
+        .addBooleanOption((o) =>
+          o
+            .setName('defaut')
+            .setDescription('Remettre le message d’accueil par défaut')
+            .setRequired(false),
         ),
     )
     .toJSON(),
@@ -142,6 +167,66 @@ export const configCommand: SlashCommand = {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const guildId = interaction.guild.id;
     const sub = interaction.options.getSubcommand();
+
+    if (sub === 'accueil') {
+      const message = interaction.options.getString('message')?.trim() || null;
+      const reset = interaction.options.getBoolean('defaut') ?? false;
+
+      // Sans argument : on affiche un apercu du message courant.
+      if (!message && !reset) {
+        const current = await prisma.guildConfig.findUnique({
+          where: { guildId },
+          select: { welcomeMessage: true, channelWelcome: true },
+        });
+        const preview = renderWelcomeMessage(current?.welcomeMessage ?? null, {
+          mention: `@${interaction.user.username}`,
+          guildName: interaction.guild.name,
+        });
+        const channelNote = current?.channelWelcome
+          ? `Salon d’accueil : <#${current.channelWelcome}>`
+          : '⚠️ Aucun salon d’accueil lié (`/config salons accueil:#…`).';
+        await interaction.editReply({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle('Message d’accueil')
+              .setColor(0xff7a00)
+              .setDescription(preview)
+              .setFooter({
+                text: 'Placeholders : {membre}, {serveur}. Modifie avec /config accueil message:…',
+              }),
+          ],
+          content: channelNote,
+        });
+        return;
+      }
+
+      const newValue = reset ? null : message;
+      const config = await prisma.guildConfig.upsert({
+        where: { guildId },
+        create: { guildId, timezone: 'Europe/Paris', welcomeMessage: newValue },
+        update: { welcomeMessage: newValue },
+      });
+      await writeAudit(prisma, {
+        guildConfigId: config.id,
+        action: 'CONFIG_WELCOME_SET',
+        authorDiscordId: interaction.user.id,
+        after: { welcomeMessage: newValue ?? '(défaut)' },
+      });
+      const shown = renderWelcomeMessage(newValue, {
+        mention: `@${interaction.user.username}`,
+        guildName: interaction.guild.name,
+      });
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(reset ? 'Message d’accueil réinitialisé' : 'Message d’accueil mis à jour')
+            .setColor(0x2ecc71)
+            .setDescription(shown)
+            .setFooter({ text: 'Aperçu (la mention pingera vraiment le nouvel arrivant)' }),
+        ],
+      });
+      return;
+    }
 
     if (sub === 'roles') {
       const fields: Record<string, string> = {};
