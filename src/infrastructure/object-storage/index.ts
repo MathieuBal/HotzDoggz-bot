@@ -17,6 +17,8 @@ export interface ObjectStorage {
   put(input: PutObjectInput): Promise<{ key: string }>;
   getSignedUrl(key: string, expiresInSeconds?: number): Promise<string>;
   exists(key: string): Promise<boolean>;
+  /** Relit les octets d'un objet (ex. ré-attacher une image au menu). */
+  get(key: string): Promise<Buffer>;
 }
 
 /** Implementation par defaut tant que le stockage n'est pas configure (Phase 2). */
@@ -31,6 +33,9 @@ export class UnconfiguredObjectStorage implements ObjectStorage {
     return this.fail();
   }
   exists(): Promise<boolean> {
+    return this.fail();
+  }
+  get(): Promise<Buffer> {
     return this.fail();
   }
 }

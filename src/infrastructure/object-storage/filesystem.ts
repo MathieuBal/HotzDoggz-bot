@@ -52,9 +52,14 @@ export class FilesystemObjectStorage implements ObjectStorage {
     }
   }
 
-  /** Utilitaire de lecture (tests / verification d'integrite). */
-  async read(key: string): Promise<Buffer> {
+  /** Relit les octets d'un objet stocke. */
+  async get(key: string): Promise<Buffer> {
     return readFile(this.pathFor(key));
+  }
+
+  /** Alias historique (tests / verification d'integrite). */
+  async read(key: string): Promise<Buffer> {
+    return this.get(key);
   }
 }
 

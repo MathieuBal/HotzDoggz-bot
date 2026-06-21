@@ -132,6 +132,7 @@ model GuildConfig {
   channelGuideEmployee  String? // salon tuto employes (process)
   channelWelcome        String? // salon d'accueil des nouveaux arrivants
   channelReglement      String? // salon reglement (porte le bouton de validation)
+  channelMenuBoard      String? // salon public "menu et tarifs" (maintenu par le bot)
 
   // Message d'accueil RP personnalisable ({membre} = mention du nouveau)
   welcomeMessage String?
@@ -148,6 +149,7 @@ model GuildConfig {
   msgGuideDirection   String? // guide tuto direction (permanent)
   msgGuideEmployee    String? // guide tuto employes (permanent)
   msgVerification     String? // message permanent "valider le reglement" (bouton)
+  msgMenuBoard        String? // menu public "menu et tarifs" (permanent)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
@@ -199,6 +201,9 @@ model Product {
   guildConfigId String
   name          String
   retailPrice   Int // prix de detail au joueur (entier, $)
+  description   String? // courte accroche affichee au menu public
+  imageKey      String? // cle de stockage de la photo du produit
+  imageName     String? // nom de fichier d'origine (extension pour l'affichage)
   active        Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

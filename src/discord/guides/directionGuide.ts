@@ -43,6 +43,8 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
     .setColor(0xe67e22)
     .setDescription(
       '• **`/menu ajouter`** / **`retirer`** / **`voir`** — produits & prix de détail.\n' +
+        '• **`/menu image`** — photo (+ accroche) d’un produit : alimente le **menu public** ' +
+        '`menu & tarifs`, tenu à jour par le bot (`/config salons menu:#…`).\n' +
         '• **`/facture`** (employés) — vente main en main (produits + photo de facture).\n' +
         '• ✅ Vérification : sur la **fiche** dans `controle-des-ventes`, boutons ' +
         '**Prendre en charge → Valider** (quantité par produit) **/ Refuser**.',

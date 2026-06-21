@@ -4,6 +4,7 @@ import { writeAudit } from '../../modules/audit/auditService.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import { archiveEmployee } from '../../modules/employees/employeeService.js';
 import { deactivateProduct, upsertProduct } from '../../modules/products/productService.js';
+import { publishMenuBoard } from '../menu/menuBoard.js';
 import { PanelConfirmId } from '../components/ids.js';
 import { takePending, type PendingAction } from '../panel/pending.js';
 
@@ -29,6 +30,7 @@ async function apply(
         after: { name: res.data.name, retailPrice: res.data.retailPrice },
       });
       scheduleDashboardUpdate(interaction.client, action.guildConfigId);
+      await publishMenuBoard(interaction.client, action.guildConfigId).catch(() => undefined);
       const change =
         action.oldPrice === null
           ? 'ajouté au menu'
@@ -61,6 +63,7 @@ async function apply(
         entityId: res.data.id,
       });
       scheduleDashboardUpdate(interaction.client, action.guildConfigId);
+      await publishMenuBoard(interaction.client, action.guildConfigId).catch(() => undefined);
       return result(`🗑️ **${res.data.name}** retiré du menu.`);
     }
     case 'archive': {

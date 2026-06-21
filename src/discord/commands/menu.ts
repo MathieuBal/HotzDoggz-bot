@@ -1,13 +1,23 @@
 import {
+  AttachmentType,
+} from '@prisma/client';
+import {
   EmbedBuilder,
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  type AutocompleteInteraction,
   type ChatInputCommandInteraction,
 } from 'discord.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
-import { findActiveProductByName, listActiveProducts } from '../../modules/products/productService.js';
+import {
+  findActiveProductByName,
+  listActiveProducts,
+  setProductImage,
+} from '../../modules/products/productService.js';
+import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
 import { buildConfirmMessage } from '../panel/confirmUi.js';
+import { publishMenuBoard } from '../menu/menuBoard.js';
 import { putPending } from '../panel/pending.js';
 import { isDirection } from '../permissions.js';
 import type { SlashCommand } from './types.js';
@@ -41,8 +51,40 @@ export const menuCommand: SlashCommand = {
           o.setName('nom').setDescription('Nom du produit').setRequired(true),
         ),
     )
+    .addSubcommand((s) =>
+      s
+        .setName('image')
+        .setDescription('Définir la photo (et l’accroche) d’un produit pour le menu public')
+        .addStringOption((o) =>
+          o
+            .setName('nom')
+            .setDescription('Produit')
+            .setAutocomplete(true)
+            .setRequired(true),
+        )
+        .addAttachmentOption((o) =>
+          o.setName('image').setDescription('Photo du produit').setRequired(true),
+        )
+        .addStringOption((o) =>
+          o.setName('accroche').setDescription('Petite description (optionnel)').setRequired(false),
+        ),
+    )
     .addSubcommand((s) => s.setName('voir').setDescription('Afficher le menu actuel'))
     .toJSON(),
+
+  async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+    if (!interaction.inGuild()) return void interaction.respond([]);
+    const config = await getGuildConfigByGuildId(interaction.guildId);
+    if (!config) return void interaction.respond([]);
+    const focused = interaction.options.getFocused().toString().toLowerCase();
+    const products = await listActiveProducts(config.id);
+    await interaction.respond(
+      products
+        .filter((p) => p.name.toLowerCase().includes(focused))
+        .slice(0, 25)
+        .map((p) => ({ name: `${p.name} — ${p.retailPrice} $`, value: p.name })),
+    );
+  },
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.inGuild() || !interaction.guild) {
@@ -110,6 +152,51 @@ export const menuCommand: SlashCommand = {
           confirmLabel: 'Retirer',
           danger: true,
         }),
+      );
+      return;
+    }
+
+    if (sub === 'image') {
+      const nom = interaction.options.getString('nom', true).trim();
+      const image = interaction.options.getAttachment('image', true);
+      const accroche = interaction.options.getString('accroche')?.trim() || null;
+      if (!isImageAttachment(image)) {
+        await interaction.editReply('Le fichier doit être une image.');
+        return;
+      }
+      const product = await findActiveProductByName(config.id, nom);
+      if (!product) {
+        await interaction.editReply(`Produit introuvable au menu : « ${nom} ».`);
+        return;
+      }
+      let stored;
+      try {
+        stored = await downloadAndStore({
+          guildId: interaction.guild.id,
+          threadId: `menu-${product.id}`,
+          type: AttachmentType.COFFRE_PLEIN, // emplacement de stockage (photo produit)
+          messageId: interaction.id,
+          attachment: image,
+        });
+      } catch {
+        await interaction.editReply('Échec de la copie de l’image. Réessaie.');
+        return;
+      }
+      const res = await setProductImage(
+        config.id,
+        product.name,
+        stored.storageKey,
+        stored.fileName,
+        accroche,
+      );
+      if (!res.ok) {
+        await interaction.editReply(`Échec : ${res.reason}`);
+        return;
+      }
+      await publishMenuBoard(interaction.client, config.id).catch(() => undefined);
+      await interaction.editReply(
+        `✅ Photo de **${res.data.name}** enregistrée. Le menu public est à jour.` +
+          (config.channelMenuBoard ? '' : '\n⚠️ Aucun salon menu lié : `/config salons menu:#…`.'),
       );
       return;
     }

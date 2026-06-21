@@ -13,6 +13,7 @@ import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { publishVerification } from '../verification/verificationBoard.js';
+import { publishMenuBoard } from '../menu/menuBoard.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { renderWelcomeMessage } from '../../modules/welcome/welcomeMessage.js';
 import type { SlashCommand } from './types.js';
@@ -41,6 +42,7 @@ const CHANNEL_MAP = [
   { opt: 'guide_equipe', field: 'channelGuideEmployee' },
   { opt: 'accueil', field: 'channelWelcome' },
   { opt: 'reglement', field: 'channelReglement' },
+  { opt: 'menu', field: 'channelMenuBoard' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -139,6 +141,12 @@ export const configCommand: SlashCommand = {
           o
             .setName('reglement')
             .setDescription('Salon règlement (reçoit le bouton de validation d’accès)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('menu')
+            .setDescription('Salon public menu & tarifs (maintenu par le bot)')
             .addChannelTypes(ChannelType.GuildText),
         ),
     )
@@ -342,6 +350,10 @@ export const configCommand: SlashCommand = {
       if (touched.has('channelReglement')) {
         tasks.push(publishVerification(interaction.client, config.id));
         published.push('sas d’accès (règlement)');
+      }
+      if (touched.has('channelMenuBoard')) {
+        tasks.push(publishMenuBoard(interaction.client, config.id));
+        published.push('menu & tarifs');
       }
       const results = await Promise.allSettled(tasks);
       const failed = results.filter((r) => r.status === 'rejected');

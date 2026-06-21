@@ -6,6 +6,7 @@ import { startProactiveNotifications } from '../../modules/notifications/schedul
 import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { publishVerification } from '../verification/verificationBoard.js';
+import { publishMenuBoard } from '../menu/menuBoard.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { reconcileActiveThreads } from '../../modules/sales/reconcile.js';
 import { commandData } from '../commands/index.js';
@@ -52,6 +53,9 @@ export function registerReady(client: Client): void {
         );
         await publishVerification(c, config.id).catch((err) =>
           logger.warn({ err, guildId: guild.id }, 'Publication du sas reglement au demarrage KO'),
+        );
+        await publishMenuBoard(c, config.id).catch((err) =>
+          logger.warn({ err, guildId: guild.id }, 'Publication du menu public au demarrage KO'),
         );
       }
     }
