@@ -14,7 +14,7 @@ export function registerGuildMemberAdd(client: Client): void {
 
     const config = await prisma.guildConfig.findUnique({
       where: { guildId: member.guild.id },
-      select: { channelWelcome: true, welcomeMessage: true },
+      select: { channelWelcome: true, welcomeMessage: true, channelReglement: true },
     });
     if (!config?.channelWelcome) return;
 
@@ -29,10 +29,15 @@ export function registerGuildMemberAdd(client: Client): void {
       guildName: member.guild.name,
     });
 
+    // Renvoi vers le reglement (sas d'acces) si configure.
+    const next = config.channelReglement
+      ? `\n\n👉 Rends-toi dans <#${config.channelReglement}> pour valider le règlement et débloquer le menu, les tarifs et les commandes.`
+      : '';
+
     const embed = new EmbedBuilder()
       .setColor(0xff7a00)
       .setTitle('👋 Un nouveau client arrive !')
-      .setDescription(text)
+      .setDescription(text + next)
       .setThumbnail(member.displayAvatarURL({ size: 256 }))
       .setFooter({ text: `${member.guild.memberCount} membres` })
       .setTimestamp(new Date());

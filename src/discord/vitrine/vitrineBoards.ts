@@ -9,18 +9,6 @@ import { logger } from '../../infrastructure/logging/logger.js';
 
 const SIGNATURE = 'HotzDoggz – Le goût qui fait la différence 🔥';
 
-/** Texte par defaut de la vitrine bienvenue (corps editable, hors titre). */
-export const DEFAULT_WELCOME_BOARD =
-  'Toute l’équipe vous souhaite la bienvenue dans notre univers dédié aux **meilleurs hot dogs de la ville** !\n\n' +
-  '🚂 **HotzDoggz, c’est :**\n' +
-  '• Des menus uniques et savoureux.\n' +
-  '• Des événements et offres exclusives.\n' +
-  '• Un service sur place et en livraison.\n' +
-  '• Une communauté conviviale et respectueuse.\n\n' +
-  '📢 Pensez à consulter les différents salons pour découvrir nos **menus**, nos **tarifs** et les dernières nouveautés.\n' +
-  '🤝 Respect, bonne humeur et partage sont les maîtres mots de ce serveur.\n\n' +
-  'Merci pour votre confiance — nous espérons vous régaler très bientôt ! 🌭';
-
 /** Texte par defaut de la vitrine evenement. */
 export const DEFAULT_EVENT_BOARD =
   'L’heure est enfin arrivée ! 🎉\n\n' +
@@ -48,14 +36,6 @@ function styled(guild: Guild, opts: { title: string; body: string; color: number
   return embed;
 }
 
-export function buildWelcomeBoardEmbed(guild: Guild, body: string | null): EmbedBuilder {
-  return styled(guild, {
-    title: '🌭 Bienvenue sur le Discord officiel de HotzDoggz ! 🌭',
-    body: body && body.trim() ? body : DEFAULT_WELCOME_BOARD,
-    color: 0xff7a00,
-  });
-}
-
 export function buildEventBoardEmbed(guild: Guild, body: string | null): EmbedBuilder {
   return styled(guild, {
     title: '🌭🚂 ÉVÉNEMENT D’OUVERTURE HOTZDOGGZ 🚂🌭',
@@ -65,10 +45,10 @@ export function buildEventBoardEmbed(guild: Guild, body: string | null): EmbedBu
 }
 
 interface BoardSpec {
-  channelField: 'channelWelcome' | 'channelEvent';
-  msgField: 'msgWelcomeBoard' | 'msgEventBoard';
+  channelField: 'channelEvent';
+  msgField: 'msgEventBoard';
   build: (guild: Guild, body: string | null) => EmbedBuilder;
-  textField: 'welcomeBoardText' | 'eventText';
+  textField: 'eventText';
 }
 
 async function publishBoard(client: Client, guildConfigId: string, spec: BoardSpec): Promise<void> {
@@ -97,15 +77,6 @@ async function publishBoard(client: Client, guildConfigId: string, spec: BoardSp
   await prisma.guildConfig.update({
     where: { id: guildConfigId },
     data: { [spec.msgField]: created.id },
-  });
-}
-
-export function publishWelcomeBoard(client: Client, guildConfigId: string): Promise<void> {
-  return publishBoard(client, guildConfigId, {
-    channelField: 'channelWelcome',
-    msgField: 'msgWelcomeBoard',
-    textField: 'welcomeBoardText',
-    build: buildWelcomeBoardEmbed,
   });
 }
 

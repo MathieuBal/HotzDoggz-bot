@@ -4,13 +4,14 @@ import { writeAudit } from '../../modules/audit/auditService.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { isDirectionMember } from '../permissions.js';
 import { VitrineFieldId, VitrineModalId } from '../components/ids.js';
-import { publishEventBoard, publishWelcomeBoard } from './vitrineBoards.js';
+import { publishVerification } from '../verification/verificationBoard.js';
+import { publishEventBoard } from './vitrineBoards.js';
 
-/** Soumission d'une vitrine : enregistre le texte et republie l'embed. */
+/** Soumission d'un texte public : enregistre et republie l'embed concerne. */
 export async function handleVitrineModal(interaction: ModalSubmitInteraction): Promise<boolean> {
-  const isWelcome = interaction.customId === VitrineModalId.WELCOME;
+  const isReglement = interaction.customId === VitrineModalId.WELCOME;
   const isEvent = interaction.customId === VitrineModalId.EVENT;
-  if (!isWelcome && !isEvent) return false;
+  if (!isReglement && !isEvent) return false;
 
   const ephemeral = MessageFlags.Ephemeral;
   if (!interaction.guild) {
@@ -28,22 +29,22 @@ export async function handleVitrineModal(interaction: ModalSubmitInteraction): P
 
   await prisma.guildConfig.update({
     where: { id: config.id },
-    data: isWelcome ? { welcomeBoardText: text } : { eventText: text },
+    data: isReglement ? { welcomeBoardText: text } : { eventText: text },
   });
   await writeAudit(prisma, {
     guildConfigId: config.id,
-    action: isWelcome ? 'VITRINE_WELCOME_SET' : 'VITRINE_EVENT_SET',
+    action: isReglement ? 'REGLEMENT_TEXT_SET' : 'VITRINE_EVENT_SET',
     authorDiscordId: interaction.user.id,
   });
 
-  const channelField = isWelcome ? config.channelWelcome : config.channelEvent;
-  if (isWelcome) await publishWelcomeBoard(interaction.client, config.id);
+  const channelField = isReglement ? config.channelReglement : config.channelEvent;
+  if (isReglement) await publishVerification(interaction.client, config.id);
   else await publishEventBoard(interaction.client, config.id);
 
   await interaction.editReply(
     channelField
-      ? '✅ Vitrine mise à jour et publiée.'
-      : `✅ Texte enregistré. ⚠️ Aucun salon lié — \`/config salons ${isWelcome ? 'accueil' : 'evenement'}:#…\` pour l’afficher.`,
+      ? '✅ Texte mis à jour et publié.'
+      : `✅ Texte enregistré. ⚠️ Aucun salon lié — \`/config salons ${isReglement ? 'reglement' : 'evenement'}:#…\` pour l’afficher.`,
   );
   return true;
 }

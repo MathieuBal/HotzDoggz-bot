@@ -7,7 +7,7 @@ import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { publishVerification } from '../verification/verificationBoard.js';
 import { publishMenuBoard } from '../menu/menuBoard.js';
-import { publishEventBoard, publishWelcomeBoard } from '../vitrine/vitrineBoards.js';
+import { publishEventBoard } from '../vitrine/vitrineBoards.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { reconcileActiveThreads } from '../../modules/sales/reconcile.js';
 import { commandData } from '../commands/index.js';
@@ -57,9 +57,6 @@ export function registerReady(client: Client): void {
         );
         await publishMenuBoard(c, config.id).catch((err) =>
           logger.warn({ err, guildId: guild.id }, 'Publication du menu public au demarrage KO'),
-        );
-        await publishWelcomeBoard(c, config.id).catch((err) =>
-          logger.warn({ err, guildId: guild.id }, 'Publication vitrine bienvenue au demarrage KO'),
         );
         await publishEventBoard(c, config.id).catch((err) =>
           logger.warn({ err, guildId: guild.id }, 'Publication vitrine evenement au demarrage KO'),

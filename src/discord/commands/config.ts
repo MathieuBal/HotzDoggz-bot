@@ -14,7 +14,7 @@ import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { publishVerification } from '../verification/verificationBoard.js';
 import { publishMenuBoard } from '../menu/menuBoard.js';
-import { publishEventBoard, publishWelcomeBoard } from '../vitrine/vitrineBoards.js';
+import { publishEventBoard } from '../vitrine/vitrineBoards.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { renderWelcomeMessage } from '../../modules/welcome/welcomeMessage.js';
 import type { SlashCommand } from './types.js';
@@ -362,10 +362,6 @@ export const configCommand: SlashCommand = {
       if (touched.has('channelMenuBoard')) {
         tasks.push(publishMenuBoard(interaction.client, config.id));
         published.push('menu & tarifs');
-      }
-      if (touched.has('channelWelcome')) {
-        tasks.push(publishWelcomeBoard(interaction.client, config.id));
-        published.push('vitrine bienvenue');
       }
       if (touched.has('channelEvent')) {
         tasks.push(publishEventBoard(interaction.client, config.id));

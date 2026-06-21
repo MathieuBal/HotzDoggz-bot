@@ -11,20 +11,18 @@ import {
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { VitrineFieldId, VitrineModalId } from '../components/ids.js';
 import { isDirection } from '../permissions.js';
-import {
-  DEFAULT_EVENT_BOARD,
-  DEFAULT_WELCOME_BOARD,
-} from '../vitrine/vitrineBoards.js';
+import { DEFAULT_REGLEMENT_TEXT } from '../verification/verificationBoard.js';
+import { DEFAULT_EVENT_BOARD } from '../vitrine/vitrineBoards.js';
 import type { SlashCommand } from './types.js';
 
-/** Edition des vitrines publiques (bienvenue, evenement) — direction. */
+/** Edition des textes publics (reglement, evenement) — direction. */
 export const vitrineCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('vitrine')
-    .setDescription('Modifier les vitrines publiques (direction)')
+    .setDescription('Modifier les textes publics (direction)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) =>
-      s.setName('bienvenue').setDescription('Modifier le texte de la vitrine Bienvenue'),
+      s.setName('reglement').setDescription('Modifier le texte du règlement (au-dessus du bouton)'),
     )
     .addSubcommand((s) =>
       s.setName('evenement').setDescription('Modifier le texte de la vitrine Événement'),
@@ -49,11 +47,11 @@ export const vitrineCommand: SlashCommand = {
     const isEvent = interaction.options.getSubcommand() === 'evenement';
     const current = isEvent
       ? (config.eventText ?? DEFAULT_EVENT_BOARD)
-      : (config.welcomeBoardText ?? DEFAULT_WELCOME_BOARD);
+      : (config.welcomeBoardText ?? DEFAULT_REGLEMENT_TEXT);
 
     const modal = new ModalBuilder()
       .setCustomId(isEvent ? VitrineModalId.EVENT : VitrineModalId.WELCOME)
-      .setTitle(isEvent ? 'Vitrine Événement' : 'Vitrine Bienvenue')
+      .setTitle(isEvent ? 'Vitrine Événement' : 'Texte du règlement')
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()

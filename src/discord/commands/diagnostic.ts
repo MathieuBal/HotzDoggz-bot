@@ -207,7 +207,6 @@ export const diagnosticCommand: SlashCommand = {
       ),
       messageLine(guild, 'Sas règlement (bouton)', config.channelReglement, config.msgVerification),
       messageLine(guild, 'Menu & tarifs (public)', config.channelMenuBoard, config.msgMenuBoard),
-      messageLine(guild, 'Vitrine bienvenue', config.channelWelcome, config.msgWelcomeBoard),
       messageLine(guild, 'Vitrine événement', config.channelEvent, config.msgEventBoard),
     ]);
 
