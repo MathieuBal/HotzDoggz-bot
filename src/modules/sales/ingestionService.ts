@@ -459,7 +459,9 @@ export interface AssistedSaleParams {
  */
 export async function ingestAssistedSale(
   params: AssistedSaleParams,
-): Promise<{ ok: true; reference: string } | { ok: false; reason: string }> {
+): Promise<
+  { ok: true; reference: string; ficheCreated: boolean } | { ok: false; reason: string }
+> {
   const { thread, guild, config, employee } = params;
   const parentId = thread.parentId;
   if (!parentId) return { ok: false, reason: 'Casier introuvable.' };
@@ -526,6 +528,7 @@ export async function ingestAssistedSale(
     return { ok: false, reason: 'Cette vente est deja enregistree.' };
   }
 
+  let ficheCreated = false;
   if (config.channelControl) {
     try {
       const controlChannel = await guild.channels.fetch(config.channelControl);
@@ -551,6 +554,7 @@ export async function ingestAssistedSale(
           where: { id: result.saleId },
           data: { controlThreadId: controlThread.id },
         });
+        ficheCreated = true;
       }
     } catch (err) {
       logger.error({ err }, 'Fiche de controle (assistee) echouee');
@@ -572,5 +576,5 @@ export async function ingestAssistedSale(
     .send(`✅ Vente enregistree — reference **${result.reference}**.\nStatut : A verifier.${note}`)
     .catch(() => undefined);
 
-  return { ok: true, reference: result.reference };
+  return { ok: true, reference: result.reference, ficheCreated };
 }

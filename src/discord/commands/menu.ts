@@ -5,14 +5,10 @@ import {
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from 'discord.js';
-import { writeAudit } from '../../modules/audit/auditService.js';
-import { prisma } from '../../infrastructure/database/client.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
-import {
-  deactivateProduct,
-  listActiveProducts,
-  upsertProduct,
-} from '../../modules/products/productService.js';
+import { findActiveProductByName, listActiveProducts } from '../../modules/products/productService.js';
+import { buildConfirmMessage } from '../panel/confirmUi.js';
+import { putPending } from '../panel/pending.js';
 import { isDirection } from '../permissions.js';
 import type { SlashCommand } from './types.js';
 
@@ -70,42 +66,51 @@ export const menuCommand: SlashCommand = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'ajouter') {
-      const nom = interaction.options.getString('nom', true);
+      const nom = interaction.options.getString('nom', true).trim();
       const prix = interaction.options.getInteger('prix', true);
-      const res = await upsertProduct(config.id, nom, prix);
-      if (!res.ok) {
-        await interaction.editReply(`Échec : ${res.reason}`);
+      if (!nom) {
+        await interaction.editReply('Le nom du produit est obligatoire.');
         return;
       }
-      await writeAudit(prisma, {
+      const existing = await findActiveProductByName(config.id, nom);
+      const oldPrice = existing?.retailPrice ?? null;
+      const token = putPending(interaction.user.id, {
+        kind: 'menu_price',
         guildConfigId: config.id,
-        action: 'PRODUCT_UPSERT',
-        authorDiscordId: interaction.user.id,
-        entityType: 'Product',
-        entityId: res.data.id,
-        after: { name: res.data.name, retailPrice: res.data.retailPrice },
+        name: nom,
+        price: prix,
+        oldPrice,
       });
-      await interaction.editReply(
-        `✅ **${res.data.name}** au menu à ${money(res.data.retailPrice)}.`,
-      );
+      const desc =
+        oldPrice === null
+          ? `Ajouter **${nom}** au menu à **${money(prix)}** ?`
+          : `Changer le prix de **${nom}** : **${money(oldPrice)} → ${money(prix)}** ?`;
+      await interaction.editReply(buildConfirmMessage({ title: '🍴 Menu', description: desc, token }));
       return;
     }
 
     if (sub === 'retirer') {
-      const nom = interaction.options.getString('nom', true);
-      const res = await deactivateProduct(config.id, nom);
-      if (!res.ok) {
-        await interaction.editReply(`Échec : ${res.reason}`);
+      const nom = interaction.options.getString('nom', true).trim();
+      const existing = await findActiveProductByName(config.id, nom);
+      if (!existing) {
+        await interaction.editReply(`Produit introuvable au menu : « ${nom} ».`);
         return;
       }
-      await writeAudit(prisma, {
+      const token = putPending(interaction.user.id, {
+        kind: 'menu_remove',
         guildConfigId: config.id,
-        action: 'PRODUCT_DEACTIVATED',
-        authorDiscordId: interaction.user.id,
-        entityType: 'Product',
-        entityId: res.data.id,
+        productId: existing.id,
+        name: existing.name,
       });
-      await interaction.editReply(`🚫 **${res.data.name}** retiré du menu.`);
+      await interaction.editReply(
+        buildConfirmMessage({
+          title: '🗑️ Retirer un produit',
+          description: `Retirer **${existing.name}** du menu ? Il ne sera plus proposé aux ventes (l'historique reste intact).`,
+          token,
+          confirmLabel: 'Retirer',
+          danger: true,
+        }),
+      );
       return;
     }
 

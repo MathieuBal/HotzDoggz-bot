@@ -82,6 +82,19 @@ export const PanelSelectId = {
   EDIT: 'panel:edit',
 } as const;
 
+/** Selecteurs de second niveau : choisir l'entite (grade/partenaire/produit). */
+export const PanelPickId = {
+  SALAIRE: 'panel:pick:salaire',
+  PARTENAIRE: 'panel:pick:partenaire',
+  MENU_RETIRER: 'panel:pick:menuretirer',
+} as const;
+
+/** Boutons de confirmation (jeton ephemere appose : `panel:confirm:<token>`). */
+export const PanelConfirmId = {
+  CONFIRM: 'panel:confirm',
+  CANCEL: 'panel:cancel',
+} as const;
+
 export const PanelEditValue = {
   SALAIRE: 'salaire',
   MENU: 'menu',

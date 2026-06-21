@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { handleDirectSaleButton } from '../buttons/directSaleButtons.js';
 import { handlePanelButton } from '../buttons/panelButtons.js';
+import { handlePanelConfirmButton } from '../buttons/panelConfirm.js';
 import { handleReviewButton } from '../buttons/reviewButtons.js';
 import { handleSaleButton } from '../buttons/saleButtons.js';
 import { handleWeekButton } from '../buttons/weekButtons.js';
@@ -12,12 +13,15 @@ import { handlePanelModal } from '../modals/panelModalHandlers.js';
 import { handleReviewModal } from '../modals/reviewModalHandlers.js';
 import { handleSaleModal } from '../modals/saleModalHandlers.js';
 import { handleWeekModal } from '../modals/weekModalHandlers.js';
+import { handlePanelPick } from '../panel/pickers.js';
 import { handlePanelSelect } from '../selects/panelSelect.js';
 
-async function notifyError(interaction: Interaction): Promise<void> {
+async function notifyError(interaction: Interaction, correlationId: string): Promise<void> {
   if (!interaction.isRepliable()) return;
   const payload = {
-    content: 'Une erreur est survenue. Les details ont ete journalises.',
+    content:
+      'Une erreur est survenue (rien n’a été enregistré). Réessaie ; si ça persiste, ' +
+      `donne ce code à la direction : \`${correlationId.slice(0, 8)}\`.`,
     flags: MessageFlags.Ephemeral as const,
   };
   try {
@@ -40,6 +44,7 @@ export function registerInteractionCreate(client: Client): void {
 
     try {
       if (interaction.isButton()) {
+        if (await handlePanelConfirmButton(interaction)) return;
         if (await handlePanelButton(interaction)) return;
         if (await handleReviewButton(interaction)) return;
         if (await handleDirectSaleButton(interaction)) return;
@@ -48,6 +53,7 @@ export function registerInteractionCreate(client: Client): void {
         return;
       }
       if (interaction.isStringSelectMenu()) {
+        if (await handlePanelPick(interaction)) return;
         await handlePanelSelect(interaction);
         return;
       }
@@ -74,7 +80,7 @@ export function registerInteractionCreate(client: Client): void {
       }
     } catch (err) {
       log.error({ err, type: interaction.type }, 'Erreur de traitement d’une interaction');
-      await notifyError(interaction);
+      await notifyError(interaction, correlationId);
     }
   });
 }

@@ -190,8 +190,10 @@ export const vendreCommand: SlashCommand = {
       await interaction.editReply(`Echec : ${result.reason}`);
       return;
     }
-    await interaction.editReply(
-      `✅ Vente declaree — reference **${result.reference}**. La direction va la verifier.`,
-    );
+    const ficheWarn = result.ficheCreated
+      ? ' La direction va la verifier.'
+      : '\n❌ **Fiche de controle non creee** : la direction ne la verra pas a valider. ' +
+        'Previens-la (verifier le salon `controle` et les permissions du bot).';
+    await interaction.editReply(`✅ Vente declaree — reference **${result.reference}**.${ficheWarn}`);
   },
 };

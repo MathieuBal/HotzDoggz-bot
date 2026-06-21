@@ -211,6 +211,12 @@ export const factureCommand: SlashCommand = {
       return;
     }
 
+    // Suivi des etapes post-creation : on previent l'employe si l'une echoue
+    // (sinon il croit que tout est OK alors que la direction ne verra rien).
+    let casierOk = true;
+    let ficheOk = true;
+    let ficheLink: string | null = null;
+
     // Trace dans le casier de l'employe (parite avec les ventes PNJ).
     if (employee.casierForumId) {
       try {
@@ -236,13 +242,17 @@ export const factureCommand: SlashCommand = {
             data: { threadId: thread.id },
           });
           await setCasierTag(thread, employee.casierForumId, ForumTagKey.A_VERIFIER);
+        } else {
+          casierOk = false;
         }
       } catch (err) {
-        logger.warn({ err }, 'Post casier vente directe KO (non bloquant)');
+        casierOk = false;
+        logger.warn({ err }, 'Post casier vente directe KO');
       }
     }
 
-    // Fiche de controle dans le Forum de controle.
+    // Fiche de controle dans le Forum de controle (ETAPE CRITIQUE : sans elle la
+    // direction ne peut pas valider la vente).
     if (config.channelControl) {
       try {
         const controlChannel = await interaction.guild.channels.fetch(config.channelControl);
@@ -258,13 +268,20 @@ export const factureCommand: SlashCommand = {
               where: { id: created.data.id },
               data: { controlThreadId: thread.id },
             });
+            ficheLink = `https://discord.com/channels/${interaction.guild.id}/${thread.id}`;
+          } else {
+            ficheOk = false;
           }
         } else {
+          ficheOk = false;
           logger.warn('channelControl n’est pas un Forum : fiche vente directe non creee');
         }
       } catch (err) {
+        ficheOk = false;
         logger.error({ err }, 'Creation fiche vente directe KO');
       }
+    } else {
+      ficheOk = false;
     }
 
     if (risk.level !== 'CLEAN') {
@@ -273,9 +290,25 @@ export const factureCommand: SlashCommand = {
       });
     }
 
-    const warn = gradeWarning ? `\n⚠️ ${gradeWarning}` : '';
+    // Message final : on est franc sur ce qui a reussi ou non.
+    const notes: string[] = [];
+    if (gradeWarning) notes.push(`⚠️ ${gradeWarning}`);
+    if (!casierOk) {
+      notes.push('⚠️ Le post dans ton casier n’a pas pu être créé (trace manquante).');
+    }
+    if (ficheOk) {
+      if (ficheLink) notes.push(`📋 Fiche de contrôle : ${ficheLink}`);
+    } else {
+      notes.push(
+        '❌ **Fiche de contrôle non créée** : la direction ne verra pas cette vente à valider. ' +
+          'Préviens-la (vérifier le salon `controle` et les permissions du bot).',
+      );
+    }
+    const suffix = notes.length > 0 ? `\n${notes.join('\n')}` : '';
     await interaction.editReply(
-      `✅ Vente **${created.data.reference}** déclarée (${totalQty} produit(s)). La direction va la vérifier.${warn}`,
+      `✅ Vente **${created.data.reference}** déclarée (${totalQty} produit(s)).` +
+        (ficheOk ? ' La direction va la vérifier.' : '') +
+        suffix,
     );
   },
 };

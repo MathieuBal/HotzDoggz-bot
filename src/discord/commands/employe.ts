@@ -11,12 +11,13 @@ import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { writeAudit } from '../../modules/audit/auditService.js';
 import {
-  archiveEmployee,
   associateEmployee,
   getGuildConfigByGuildId,
 } from '../../modules/employees/employeeService.js';
 import { mapForumTags } from '../../modules/lockers/forumTags.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
+import { buildConfirmMessage } from '../panel/confirmUi.js';
+import { putPending } from '../panel/pending.js';
 import { isDirection } from '../permissions.js';
 import type { SlashCommand } from './types.js';
 
@@ -150,18 +151,25 @@ export const employeCommand: SlashCommand = {
         await interaction.editReply('Aucun employe associe a ce membre.');
         return;
       }
-      const employee = await archiveEmployee(member.id);
-      await writeAudit(prisma, {
+      if (existing.status === 'ARCHIVED') {
+        await interaction.editReply(`**${existing.nomRP}** est déjà archivé.`);
+        return;
+      }
+      const token = putPending(interaction.user.id, {
+        kind: 'archive',
         guildConfigId: config.id,
-        action: 'EMPLOYEE_ARCHIVED',
-        authorDiscordId: interaction.user.id,
-        entityType: 'Employee',
-        entityId: employee.id,
-        before: { status: existing.status },
-        after: { status: 'ARCHIVED' },
+        discordUserId: member.id,
+        nomRP: existing.nomRP,
       });
-      await interaction.editReply(`Employe **${employee.nomRP}** archive. Historique conserve.`);
-      logger.info({ employeeId: employee.id }, 'Employe archive');
+      await interaction.editReply(
+        buildConfirmMessage({
+          title: '📦 Archiver un employé',
+          description: `Archiver **${existing.nomRP}** (<@${member.id}>) ? Ses futures ventes ne seront plus comptées, mais tout l’historique est conservé.`,
+          token,
+          confirmLabel: 'Archiver',
+          danger: true,
+        }),
+      );
     }
   },
 };

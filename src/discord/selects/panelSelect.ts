@@ -3,13 +3,15 @@ import { getGuildConfigByGuildId } from '../../modules/employees/employeeService
 import { PanelEditValue, PanelSelectId } from '../components/ids.js';
 import {
   buildPanelMenuModal,
-  buildPanelMenuRemoveModal,
   buildPanelOrderCreateModal,
-  buildPanelPartenaireModal,
   buildPanelPartnerCreateModal,
   buildPanelPnjPriceModal,
-  buildPanelSalaireModal,
 } from '../modals/panelModals.js';
+import {
+  buildGradePicker,
+  buildPartnerPicker,
+  buildProductRemovePicker,
+} from '../panel/pickers.js';
 import { isDirectionMember } from '../permissions.js';
 
 /** @returns true si l'interaction a ete prise en charge ici. */
@@ -30,23 +32,54 @@ export async function handlePanelSelect(
   }
 
   switch (interaction.values[0]) {
-    case PanelEditValue.SALAIRE:
-      await interaction.showModal(buildPanelSalaireModal());
+    // Actions a entite : on propose un menu de selection (plus de saisie a la main).
+    case PanelEditValue.SALAIRE: {
+      const row = await buildGradePicker(config.id);
+      if (!row) {
+        await interaction.reply({
+          content: 'Aucun grade configuré. Lance `/config roles` d’abord.',
+          flags: ephemeral,
+        });
+        return true;
+      }
+      await interaction.reply({ content: '💰 Quel grade ?', components: [row], flags: ephemeral });
       return true;
+    }
+    case PanelEditValue.PARTENAIRE: {
+      const row = await buildPartnerPicker(config.id);
+      if (!row) {
+        await interaction.reply({
+          content: 'Aucun partenaire. Crée-en un via « Créer un partenaire ».',
+          flags: ephemeral,
+        });
+        return true;
+      }
+      await interaction.reply({ content: '🤝 Quel partenaire ?', components: [row], flags: ephemeral });
+      return true;
+    }
+    case PanelEditValue.MENU_RETIRER: {
+      const row = await buildProductRemovePicker(config.id);
+      if (!row) {
+        await interaction.reply({ content: 'Le menu est déjà vide.', flags: ephemeral });
+        return true;
+      }
+      await interaction.reply({
+        content: '🗑️ Quel produit retirer ?',
+        components: [row],
+        flags: ephemeral,
+      });
+      return true;
+    }
+
+    // Actions a saisie libre : modal direct.
     case PanelEditValue.MENU:
       await interaction.showModal(buildPanelMenuModal());
-      return true;
-    case PanelEditValue.MENU_RETIRER:
-      await interaction.showModal(buildPanelMenuRemoveModal());
       return true;
     case PanelEditValue.PNJ_PRIX:
       await interaction.showModal(buildPanelPnjPriceModal());
       return true;
     case PanelEditValue.PARTENAIRE_CREER:
       await interaction.showModal(buildPanelPartnerCreateModal());
-      return true;
-    case PanelEditValue.PARTENAIRE:
-      await interaction.showModal(buildPanelPartenaireModal());
       return true;
     case PanelEditValue.COMMANDE_CREER:
       await interaction.showModal(buildPanelOrderCreateModal());

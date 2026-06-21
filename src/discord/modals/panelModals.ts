@@ -12,16 +12,6 @@ const short = (id: string, label: string, required = true): TextInputBuilder =>
     .setStyle(TextInputStyle.Short)
     .setRequired(required);
 
-export function buildPanelSalaireModal(): ModalBuilder {
-  return new ModalBuilder()
-    .setCustomId(PanelModalId.SALAIRE)
-    .setTitle('Modifier un salaire')
-    .addComponents(
-      row(short(PanelFieldId.GRADE, 'Grade (ex. Novice, Chef d’équipe)')),
-      row(short(PanelFieldId.MONTANT, 'Nouveau tarif ($/u)')),
-    );
-}
-
 export function buildPanelMenuModal(): ModalBuilder {
   return new ModalBuilder()
     .setCustomId(PanelModalId.MENU)
@@ -30,23 +20,6 @@ export function buildPanelMenuModal(): ModalBuilder {
       row(short(PanelFieldId.NOM, 'Nom du produit')),
       row(short(PanelFieldId.PRIX, 'Prix de détail ($)')),
     );
-}
-
-export function buildPanelPartenaireModal(): ModalBuilder {
-  return new ModalBuilder()
-    .setCustomId(PanelModalId.PARTENAIRE)
-    .setTitle('Objectif hebdomadaire partenaire')
-    .addComponents(
-      row(short(PanelFieldId.NOM, 'Nom du partenaire')),
-      row(short(PanelFieldId.OBJECTIF, 'Objectif (produits / semaine)')),
-    );
-}
-
-export function buildPanelMenuRemoveModal(): ModalBuilder {
-  return new ModalBuilder()
-    .setCustomId(PanelModalId.MENU_REMOVE)
-    .setTitle('Menu : retirer un produit')
-    .addComponents(row(short(PanelFieldId.NOM, 'Nom du produit à retirer')));
 }
 
 export function buildPanelPartnerCreateModal(): ModalBuilder {
