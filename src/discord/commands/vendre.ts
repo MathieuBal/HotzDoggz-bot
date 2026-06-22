@@ -14,7 +14,7 @@ import {
   getGuildConfigByGuildId,
   resolveMemberGrade,
 } from '../../modules/employees/employeeService.js';
-import { isImageAttachment } from '../../modules/sales/attachments.js';
+import { resolveProof } from '../../modules/sales/proofInput.js';
 import { ingestAssistedSale } from '../../modules/sales/ingestionService.js';
 import type { SlashCommand } from './types.js';
 
@@ -34,17 +34,18 @@ export const vendreCommand: SlashCommand = {
         .setMinValue(1)
         .setRequired(true),
     )
+    // Preuves : une image OU un lien pour chacune (coffre plein / vide).
     .addAttachmentOption((o) =>
-      o
-        .setName('preuve_avant')
-        .setDescription('Capture du coffre PLEIN avant la vente')
-        .setRequired(true),
+      o.setName('preuve_avant').setDescription('Image du coffre PLEIN avant la vente'),
+    )
+    .addStringOption((o) =>
+      o.setName('lien_avant').setDescription('…ou le lien de la capture du coffre PLEIN'),
     )
     .addAttachmentOption((o) =>
-      o
-        .setName('preuve_apres')
-        .setDescription('Capture du coffre VIDE apres la vente')
-        .setRequired(true),
+      o.setName('preuve_apres').setDescription('Image du coffre VIDE apres la vente'),
+    )
+    .addStringOption((o) =>
+      o.setName('lien_apres').setDescription('…ou le lien de la capture du coffre VIDE'),
     )
     .addStringOption((o) =>
       o.setName('commentaire').setDescription('Commentaire eventuel').setRequired(false),
@@ -80,15 +81,24 @@ export const vendreCommand: SlashCommand = {
     }
 
     const quantity = interaction.options.getInteger('quantite', true);
-    const before = interaction.options.getAttachment('preuve_avant', true);
-    const after = interaction.options.getAttachment('preuve_apres', true);
     const comment = interaction.options.getString('commentaire')?.trim() || null;
 
-    if (!isImageAttachment(before) || !isImageAttachment(after)) {
-      await interaction.reply({
-        content: 'Les deux preuves doivent etre des images (captures d’ecran).',
-        flags: MessageFlags.Ephemeral,
-      });
+    const before = resolveProof(
+      interaction.options.getAttachment('preuve_avant'),
+      interaction.options.getString('lien_avant'),
+      'Coffre plein',
+    );
+    if (!before.ok) {
+      await interaction.reply({ content: before.reason, flags: MessageFlags.Ephemeral });
+      return;
+    }
+    const after = resolveProof(
+      interaction.options.getAttachment('preuve_apres'),
+      interaction.options.getString('lien_apres'),
+      'Coffre vide',
+    );
+    if (!after.ok) {
+      await interaction.reply({ content: after.reason, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -153,7 +163,7 @@ export const vendreCommand: SlashCommand = {
     try {
       thread = await forum.threads.create({
         name: `VENTE - ${quantity} hot dogs - ${dateStr}`,
-        message: { content, files: [before, after] },
+        message: { content, files: [before.file, after.file] },
         appliedTags: tag ? [tag.discordTagId] : undefined,
       });
     } catch (err) {
@@ -178,8 +188,8 @@ export const vendreCommand: SlashCommand = {
       weekId: week.id,
       quantity,
       starterMessageId: starter?.id ?? thread.id,
-      attachmentPlein: before,
-      attachmentVide: after,
+      attachmentPlein: before.source,
+      attachmentVide: after.source,
       gradeLabel,
       gradeRoleId,
       salaryRate,

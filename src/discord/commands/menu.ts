@@ -15,7 +15,8 @@ import {
   listActiveProducts,
   setProductImage,
 } from '../../modules/products/productService.js';
-import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
+import { downloadAndStore } from '../../modules/sales/attachments.js';
+import { resolveProof } from '../../modules/sales/proofInput.js';
 import { buildConfirmMessage } from '../panel/confirmUi.js';
 import { publishMenuBoard } from '../menu/menuBoard.js';
 import { putPending } from '../panel/pending.js';
@@ -63,7 +64,10 @@ export const menuCommand: SlashCommand = {
             .setRequired(true),
         )
         .addAttachmentOption((o) =>
-          o.setName('image').setDescription('Photo du produit').setRequired(true),
+          o.setName('image').setDescription('Photo du produit (ou utilise lien)'),
+        )
+        .addStringOption((o) =>
+          o.setName('lien').setDescription('…ou le lien de la photo du produit'),
         )
         .addStringOption((o) =>
           o.setName('accroche').setDescription('Petite description (optionnel)').setRequired(false),
@@ -158,10 +162,14 @@ export const menuCommand: SlashCommand = {
 
     if (sub === 'image') {
       const nom = interaction.options.getString('nom', true).trim();
-      const image = interaction.options.getAttachment('image', true);
       const accroche = interaction.options.getString('accroche')?.trim() || null;
-      if (!isImageAttachment(image)) {
-        await interaction.editReply('Le fichier doit être une image.');
+      const image = resolveProof(
+        interaction.options.getAttachment('image'),
+        interaction.options.getString('lien'),
+        'Photo',
+      );
+      if (!image.ok) {
+        await interaction.editReply(image.reason);
         return;
       }
       const product = await findActiveProductByName(config.id, nom);
@@ -176,10 +184,12 @@ export const menuCommand: SlashCommand = {
           threadId: `menu-${product.id}`,
           type: AttachmentType.COFFRE_PLEIN, // emplacement de stockage (photo produit)
           messageId: interaction.id,
-          attachment: image,
+          attachment: image.source,
         });
       } catch {
-        await interaction.editReply('Échec de la copie de l’image. Réessaie.');
+        await interaction.editReply(
+          'Échec de la copie de l’image. Si c’est un lien, vérifie qu’il pointe directement vers une image.',
+        );
         return;
       }
       const res = await setProductImage(

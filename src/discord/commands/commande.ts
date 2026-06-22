@@ -19,7 +19,8 @@ import {
   listActivePartners,
 } from '../../modules/partners/partnerService.js';
 import { mentionDirection, postToLogs } from '../notify.js';
-import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
+import { downloadAndStore } from '../../modules/sales/attachments.js';
+import { resolveProof } from '../../modules/sales/proofInput.js';
 import { riskBadge } from '../../modules/sales/fraud.js';
 import { evaluateOrderContributionFraud } from '../../modules/sales/fraudService.js';
 import {
@@ -111,10 +112,16 @@ export const commandeCommand: SlashCommand = {
           o.setName('quantite').setDescription('Unités produites').setMinValue(1).setRequired(true),
         )
         .addAttachmentOption((o) =>
-          o.setName('preuve_avant').setDescription('Coffre plein avant').setRequired(true),
+          o.setName('preuve_avant').setDescription('Image coffre plein (ou lien_avant)'),
+        )
+        .addStringOption((o) =>
+          o.setName('lien_avant').setDescription('…ou le lien du coffre plein'),
         )
         .addAttachmentOption((o) =>
-          o.setName('preuve_apres').setDescription('Coffre vide après').setRequired(true),
+          o.setName('preuve_apres').setDescription('Image coffre vide (ou lien_apres)'),
+        )
+        .addStringOption((o) =>
+          o.setName('lien_apres').setDescription('…ou le lien du coffre vide'),
         ),
     )
     .addSubcommand((s) =>
@@ -133,7 +140,10 @@ export const commandeCommand: SlashCommand = {
           o.setName('commande').setDescription('Référence CMD-AAAA-NNNN').setRequired(true),
         )
         .addAttachmentOption((o) =>
-          o.setName('preuve').setDescription('Preuve de paiement').setRequired(true),
+          o.setName('preuve').setDescription('Image de la preuve de paiement (ou lien)'),
+        )
+        .addStringOption((o) =>
+          o.setName('lien').setDescription('…ou le lien de la preuve de paiement'),
         ),
     )
     .addSubcommand((s) =>
@@ -237,11 +247,22 @@ export const commandeCommand: SlashCommand = {
       const reference = interaction.options.getString('commande', true).trim().toUpperCase();
       const user = interaction.options.getUser('employe', true);
       const quantity = interaction.options.getInteger('quantite', true);
-      const before = interaction.options.getAttachment('preuve_avant', true);
-      const after = interaction.options.getAttachment('preuve_apres', true);
-
-      if (!isImageAttachment(before) || !isImageAttachment(after)) {
-        await interaction.editReply('Les deux preuves doivent être des images.');
+      const before = resolveProof(
+        interaction.options.getAttachment('preuve_avant'),
+        interaction.options.getString('lien_avant'),
+        'Coffre plein',
+      );
+      if (!before.ok) {
+        await interaction.editReply(before.reason);
+        return;
+      }
+      const after = resolveProof(
+        interaction.options.getAttachment('preuve_apres'),
+        interaction.options.getString('lien_apres'),
+        'Coffre vide',
+      );
+      if (!after.ok) {
+        await interaction.editReply(after.reason);
         return;
       }
 
@@ -289,12 +310,14 @@ export const commandeCommand: SlashCommand = {
               threadId: `order-${order.id}`,
               type,
               messageId: interaction.id,
-              attachment: i === 0 ? before : after,
+              attachment: i === 0 ? before.source : after.source,
             }),
           ),
         );
       } catch {
-        await interaction.editReply('Échec de la copie des preuves. Réessaie.');
+        await interaction.editReply(
+          'Échec de la copie des preuves. Si tu as collé un lien, vérifie qu’il pointe directement vers une image.',
+        );
         return;
       }
 
@@ -356,7 +379,15 @@ export const commandeCommand: SlashCommand = {
 
     if (sub === 'payer') {
       const reference = interaction.options.getString('commande', true).trim().toUpperCase();
-      const proof = interaction.options.getAttachment('preuve', true);
+      const proof = resolveProof(
+        interaction.options.getAttachment('preuve'),
+        interaction.options.getString('lien'),
+        'Preuve de paiement',
+      );
+      if (!proof.ok) {
+        await interaction.editReply(proof.reason);
+        return;
+      }
       const order = await getOrderByReference(config.id, reference);
       if (!order) {
         await interaction.editReply(`Commande ${reference} introuvable.`);
@@ -377,7 +408,7 @@ export const commandeCommand: SlashCommand = {
           threadId: `order-${order.id}`,
           type: AttachmentType.COFFRE_PLEIN, // emplacement de stockage (preuve de paiement)
           messageId: interaction.id,
-          attachment: proof,
+          attachment: proof.source,
         });
         proofKey = s.storageKey;
       } catch {
