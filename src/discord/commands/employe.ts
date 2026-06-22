@@ -65,6 +65,20 @@ export const employeCommand: SlashCommand = {
           o.setName('membre').setDescription('Membre a archiver').setRequired(true),
         ),
     )
+    .addSubcommand((sub) =>
+      sub
+        .setName('bracelet')
+        .setDescription('Définir le multiplicateur bracelet d’un employé (équité de la prime)')
+        .addUserOption((o) => o.setName('membre').setDescription('Employé').setRequired(true))
+        .addIntegerOption((o) =>
+          o
+            .setName('multiplicateur')
+            .setDescription('1 = aucun, 2 = x2, 3 = x3…')
+            .setMinValue(1)
+            .setMaxValue(10)
+            .setRequired(true),
+        ),
+    )
     .toJSON(),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -169,6 +183,35 @@ export const employeCommand: SlashCommand = {
           confirmLabel: 'Archiver',
           danger: true,
         }),
+      );
+      return;
+    }
+
+    if (sub === 'bracelet') {
+      const multiplier = interaction.options.getInteger('multiplicateur', true);
+      const existing = await prisma.employee.findUnique({ where: { discordUserId: member.id } });
+      if (!existing || existing.guildConfigId !== config.id) {
+        await interaction.editReply('Aucun employé associé à ce membre.');
+        return;
+      }
+      await prisma.employee.update({
+        where: { id: existing.id },
+        data: { bonusMultiplier: multiplier },
+      });
+      await writeAudit(prisma, {
+        guildConfigId: config.id,
+        action: 'EMPLOYEE_BRACELET_SET',
+        authorDiscordId: interaction.user.id,
+        entityType: 'Employee',
+        entityId: existing.id,
+        before: { bonusMultiplier: existing.bonusMultiplier },
+        after: { bonusMultiplier: multiplier },
+      });
+      scheduleDashboardUpdate(interaction.client, config.id);
+      await interaction.editReply(
+        multiplier === 1
+          ? `✅ **${existing.nomRP}** : aucun bracelet (×1). Sa production compte telle quelle pour la prime.`
+          : `✅ **${existing.nomRP}** : bracelet **×${multiplier}**. Pour la prime, sa production sera divisée par ${multiplier} (équité).`,
       );
     }
   },

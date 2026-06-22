@@ -33,7 +33,7 @@ export async function collectWeekReportInputs(db: Db, weekId: string): Promise<W
       pnjUnitPriceSnapshot: true,
       gradeRoleIdSnapshot: true,
       gradeSnapshot: true,
-      employee: { select: { nomRP: true } },
+      employee: { select: { nomRP: true, bonusMultiplier: true } },
     },
   });
   const saleLines: ValidatedSaleInput[] = sales.map((s) => ({
@@ -44,6 +44,7 @@ export async function collectWeekReportInputs(db: Db, weekId: string): Promise<W
     pnjUnitPrice: s.pnjUnitPriceSnapshot ?? 0,
     gradeRoleId: s.gradeRoleIdSnapshot,
     gradeLabel: s.gradeSnapshot,
+    multiplier: s.employee.bonusMultiplier,
   }));
 
   const orders = await db.clientOrder.findMany({
@@ -58,7 +59,7 @@ export async function collectWeekReportInputs(db: Db, weekId: string): Promise<W
           salaryRateSnapshot: true,
           gradeRoleIdSnapshot: true,
           gradeSnapshot: true,
-          employee: { select: { nomRP: true } },
+          employee: { select: { nomRP: true, bonusMultiplier: true } },
         },
       },
     },
@@ -77,6 +78,7 @@ export async function collectWeekReportInputs(db: Db, weekId: string): Promise<W
         pnjUnitPrice: 0, // revenu porte par extraRevenue, pas par la ligne
         gradeRoleId: c.gradeRoleIdSnapshot,
         gradeLabel: c.gradeSnapshot,
+        multiplier: c.employee.bonusMultiplier,
       });
     }
   }
@@ -90,7 +92,7 @@ export async function collectWeekReportInputs(db: Db, weekId: string): Promise<W
       salaryRateSnapshot: true,
       gradeRoleIdSnapshot: true,
       gradeSnapshot: true,
-      employee: { select: { nomRP: true } },
+      employee: { select: { nomRP: true, bonusMultiplier: true } },
       lines: { select: { validatedQuantity: true, unitPrice: true } },
     },
   });
@@ -110,6 +112,7 @@ export async function collectWeekReportInputs(db: Db, weekId: string): Promise<W
       pnjUnitPrice: 0,
       gradeRoleId: ds.gradeRoleIdSnapshot,
       gradeLabel: ds.gradeSnapshot,
+      multiplier: ds.employee.bonusMultiplier,
     });
   }
 

@@ -79,7 +79,8 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
       '• **`/gestion voir`** — détail chiffré de la semaine (repérer une erreur).\n' +
         '• Corriger une erreur : **`/gestion rouvrir-semaine`** → **`annuler-commande`** / ' +
         '**`annuler-vente`** → **`/semaine cloturer`**. _(tout est audité)_\n' +
-        '• **`/employe associer`** / **`archiver`**.',
+        '• **`/employe associer`** / **`archiver`** · **`/employe bracelet`** (multiplicateur ' +
+        'x2/x3 : neutralisé pour une prime équitable).',
     );
 
   const accueil = new EmbedBuilder()

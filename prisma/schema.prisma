@@ -349,6 +349,10 @@ model Employee {
   lastGradeLabel  String?
   lastGradeRate   Int?
 
+  // Multiplicateur "bracelet" (x2/x3 achete en vrai argent) : neutralise pour la
+  // course a la prime (production ajustee = quantite / multiplicateur). 1 = aucun.
+  bonusMultiplier Int @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

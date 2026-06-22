@@ -27,14 +27,15 @@ export function buildEmployeeBoard(report: WeekReport, startAt: Date, endAt: Dat
           .map((e, i) => {
             const rank = MEDALS[i] ?? `**${i + 1}.**`;
             const star = e.eligible ? '' : ' _(hors prime)_';
-            return `${rank} **${e.nomRP}** — ${qty(e.quantity)} u — ${money(e.salary)} (${e.gradeLabel ?? '—'})${star}`;
+            const brace = e.multiplier > 1 ? ` ×${e.multiplier}` : '';
+            return `${rank} **${e.nomRP}** — ${qty(e.quantity)} u${brace} — ${money(e.salary)} (${e.gradeLabel ?? '—'})${star}`;
           })
           .join('\n');
 
   const best = report.bestEmployee
     ? report.bestTie
-      ? `Egalite a ${qty(report.bestEmployee.quantity)} u — a departager a la cloture`
-      : `**${report.bestEmployee.nomRP}** (${qty(report.bestEmployee.quantity)} u) — prime provisoire ${money(report.bonus)}`
+      ? `Egalite a ${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts — a departager a la cloture`
+      : `**${report.bestEmployee.nomRP}** (${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts d’effort) — prime repartie`
     : '—';
 
   return new EmbedBuilder()
@@ -84,7 +85,7 @@ function objectiveMessage(view: PersonalView): string {
       ? '🤝 Egalite en tete — accelere pour prendre le large !'
       : '🏆 Tu es en tete ! Garde le rythme.';
   }
-  return `Plus que **${qty(view.gapToBest)} u** pour ravir la premiere place a ${view.best.nomRP} !`;
+  return `Plus que **${qty(Math.ceil(view.gapToBest))} pts** d’effort pour ravir la premiere place a ${view.best.nomRP} !`;
 }
 
 /** Fiche perso de suivi de compta d'un employe (CDC §7.4). */
@@ -96,20 +97,25 @@ export function buildPersonalBoard(
 ): EmbedBuilder {
   const rank =
     view.rankAmongEligible !== null ? `#${view.rankAmongEligible}` : '— (hors prime, direction)';
-  const best = view.best ? `${view.best.nomRP} — ${qty(view.best.quantity)} u` : '—';
+  const best = view.best ? `${view.best.nomRP} — ${qty(Math.round(view.best.adjustedQuantity))} pts` : '—';
+  // "pts" = production ajustee (bracelet neutralise) qui sert a la prime.
+  const prod =
+    view.multiplier > 1
+      ? `${qty(view.quantity)} u (×${view.multiplier} → ${qty(Math.round(view.adjustedQuantity))} pts)`
+      : `${qty(view.quantity)} u`;
 
   return new EmbedBuilder()
     .setTitle(`Ta comptabilite — ${nomRP}`)
     .setDescription(dateRange(startAt, endAt))
     .setColor(view.isLeader ? 0xf1c40f : 0xff7a00)
     .addFields(
-      { name: 'Production validee', value: `${qty(view.quantity)} u`, inline: true },
+      { name: 'Production validee', value: prod, inline: true },
       { name: 'Salaire provisoire', value: money(view.salary), inline: true },
       { name: 'Rang (course a la prime)', value: rank, inline: true },
-      { name: 'Meilleur employe', value: best, inline: true },
+      { name: 'Meilleur (effort ajuste)', value: best, inline: true },
       { name: 'Objectif', value: objectiveMessage(view) },
     )
-    .setFooter({ text: 'Provisoire — definitif a la cloture' })
+    .setFooter({ text: 'Provisoire — prime repartie selon l’effort ajuste (bracelet neutralise)' })
     .setTimestamp(new Date());
 }
 
@@ -140,14 +146,14 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
     .setDescription(`${dateRange(data.weekStart, data.weekEnd)}\n\n${activity}`)
     .setColor(0xff7a00);
 
-  // Prime de la semaine (provisoire) : l'argent que le meilleur vendeur remportera.
+  // Prime de la semaine (provisoire), repartie de facon degressive selon l'effort.
   const leader = data.topSellers[0];
   const bonusValue =
     `**${money(data.bonusPot)}**` +
-    (leader ? ` — en tête : **${leader.nomRP}** (${qty(leader.quantity)} u)` : ' — à jouer !');
+    (leader ? ` — en tête : **${leader.nomRP}**` : ' — à jouer !');
   embed.addFields({
-    name: '🏆 Prime de la semaine (à remporter)',
-    value: `${bonusValue}\n_Le meilleur vendeur de la semaine l’empoche à la clôture._`,
+    name: '🏆 Prime de la semaine',
+    value: `${bonusValue}\n_Répartie à la clôture selon l’effort (ajusté du bracelet), du 1er au dernier._`,
   });
 
   const news: string[] = [];
@@ -163,9 +169,15 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
 
   if (data.topSellers.length > 0) {
     const top = data.topSellers
-      .map((e, i) => `${MEDALS[i] ?? `**${i + 1}.**`} **${e.nomRP}** — ${qty(e.quantity)} u`)
+      .map((e, i) => {
+        const medal = MEDALS[i] ?? `**${i + 1}.**`;
+        // Classement par effort ajuste ; on montre le bracelet pour la transparence.
+        return e.multiplier > 1
+          ? `${medal} **${e.nomRP}** — ${qty(Math.round(e.adjustedQuantity))} pts _(${qty(e.quantity)} u ×${e.multiplier})_`
+          : `${medal} **${e.nomRP}** — ${qty(e.quantity)} u`;
+      })
       .join('\n');
-    embed.addFields({ name: '🏆 Top vendeurs', value: top });
+    embed.addFields({ name: '🏆 Top (effort ajusté)', value: top });
   }
 
   return embed

@@ -20,10 +20,11 @@ export interface CompanyBoardData {
   weekEnd: Date;
   current: CompanyWeekStats;
   previous: CompanyWeekStats | null; // derniere semaine cloturee (comparaison)
-  bonusPot: number; // prime de la semaine (provisoire) que le meilleur vendeur remporte
+  bonusPot: number; // prime de la semaine (provisoire), repartie de facon degressive
   newEmployees: string[]; // nomRP des embauches de la semaine
   promotions: { nomRP: string; toLabel: string }[]; // promotions de la semaine
-  topSellers: { nomRP: string; quantity: number }[]; // hors direction, top 3
+  // Classement par effort AJUSTE (bracelet neutralise) ; hors direction, top 3.
+  topSellers: { nomRP: string; quantity: number; multiplier: number; adjustedQuantity: number }[];
 }
 
 /** Stats d'activite d'une semaine donnee, calculees depuis les ventes validees. */
@@ -95,7 +96,12 @@ export async function getCompanyBoardData(guildConfigId: string): Promise<Compan
   const topSellers = report.employees
     .filter((e) => e.eligible && e.quantity > 0)
     .slice(0, 3)
-    .map((e) => ({ nomRP: e.nomRP, quantity: e.quantity }));
+    .map((e) => ({
+      nomRP: e.nomRP,
+      quantity: e.quantity,
+      multiplier: e.multiplier,
+      adjustedQuantity: e.adjustedQuantity,
+    }));
 
   return {
     weekStart: week.startAt,
