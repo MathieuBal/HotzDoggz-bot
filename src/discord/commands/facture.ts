@@ -23,8 +23,7 @@ import {
   type DirectSaleLineInput,
 } from '../../modules/directSales/directSaleService.js';
 import { ForumTagKey } from '@prisma/client';
-import { downloadAndStore } from '../../modules/sales/attachments.js';
-import { resolveProof } from '../../modules/sales/proofInput.js';
+import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
 import { evaluateDirectSaleFraud } from '../../modules/sales/fraudService.js';
 import { riskBadge } from '../../modules/sales/fraud.js';
 import { resolveTagId } from '../../modules/lockers/casierTags.js';
@@ -47,7 +46,7 @@ export const factureCommand: SlashCommand = {
       .setName('facture')
       .setDescription('Déclarer une vente main en main (facture)');
     // Discord impose : toutes les options OBLIGATOIRES avant les optionnelles.
-    // produit1 + quantite1 (requis) d'abord, puis la facture (image OU lien).
+    // produit1 + quantite1 + facture (requis) d'abord, puis le reste.
     b.addStringOption((o) =>
       o.setName('produit1').setDescription('Produit 1').setAutocomplete(true).setRequired(true),
     );
@@ -55,10 +54,7 @@ export const factureCommand: SlashCommand = {
       o.setName('quantite1').setDescription('Quantité du produit 1').setMinValue(1).setRequired(true),
     );
     b.addAttachmentOption((o) =>
-      o.setName('facture').setDescription('Photo de la facture in-game (ou utilise lien_facture)'),
-    );
-    b.addStringOption((o) =>
-      o.setName('lien_facture').setDescription('…ou le lien de la facture in-game'),
+      o.setName('facture').setDescription('Photo de la facture in-game').setRequired(true),
     );
     for (const i of [2, 3] as const) {
       b.addStringOption((o) =>
@@ -106,13 +102,12 @@ export const factureCommand: SlashCommand = {
       return;
     }
 
-    const facture = resolveProof(
-      interaction.options.getAttachment('facture'),
-      interaction.options.getString('lien_facture'),
-      'Facture',
-    );
-    if (!facture.ok) {
-      await interaction.reply({ content: facture.reason, flags: MessageFlags.Ephemeral });
+    const facture = interaction.options.getAttachment('facture', true);
+    if (!isImageAttachment(facture)) {
+      await interaction.reply({
+        content: 'La facture doit être une image (capture d’écran).',
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
     const buyer = interaction.options.getString('client')?.trim() || null;
@@ -182,13 +177,11 @@ export const factureCommand: SlashCommand = {
           threadId: `facture-${interaction.id}`,
           type: AttachmentType.COFFRE_PLEIN, // emplacement de stockage (facture)
           messageId: interaction.id,
-          attachment: facture.source,
+          attachment: facture,
         }),
       ];
     } catch {
-      await interaction.editReply(
-        'Échec de la copie de la facture. Si tu as collé un lien, vérifie qu’il pointe directement vers une image.',
-      );
+      await interaction.editReply('Échec de la copie de la facture. Réessaie.');
       return;
     }
 
@@ -245,7 +238,7 @@ export const factureCommand: SlashCommand = {
           const tagId = await resolveTagId(employee.casierForumId, ForumTagKey.A_VERIFIER);
           const thread = await (casier as ForumChannel).threads.create({
             name: `${created.data.reference} — main en main`,
-            message: { content, files: [facture.file] },
+            message: { content, files: [facture] },
             appliedTags: tagId ? [tagId] : undefined,
           });
           await prisma.directSale.update({
