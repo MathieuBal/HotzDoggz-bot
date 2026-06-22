@@ -140,6 +140,16 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
     .setDescription(`${dateRange(data.weekStart, data.weekEnd)}\n\n${activity}`)
     .setColor(0xff7a00);
 
+  // Prime de la semaine (provisoire) : l'argent que le meilleur vendeur remportera.
+  const leader = data.topSellers[0];
+  const bonusValue =
+    `**${money(data.bonusPot)}**` +
+    (leader ? ` — en tête : **${leader.nomRP}** (${qty(leader.quantity)} u)` : ' — à jouer !');
+  embed.addFields({
+    name: '🏆 Prime de la semaine (à remporter)',
+    value: `${bonusValue}\n_Le meilleur vendeur de la semaine l’empoche à la clôture._`,
+  });
+
   const news: string[] = [];
   if (data.newEmployees.length > 0) {
     news.push(`🆕 Bienvenue a : ${data.newEmployees.join(', ')}`);
