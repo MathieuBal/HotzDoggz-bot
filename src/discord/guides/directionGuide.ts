@@ -55,7 +55,9 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
     .setColor(0x27ae60)
     .setDescription(
       '• **`/semaine ouvrir`** · **`voir`** · **`cloturer`** · **`cloturer-force`** · **`reset`**.\n' +
-        '• **`/paie voir`** · **`/paie marquer-payee`** (après versement en jeu).\n' +
+        '• À la clôture : **semaine suivante ouverte automatiquement** + **récap festif** envoyé aux employés.\n' +
+        '• **`/paie voir`** — bilan clair : **reste à verser**, non-payés en tête. ' +
+        '**`/paie marquer-payee`** après le versement en jeu.\n' +
         '• **`/export semaine`** — fichiers CSV (ventes + paies).',
     );
 
@@ -78,22 +80,33 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
         '• **`/employe associer`** / **`archiver`**.',
     );
 
+  const accueil = new EmbedBuilder()
+    .setTitle('👋 Accueil & vitrine visiteurs')
+    .setColor(0x1abc9c)
+    .setDescription(
+      '• **Arrivée** : chaque nouveau est accueilli dans `bienvenue` et renvoyé vers `règlement`.\n' +
+        '• **Sas d’accès** : bouton « J’accepte le règlement » → formulaire **nom RP** → ' +
+        'rôle **Client** + pseudo.\n' +
+        '• **`/acces attribuer-existants`** — rôle Client aux membres déjà présents · ' +
+        '**`/acces publier`** — republie le bouton.\n' +
+        '• **`/vitrine reglement`** / **`evenement`** — éditer les textes publics · ' +
+        '**`/config accueil`** — message d’arrivée.\n' +
+        '• **`/menu image`** — photo d’un produit → **menu public** maintenu par le bot.',
+    );
+
   const reglages = new EmbedBuilder()
     .setTitle('⚙️ Réglages & automatismes')
     .setColor(0x7f8c8d)
     .setDescription(
-      '• **`/config roles`** (dont rôle **Client**) / **`salons`** (accueil, règlement, ' +
-        'menu, événement) · **`/config accueil`** (message d’arrivée) · ' +
-        '**`/vitrine reglement`** / **`evenement`** (textes publics) · ' +
-        '**`/acces attribuer-existants`** · **`/hotzdogz diagnostic`** · **`/tableau publier`**.\n\n' +
-        '🔔 **Le bot fait seul** : accueil des arrivants + sas d’accès (bouton règlement → ' +
-        'rôle Client + pseudo RP), contrôle anti-fraude (preuves recyclées), relances ' +
-        '(validations en attente, commandes livrées non payées, clôture du dimanche), ' +
-        'fiches de paie en DM à la clôture, tableaux en direct, avis clients.',
+      '• **`/config roles`** (grades + rôle **Client**) / **`salons`** (tous les salons) · ' +
+        '**`/hotzdogz diagnostic`** · **`/tableau publier`**.\n\n' +
+        '🔔 **Le bot fait seul** : accueil + sas d’accès, contrôle anti-fraude (preuves ' +
+        'recyclées), relances (validations en attente, commandes livrées non payées, rappel ' +
+        'de clôture du dimanche), fiches de paie en DM, tableaux en direct, avis clients.',
     )
     .setFooter({ text: 'Guide maintenu automatiquement par le bot' });
 
-  return [intro, panel, commandes, ventes, compta, partenaires, corrections, reglages];
+  return [intro, panel, commandes, ventes, compta, partenaires, corrections, accueil, reglages];
 }
 
 /** Publie / met a jour le guide direction dans son salon dedie. */
