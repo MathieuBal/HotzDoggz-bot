@@ -92,7 +92,7 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   const companyData = await getCompanyBoardData(guildConfigId);
   const companyEmbed = companyData
     ? buildCompanyBoard(companyData)
-    : placeholder('📊 HotzDogz — Developpement de l’entreprise');
+    : placeholder('📊 HotzDoggz — Developpement de l’entreprise');
   // Salon employe dedie si configure, sinon repli sur le tableau hebdo.
   const companyChannel = config.channelCompanyBoard ?? config.channelWeeklyBoard;
 

@@ -209,7 +209,7 @@ export const menuCommand: SlashCommand = {
         : '_Aucun produit. Ajoute-en avec_ `/menu ajouter`.';
     await interaction.editReply({
       embeds: [
-        new EmbedBuilder().setTitle('🍴 Menu HotzDogz').setColor(0xff7a00).setDescription(lines),
+        new EmbedBuilder().setTitle('🍴 Menu HotzDoggz').setColor(0xff7a00).setDescription(lines),
       ],
     });
   },

@@ -140,7 +140,7 @@ export async function sendPayslips(client: Client, guildConfigId: string): Promi
 
   for (const p of latest.payrolls) {
     const embed = new EmbedBuilder()
-      .setTitle('🧾 Ta fiche de paie HotzDogz')
+      .setTitle('🧾 Ta fiche de paie HotzDoggz')
       .setDescription(`Semaine du ${weekLabel}`)
       .setColor(0x8e44ad)
       .addFields(

@@ -1,4 +1,4 @@
-# Guide clé en main — HotzDogz Bot
+# Guide clé en main — HotzDoggz Bot
 
 Ce guide t'amène de zéro à un bot **fonctionnel et branché sur ton serveur**.
 Aucune connaissance technique poussée requise : suis les étapes dans l'ordre.
@@ -76,7 +76,7 @@ Sur chaque casier, crée ces **6 tags** (le bot les reconnaît par leur nom) :
 ## 2. Créer le bot (Discord Developer Portal)
 
 1. Va sur https://discord.com/developers/applications → **New Application**,
-   nomme-la _HotzDogz_.
+   nomme-la _HotzDoggz_.
 2. Onglet **Bot** :
    - clique **Reset Token** → **copie le token** (tu le mettras dans `.env`).
    - Active **MESSAGE CONTENT INTENT** et **SERVER MEMBERS INTENT** (obligatoire).
@@ -184,7 +184,7 @@ Dans ton serveur (les réponses sont privées) :
 4. **Vérifier que tout est au vert** :
 
    ```
-   /hotzdogz diagnostic
+   /hotzdoggz diagnostic
    ```
 
    Corrige ce qui est ❌ ou ⚠️, puis relance jusqu'au tout vert.
@@ -341,7 +341,7 @@ Ces trois mécanismes tournent tout seuls une fois le bot lancé :
 - [ ] Rôles créés et liés (`/config roles`)
 - [ ] Salons créés et liés (`/config salons`, dont `developpement`, `commandes`, `avis-clients`)
 - [ ] Au moins un casier (Forum) avec les 6 tags, employé associé
-- [ ] `/hotzdogz diagnostic` tout au vert
+- [ ] `/hotzdoggz diagnostic` tout au vert
 - [ ] `/semaine ouvrir` effectué, tableaux visibles
 - [ ] Cycle test déclaration → validation → clôture → paie → export OK
 

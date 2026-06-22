@@ -1,4 +1,4 @@
-# HotzDogz — Les commandes du bot (guide directeur)
+# HotzDoggz — Les commandes du bot (guide directeur)
 
 Petit mémo de **toutes les commandes** du bot, expliquées simplement.
 Sur Discord, tape `/` puis le nom : Discord propose les options automatiquement.
@@ -92,7 +92,7 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 | ---------------------- | -------------------------------------------------------------- |
 | `/export semaine`      | Exporter ventes + paies en fichiers (CSV) pour archivage.      |
 | `/tableau publier`     | Forcer la (re)publication des tableaux permanents.             |
-| `/hotzdogz diagnostic` | Vérifier que tout est bien réglé (rôles, salons, permissions). |
+| `/hotzdoggz diagnostic` | Vérifier que tout est bien réglé (rôles, salons, permissions). |
 | `/config roles`        | Lier les rôles de grade et de direction.                       |
 | `/config salons`       | Lier les salons utilisés par le bot.                           |
 

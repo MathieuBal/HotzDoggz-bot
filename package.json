@@ -2,7 +2,7 @@
   "name": "hotzdogz-bot",
   "version": "0.1.0",
   "private": true,
-  "description": "Bot Discord de gestion HotzDogz - ventes au PNJ, comptabilite, paies et audit (MVP)",
+  "description": "Bot Discord de gestion HotzDoggz - ventes au PNJ, comptabilite, paies et audit (MVP)",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"

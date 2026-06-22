@@ -39,7 +39,7 @@ export async function buildPanelMessage(guildConfigId: string): Promise<BaseMess
   ]);
 
   const embed = new EmbedBuilder()
-    .setTitle('🎛️ Panneau de gestion HotzDogz')
+    .setTitle('🎛️ Panneau de gestion HotzDoggz')
     .setColor(0x34495e)
     .setTimestamp(new Date());
 

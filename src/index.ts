@@ -7,7 +7,7 @@ import { flushDashboards } from './modules/dashboards/scheduler.js';
 import { stopProactiveNotifications } from './modules/notifications/scheduler.js';
 
 /**
- * Point d'entree du bot HotzDogz.
+ * Point d'entree du bot HotzDoggz.
  * Processus PERMANENT (CDC §8.5), pas une tache planifiee.
  */
 async function main(): Promise<void> {

@@ -8,7 +8,7 @@ import { logger } from '../../infrastructure/logging/logger.js';
  */
 export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
   const intro = new EmbedBuilder()
-    .setTitle('📖 Guide Direction — Bot HotzDogz')
+    .setTitle('📖 Guide Direction — Bot HotzDoggz')
     .setColor(0xff7a00)
     .setDescription(
       'Toutes tes commandes de gestion, au même endroit. Tape `/` puis le nom : ' +
@@ -101,7 +101,7 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
     .setColor(0x7f8c8d)
     .setDescription(
       '• **`/config roles`** (grades + rôle **Client**) / **`salons`** (tous les salons) · ' +
-        '**`/hotzdogz diagnostic`** · **`/tableau publier`**.\n\n' +
+        '**`/hotzdoggz diagnostic`** · **`/tableau publier`**.\n\n' +
         '🔔 **Le bot fait seul** : accueil + sas d’accès, contrôle anti-fraude (preuves ' +
         'recyclées), relances (validations en attente, commandes livrées non payées, rappel ' +
         'de clôture du dimanche), fiches de paie en DM, tableaux en direct, avis clients.',

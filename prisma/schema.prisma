@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════════
-// HotzDogz · Modele de donnees (CDC §9)
+// HotzDoggz · Modele de donnees (CDC §9)
 // PostgreSQL est la source officielle ; Discord n'est que l'interface.
 // Principes : montants entiers, append-only pour l'audit/le journal financier,
 // idempotence (threadId unique), snapshots figes a la validation.

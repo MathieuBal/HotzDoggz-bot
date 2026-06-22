@@ -79,8 +79,8 @@ const EMBED = PermissionsBitField.Flags.EmbedLinks;
 
 export const diagnosticCommand: SlashCommand = {
   data: new SlashCommandBuilder()
-    .setName('hotzdogz')
-    .setDescription('Bot de gestion HotzDogz')
+    .setName('hotzdoggz')
+    .setDescription('Bot de gestion HotzDoggz')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) =>
       sub
@@ -107,7 +107,7 @@ export const diagnosticCommand: SlashCommand = {
       include: { gradeRates: true, forumTags: true },
     });
 
-    const embed = new EmbedBuilder().setTitle('Diagnostic HotzDogz').setColor(0xff7a00);
+    const embed = new EmbedBuilder().setTitle('Diagnostic HotzDoggz').setColor(0xff7a00);
 
     if (!config) {
       embed

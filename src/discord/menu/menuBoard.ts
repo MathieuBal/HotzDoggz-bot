@@ -13,7 +13,7 @@ const nf = new Intl.NumberFormat('fr-FR');
 const money = (n: number): string => `${nf.format(n)} $`;
 
 const INTRO =
-  'Bienvenue chez **HotzDogz**, votre spécialiste du hot dog sur Los Santos. ' +
+  'Bienvenue chez **HotzDoggz**, votre spécialiste du hot dog sur Los Santos. ' +
   'Sur place, en livraison ou sur commande (entreprises, rassos, événements privés) — ' +
   'des tarifs préférentiels selon les quantités.\n\n' +
   '🍴 Nos produits nourrissent et hydratent. En moyenne, **5 hot dogs** suffisent à ' +
@@ -38,7 +38,7 @@ export async function buildMenuBoard(guildConfigId: string): Promise<BaseMessage
 
   const intro = new EmbedBuilder()
     .setColor(0xff7a00)
-    .setTitle('🌭 HOTZDOGZ — MENU & TARIFS')
+    .setTitle('🌭 HOTZDOGGZ — MENU & TARIFS')
     .setDescription(INTRO);
 
   const embeds: EmbedBuilder[] = [intro];

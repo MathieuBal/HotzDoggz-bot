@@ -9,7 +9,7 @@ function row(input: TextInputBuilder): ActionRowBuilder<TextInputBuilder> {
 export function buildReviewModal(): ModalBuilder {
   return new ModalBuilder()
     .setCustomId(ReviewModalId.SUBMIT)
-    .setTitle('Ton avis sur HotzDogz')
+    .setTitle('Ton avis sur HotzDoggz')
     .addComponents(
       row(
         new TextInputBuilder()

@@ -8,7 +8,7 @@
  *   {serveur} -> nom du serveur
  */
 export const DEFAULT_WELCOME_MESSAGE =
-  'Salut {membre} ! 🌭 Bienvenue au **HotzDogz**. ' +
+  'Salut {membre} ! 🌭 Bienvenue au **HotzDoggz**. ' +
   'Installe-toi, présente-toi à l’équipe, et si tu as un petit creux, ' +
   'passe commande — on s’occupe du reste !';
 

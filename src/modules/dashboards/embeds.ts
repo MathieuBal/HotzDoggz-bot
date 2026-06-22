@@ -136,7 +136,7 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
   ].join('\n');
 
   const embed = new EmbedBuilder()
-    .setTitle('📊 HotzDogz — Developpement de l’entreprise')
+    .setTitle('📊 HotzDoggz — Developpement de l’entreprise')
     .setDescription(`${dateRange(data.weekStart, data.weekEnd)}\n\n${activity}`)
     .setColor(0xff7a00);
 

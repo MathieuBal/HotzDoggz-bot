@@ -1,5 +1,5 @@
 /**
- * Constantes metier HotzDogz (CDC §1.3 a §1.5).
+ * Constantes metier HotzDoggz (CDC §1.3 a §1.5).
  *
  * NB : ces valeurs sont les valeurs par defaut / de reference. La source de
  * verite a la validation d'une vente reste le `GradeRate` enregistre en base

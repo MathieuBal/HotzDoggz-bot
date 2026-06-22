@@ -376,7 +376,7 @@ export const configCommand: SlashCommand = {
       const footer =
         published.length > 0
           ? failed.length > 0
-            ? `\n\n⚠️ Publication tentée (${published.join(', ')}) mais au moins un support a échoué — vérifie les permissions du bot puis relance \`/hotzdogz diagnostic\`.`
+            ? `\n\n⚠️ Publication tentée (${published.join(', ')}) mais au moins un support a échoué — vérifie les permissions du bot puis relance \`/hotzdoggz diagnostic\`.`
             : `\n\n📢 Publié automatiquement : ${published.join(', ')}.`
           : '';
 
