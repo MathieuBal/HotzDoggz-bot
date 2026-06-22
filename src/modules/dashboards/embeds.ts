@@ -259,20 +259,41 @@ export function buildPayrollList(
   weekLabel: string,
   payrolls: readonly PayrollLine[],
 ): EmbedBuilder {
+  // Non payes d'abord (ce qui reste a verser), puis les payes ; chaque groupe
+  // par montant decroissant pour reperer les grosses paies en premier.
+  const ordered = [...payrolls].sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'PAID' ? 1 : -1;
+    return b.totalAmount - a.totalAmount;
+  });
+
   const lines =
-    payrolls.length === 0
+    ordered.length === 0
       ? '_Aucune fiche de paie._'
-      : payrolls
+      : ordered
           .map((p) => {
             const mark = p.status === 'PAID' ? '✅' : '⏳';
             const bonus = p.bonusAmount > 0 ? ` (+${money(p.bonusAmount)} prime)` : '';
-            return `${mark} **${p.employee.nomRP}** — ${money(p.totalAmount)}${bonus} — ${p.status === 'PAID' ? 'payee' : 'a payer'}`;
+            return `${mark} **${p.employee.nomRP}** — ${money(p.totalAmount)}${bonus} — ${p.status === 'PAID' ? 'payée' : 'à payer'}`;
           })
           .join('\n');
+
+  const total = payrolls.reduce((s, p) => s + p.totalAmount, 0);
+  const paid = payrolls.filter((p) => p.status === 'PAID').reduce((s, p) => s + p.totalAmount, 0);
+  const due = total - paid;
+  const dueCount = payrolls.filter((p) => p.status !== 'PAID').length;
+
+  const summary =
+    payrolls.length === 0
+      ? ''
+      : '\n\n━━━━━━━━━━━━━━━\n' +
+        `💰 **Reste à verser : ${money(due)}** (${dueCount} employé${dueCount > 1 ? 's' : ''})\n` +
+        `Total des paies : ${money(total)} · déjà versé : ${money(paid)}`;
+
   return new EmbedBuilder()
     .setTitle(`Paies — semaine du ${weekLabel}`)
-    .setColor(0x8e44ad)
-    .setDescription(lines)
+    .setColor(due > 0 ? 0xe67e22 : 0x27ae60)
+    .setDescription(lines + summary)
+    .setFooter({ text: 'Marque un versement : /paie marquer-payee membre:@…' })
     .setTimestamp(new Date());
 }
 
