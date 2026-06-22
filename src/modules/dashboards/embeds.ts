@@ -289,6 +289,7 @@ export function buildPayrollList(
     return b.totalAmount - a.totalAmount;
   });
 
+  const net = (p: PayrollLine): number => Math.max(0, p.totalAmount - p.advancedAmount);
   const lines =
     ordered.length === 0
       ? '_Aucune fiche de paie._'
@@ -296,13 +297,15 @@ export function buildPayrollList(
           .map((p) => {
             const mark = p.status === 'PAID' ? '✅' : '⏳';
             const bonus = p.bonusAmount > 0 ? ` (+${money(p.bonusAmount)} prime)` : '';
-            return `${mark} **${p.employee.nomRP}** — ${money(p.totalAmount)}${bonus} — ${p.status === 'PAID' ? 'payée' : 'à payer'}`;
+            const adv = p.advancedAmount > 0 ? ` − acompte ${money(p.advancedAmount)}` : '';
+            const reste = p.status === 'PAID' ? 'payée' : `**${money(net(p))}** à verser`;
+            return `${mark} **${p.employee.nomRP}** — ${money(p.totalAmount)}${bonus}${adv} → ${reste}`;
           })
           .join('\n');
 
   const total = payrolls.reduce((s, p) => s + p.totalAmount, 0);
-  const paid = payrolls.filter((p) => p.status === 'PAID').reduce((s, p) => s + p.totalAmount, 0);
-  const due = total - paid;
+  const advances = payrolls.reduce((s, p) => s + p.advancedAmount, 0);
+  const due = payrolls.filter((p) => p.status !== 'PAID').reduce((s, p) => s + net(p), 0);
   const dueCount = payrolls.filter((p) => p.status !== 'PAID').length;
 
   const summary =
@@ -310,7 +313,8 @@ export function buildPayrollList(
       ? ''
       : '\n\n━━━━━━━━━━━━━━━\n' +
         `💰 **Reste à verser : ${money(due)}** (${dueCount} employé${dueCount > 1 ? 's' : ''})\n` +
-        `Total des paies : ${money(total)} · déjà versé : ${money(paid)}`;
+        `Total des paies : ${money(total)}` +
+        (advances > 0 ? ` · acomptes déjà versés : ${money(advances)}` : '');
 
   return new EmbedBuilder()
     .setTitle(`Paies — semaine du ${weekLabel}`)

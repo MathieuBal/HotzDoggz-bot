@@ -58,6 +58,8 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
         '• À la clôture : **semaine suivante ouverte automatiquement** + **récap festif** envoyé aux employés.\n' +
         '• **`/paie voir`** — bilan clair : **reste à verser**, non-payés en tête. ' +
         '**`/paie marquer-payee`** après le versement en jeu.\n' +
+        '• **`/avance verser`** — acompte en cours de semaine (plafonné au gagné), ' +
+        'déduit de la paie à la clôture · **`/avance voir`** / **`annuler`**.\n' +
         '• **`/export semaine`** — fichiers CSV (ventes + paies).',
     );
 

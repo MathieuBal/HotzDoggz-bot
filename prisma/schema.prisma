@@ -179,6 +179,7 @@ model GuildConfig {
   products     Product[]
   directSales  DirectSale[]
   partners     Partner[]
+  advances     SalaryAdvance[]
 }
 
 /// Partenaire B2B (autre org/business). Porte un objectif unique cumulatif de
@@ -357,6 +358,34 @@ model Employee {
   orderContributions OrderContribution[]
   reviews            Review[]
   directSales        DirectSale[]
+  advances           SalaryAdvance[]
+}
+
+enum SalaryAdvanceStatus {
+  ACTIVE
+  CANCELLED
+}
+
+/// Avance / acompte sur salaire verse en cours de semaine (plafonne au gagne).
+/// Deduit du net a payer a la cloture ; sortie tracee au journal des le versement.
+model SalaryAdvance {
+  id            String              @id @default(cuid())
+  guildConfig   GuildConfig         @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  week          AccountingWeek      @relation(fields: [weekId], references: [id])
+  weekId        String
+  employee      Employee            @relation(fields: [employeeId], references: [id])
+  employeeId    String
+  amount        Int
+  status        SalaryAdvanceStatus @default(ACTIVE)
+  note          String?
+
+  createdByDiscordId   String
+  createdAt            DateTime  @default(now())
+  cancelledAt          DateTime?
+  cancelledByDiscordId String?
+
+  @@index([weekId, employeeId])
 }
 
 /// Avis client (RP) laisse via un bouton dans le salon public. Note 1-5 + texte,
@@ -431,6 +460,7 @@ model AccountingWeek {
   ledger       LedgerEntry[]
   clientOrders ClientOrder[]
   directSales  DirectSale[]
+  advances     SalaryAdvance[]
 }
 
 // ── Commandes client ────────────────────────────────────────────────────────
@@ -629,6 +659,7 @@ model Payroll {
 
   salaryAmount Int // salaire de production
   bonusAmount  Int           @default(0) // prime meilleur employe (le cas echeant)
+  advancedAmount Int         @default(0) // acomptes deja verses durant la semaine
   totalAmount  Int
   status       PayrollStatus @default(PENDING)
 
