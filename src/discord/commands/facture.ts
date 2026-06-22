@@ -27,7 +27,7 @@ import { downloadAndStore } from '../../modules/sales/attachments.js';
 import { resolveProof } from '../../modules/sales/proofInput.js';
 import { evaluateDirectSaleFraud } from '../../modules/sales/fraudService.js';
 import { riskBadge } from '../../modules/sales/fraud.js';
-import { setCasierTag } from '../../modules/lockers/casierTags.js';
+import { resolveTagId } from '../../modules/lockers/casierTags.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { mentionDirection, postToLogs } from '../notify.js';
@@ -240,15 +240,18 @@ export const factureCommand: SlashCommand = {
             `**Vente main en main — ${created.data.reference}**\n${linesTxt}\n` +
             `Total : ${totalQty} produit(s) — ${revenue} $` +
             (buyer ? `\nClient : ${buyer}` : '');
+          // Tag applique DES la creation : indispensable si le Forum casier
+          // exige un tag (sinon Discord refuse la creation du post).
+          const tagId = await resolveTagId(employee.casierForumId, ForumTagKey.A_VERIFIER);
           const thread = await (casier as ForumChannel).threads.create({
             name: `${created.data.reference} — main en main`,
             message: { content, files: [facture.file] },
+            appliedTags: tagId ? [tagId] : undefined,
           });
           await prisma.directSale.update({
             where: { id: created.data.id },
             data: { threadId: thread.id },
           });
-          await setCasierTag(thread, employee.casierForumId, ForumTagKey.A_VERIFIER);
         } else {
           casierOk = false;
         }
