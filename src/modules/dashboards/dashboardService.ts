@@ -8,6 +8,7 @@ import { getPartnershipBoardData } from '../partners/partnerService.js';
 import { getCompanyBoardData } from './companyBoard.js';
 import {
   buildAccountingBoard,
+  buildBonusBoard,
   buildClosureSummary,
   buildCompanyBoard,
   buildEmployeeBoard,
@@ -105,13 +106,18 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   const partnersChannel =
     config.channelPartnerships ?? config.channelCompanyBoard ?? config.channelWeeklyBoard;
 
-  const [emp, acc, grid, company, ord, part] = await Promise.all([
+  const bonusEmbed = snapshot
+    ? buildBonusBoard(snapshot.report, snapshot.week.startAt, snapshot.week.endAt)
+    : placeholder('💸 Prime de la semaine — répartition en direct');
+
+  const [emp, acc, grid, company, ord, part, bonus] = await Promise.all([
     ensureMessage(client, config.channelWeeklyBoard, config.msgWeeklyEmployees, employeeEmbed),
     ensureMessage(client, config.channelAccounting, config.msgAccounting, accountingEmbed),
     ensureMessage(client, config.channelWeeklyBoard, config.msgSalaryGrid, gridEmbed),
     ensureMessage(client, companyChannel, config.msgCompanyBoard, companyEmbed),
     ensureMessage(client, config.channelOrders, config.msgOrdersBoard, ordersEmbed),
     ensureMessage(client, partnersChannel, config.msgPartnershipBoard, partnersEmbed),
+    ensureMessage(client, config.channelBonusBoard, config.msgBonusBoard, bonusEmbed),
   ]);
 
   const data: Record<string, string> = {};
@@ -121,6 +127,7 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   if (company.changed && company.messageId) data.msgCompanyBoard = company.messageId;
   if (ord.changed && ord.messageId) data.msgOrdersBoard = ord.messageId;
   if (part.changed && part.messageId) data.msgPartnershipBoard = part.messageId;
+  if (bonus.changed && bonus.messageId) data.msgBonusBoard = bonus.messageId;
   if (Object.keys(data).length > 0) {
     await prisma.guildConfig.update({ where: { id: guildConfigId }, data });
   }

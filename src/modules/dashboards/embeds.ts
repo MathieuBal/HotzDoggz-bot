@@ -1,5 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
+import { computeBonusShares } from '../accounting/weekReport.js';
 import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
 import type { CompanyBoardData } from './companyBoard.js';
 import type { OrderSummary } from '../orders/orderService.js';
@@ -183,6 +184,50 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
   return embed
     .setFooter({ text: 'Mis a jour en direct — comparaison avec la semaine precedente' })
     .setTimestamp(new Date());
+}
+
+/**
+ * Tableau "Prime de la semaine" (cote employes) : repartition DEGRESSIVE en
+ * direct. Chaque employe eligible voit son rang (effort ajuste, bracelet
+ * neutralise) et sa part provisoire ; le dernier touche 0. Total = la cagnotte.
+ */
+export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date): EmbedBuilder {
+  const shares = computeBonusShares(report);
+  const eligible = report.employees.filter((e) => e.eligible && e.adjustedQuantity > 0);
+
+  const embed = new EmbedBuilder()
+    .setTitle('💸 Prime de la semaine — répartition en direct')
+    .setColor(0xf1c40f)
+    .setTimestamp(new Date());
+
+  if (report.bonus <= 0 || eligible.length === 0) {
+    embed.setDescription(
+      `${dateRange(startAt, endAt)}\n\n` +
+        '_La cagnotte se remplit dès les premières ventes validées… Vendez ! 🌭_',
+    );
+    return embed.setFooter({ text: 'Provisoire — ajusté du bracelet, dégressif jusqu’à 0' });
+  }
+
+  const lines = eligible
+    .map((e, i) => {
+      const medal = MEDALS[i] ?? `**${i + 1}.**`;
+      const share = shares.get(e.employeeId) ?? 0;
+      const adj =
+        e.multiplier > 1
+          ? `${qty(Math.round(e.adjustedQuantity))} pts _(${qty(e.quantity)} u ×${e.multiplier})_`
+          : `${qty(e.quantity)} u`;
+      return `${medal} **${e.nomRP}** — ${adj} → **${money(share)}**`;
+    })
+    .join('\n');
+
+  return embed
+    .setDescription(
+      `${dateRange(startAt, endAt)}\n\n` +
+        `🏆 **Cagnotte : ${money(report.bonus)}**\n\n${lines}`,
+    )
+    .setFooter({
+      text: 'En direct — part selon l’effort ajusté (bracelet neutralisé), du 1er au dernier (0 $)',
+    });
 }
 
 /** Tableau "commandes client a realiser" (cote direction). */

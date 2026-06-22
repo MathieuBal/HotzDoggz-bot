@@ -101,7 +101,8 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
     .setTitle('⚙️ Réglages & automatismes')
     .setColor(0x7f8c8d)
     .setDescription(
-      '• **`/config roles`** (grades + rôle **Client**) / **`salons`** (tous les salons) · ' +
+      '• **`/config roles`** (grades + rôle **Client**) / **`salons`** (tous les salons, ' +
+        'dont **prime** = répartition dégressive en direct) · ' +
         '**`/hotzdoggz diagnostic`** · **`/tableau publier`**.\n\n' +
         '🔔 **Le bot fait seul** : accueil + sas d’accès, contrôle anti-fraude (preuves ' +
         'recyclées), relances (validations en attente, commandes livrées non payées, rappel ' +
