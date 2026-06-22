@@ -231,6 +231,28 @@ export function buildPartnershipBoard(rows: readonly PartnerProgress[]): EmbedBu
 }
 
 /** Bilan final de cloture (CDC §6.6). */
+/** Celebration de fin de semaine, cote employes (sans la partie direction). */
+export function buildWeekCelebration(summary: ClosureSummary, weekLabel: string): EmbedBuilder {
+  const best = summary.bestEmployeeName
+    ? summary.bestTie
+      ? `🏆 **${summary.bestEmployeeName}** (ex æquo !)`
+      : `🏆 **${summary.bestEmployeeName}**`
+    : '—';
+  const lines = [
+    `🌭 **Chiffre d’affaires de la semaine : ${money(summary.totalRevenue)}**`,
+    `👏 Employé(e) de la semaine : ${best}`,
+    `🧾 ${summary.payrollCount} fiche${summary.payrollCount > 1 ? 's' : ''} de paie envoyée${summary.payrollCount > 1 ? 's' : ''} en MP.`,
+    '',
+    'Merci à toute l’équipe pour le travail accompli — on remet ça cette semaine ! 🔥',
+  ];
+  return new EmbedBuilder()
+    .setTitle(`🎉 Semaine bouclée — bravo l’équipe ! (${weekLabel})`)
+    .setColor(0xf1c40f)
+    .setDescription(lines.join('\n'))
+    .setFooter({ text: 'HotzDoggz – Le goût qui fait la différence 🔥' })
+    .setTimestamp(new Date());
+}
+
 export function buildClosureSummary(summary: ClosureSummary, weekLabel: string): EmbedBuilder {
   const best = summary.bestEmployeeName
     ? summary.bestTie
@@ -251,6 +273,7 @@ export function buildClosureSummary(summary: ClosureSummary, weekLabel: string):
       { name: 'Co-directeur (25 %)', value: money(summary.coDirectorShare), inline: true },
       { name: 'Fiches de paie', value: String(summary.payrollCount), inline: true },
     )
+    .setFooter({ text: '▶️ Semaine suivante ouverte automatiquement.' })
     .setTimestamp(new Date());
 }
 
