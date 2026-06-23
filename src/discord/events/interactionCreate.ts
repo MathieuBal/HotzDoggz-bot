@@ -13,6 +13,7 @@ import { handlePanelModal } from '../modals/panelModalHandlers.js';
 import { handleReviewModal } from '../modals/reviewModalHandlers.js';
 import { handleSaleModal } from '../modals/saleModalHandlers.js';
 import { handleWeekModal } from '../modals/weekModalHandlers.js';
+import { handleGarageAssign, handleGaragePick } from '../garage/garageHandlers.js';
 import { handlePanelPick } from '../panel/pickers.js';
 import { handlePlanningSelect } from '../planning/planningSelect.js';
 import { handlePanelSelect } from '../selects/panelSelect.js';
@@ -59,8 +60,13 @@ export function registerInteractionCreate(client: Client): void {
         await handleWeekButton(interaction);
         return;
       }
+      if (interaction.isUserSelectMenu()) {
+        await handleGarageAssign(interaction);
+        return;
+      }
       if (interaction.isStringSelectMenu()) {
         if (await handlePlanningSelect(interaction)) return;
+        if (await handleGaragePick(interaction)) return;
         if (await handlePanelPick(interaction)) return;
         await handlePanelSelect(interaction);
         return;

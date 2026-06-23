@@ -7,6 +7,8 @@ import { listActiveOrders } from '../orders/orderService.js';
 import { getPartnershipBoardData } from '../partners/partnerService.js';
 import { getCompanyBoardData } from './companyBoard.js';
 import { publishPlanningBoard } from '../../discord/planning/planningBoard.js';
+import { publishStockBoard } from '../../discord/stock/stockBoard.js';
+import { publishGarageBoard } from '../../discord/garage/garageBoard.js';
 import {
   buildAccountingBoard,
   buildBonusBoard,
@@ -136,6 +138,14 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   // Agenda planning (embed + menu de positionnement) : gere son propre message.
   await publishPlanningBoard(client, guildConfigId).catch((err) =>
     logger.warn({ err, guildConfigId }, 'Mise a jour de l agenda planning KO'),
+  );
+  // Tableau de stock (saucisses + lots perissables).
+  await publishStockBoard(client, guildConfigId).catch((err) =>
+    logger.warn({ err, guildConfigId }, 'Mise a jour du tableau stock KO'),
+  );
+  // Catalogue garage (vehicules + attribution).
+  await publishGarageBoard(client, guildConfigId).catch((err) =>
+    logger.warn({ err, guildConfigId }, 'Mise a jour du catalogue garage KO'),
   );
 }
 

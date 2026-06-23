@@ -50,7 +50,12 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
         '`menu & tarifs`, tenu à jour par le bot (`/config salons menu:#…`).\n' +
         '• **`/facture`** (employés) — vente main en main (produits + photo de facture).\n' +
         '• ✅ Vérification : sur la **fiche** dans `controle-des-ventes`, boutons ' +
-        '**Prendre en charge → Valider** (quantité par produit) **/ Refuser**.',
+        '**Prendre en charge → Valider** (quantité par produit) **/ Refuser**.\n' +
+        '• 🏭 **Stock** : employés `/stock ramasser` (saucisses, non périssables) puis ' +
+        '`/stock transformer` (→ hot dogs, **6j17h**). Salon **`stock`** live.\n' +
+        '• 🏛️ **Garage** : `/vehicule ajouter` (photo + poids + propriétaire) ; le salon ' +
+        '**`garage`** montre les véhicules **dispo à donner** et permet de les **attribuer** ' +
+        '(max 3/employé, illimité direction). `/config salons stock:#… garage:#…`.',
     );
 
   const compta = new EmbedBuilder()
