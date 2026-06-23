@@ -112,6 +112,21 @@ export const GarageId = {
   ASSIGN_TO: 'garage:assignto', // user-select, suffixe :<vehicleId>
 } as const;
 
+/** Tableau stock : menus de selection de vehicule + modals de quantite. */
+export const StockSelectId = {
+  RAMASSER: 'stock:pick:ramasser',
+  TRANSFORMER: 'stock:pick:transformer',
+} as const;
+
+export const StockModalId = {
+  RAMASSER: 'stock:ramasser:modal', // suffixe :<vehicleId>
+  TRANSFORMER: 'stock:transformer:modal', // suffixe :<vehicleId>
+} as const;
+
+export const StockFieldId = {
+  QTE: 'qte',
+} as const;
+
 /** Selecteurs de second niveau : choisir l'entite (grade/partenaire/produit). */
 export const PanelPickId = {
   SALAIRE: 'panel:pick:salaire',
