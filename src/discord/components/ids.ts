@@ -107,6 +107,11 @@ export const PlanningSelectId = {
   SIGNUP: 'planning:signup',
 } as const;
 
+export const GarageId = {
+  PICK: 'garage:pick', // select d'un vehicule disponible a attribuer
+  ASSIGN_TO: 'garage:assignto', // user-select, suffixe :<vehicleId>
+} as const;
+
 /** Selecteurs de second niveau : choisir l'entite (grade/partenaire/produit). */
 export const PanelPickId = {
   SALAIRE: 'panel:pick:salaire',

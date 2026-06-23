@@ -6,10 +6,16 @@ import {
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
 } from 'discord.js';
+import { AttachmentType } from '@prisma/client';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
-import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
-import { addVehicle, listVehicles, removeVehicle } from '../../modules/stock/stockService.js';
-import { isDirection } from '../permissions.js';
+import {
+  getEmployeeByDiscordId,
+  getGuildConfigByGuildId,
+} from '../../modules/employees/employeeService.js';
+import { createVehicle } from '../../modules/garage/garageService.js';
+import { listVehicles, removeVehicle } from '../../modules/stock/stockService.js';
+import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
+import { isDirection, isDirectionMember } from '../permissions.js';
 import type { SlashCommand } from './types.js';
 
 export const vehiculeCommand: SlashCommand = {
@@ -20,9 +26,16 @@ export const vehiculeCommand: SlashCommand = {
     .addSubcommand((s) =>
       s
         .setName('ajouter')
-        .setDescription('Enregistrer un véhicule (marque + plaque)')
+        .setDescription('Enregistrer un véhicule au garage (photo + capacité)')
         .addStringOption((o) => o.setName('marque').setDescription('Marque du véhicule').setRequired(true))
         .addStringOption((o) => o.setName('plaque').setDescription('Plaque d’immatriculation').setRequired(true))
+        .addAttachmentOption((o) => o.setName('photo').setDescription('Photo du véhicule').setRequired(true))
+        .addIntegerOption((o) =>
+          o.setName('poids').setDescription('Poids transportable (capacité)').setMinValue(0).setRequired(true),
+        )
+        .addUserOption((o) =>
+          o.setName('proprietaire').setDescription('Employé à qui l’attribuer (sinon : disponible)'),
+        )
         .addStringOption((o) => o.setName('nom').setDescription('Petit nom (optionnel)')),
     )
     .addSubcommand((s) =>
@@ -69,17 +82,54 @@ export const vehiculeCommand: SlashCommand = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'ajouter') {
-      const res = await addVehicle(
-        config.id,
-        interaction.options.getString('marque', true),
-        interaction.options.getString('plaque', true),
-        interaction.options.getString('nom')?.trim() || null,
-        interaction.user.id,
-      );
+      const photo = interaction.options.getAttachment('photo', true);
+      if (!isImageAttachment(photo)) {
+        await interaction.editReply('La photo doit être une image.');
+        return;
+      }
+      // Proprietaire optionnel : doit etre un employe actif. Sinon : disponible.
+      let ownerId: string | null = null;
+      let ownerIsDirection = false;
+      const proprio = interaction.options.getUser('proprietaire');
+      if (proprio) {
+        const emp = await getEmployeeByDiscordId(proprio.id);
+        if (!emp || emp.guildConfigId !== config.id || emp.status !== 'ACTIVE') {
+          await interaction.editReply('Le propriétaire doit être un employé actif.');
+          return;
+        }
+        ownerId = emp.id;
+        ownerIsDirection = await isDirectionMember(interaction.guild, proprio.id, config);
+      }
+      let stored;
+      try {
+        stored = await downloadAndStore({
+          guildId: interaction.guild.id,
+          threadId: `vehicle-${interaction.id}`,
+          type: AttachmentType.COFFRE_PLEIN, // emplacement de stockage (photo vehicule)
+          messageId: interaction.id,
+          attachment: photo,
+        });
+      } catch {
+        await interaction.editReply('Échec de la copie de la photo. Réessaie.');
+        return;
+      }
+      const res = await createVehicle({
+        guildConfigId: config.id,
+        make: interaction.options.getString('marque', true),
+        plate: interaction.options.getString('plaque', true),
+        name: interaction.options.getString('nom')?.trim() || null,
+        capacity: interaction.options.getInteger('poids', true),
+        photoKey: stored.storageKey,
+        photoName: stored.fileName,
+        ownerId,
+        ownerIsDirection,
+        byDiscordId: interaction.user.id,
+      });
       if (res.ok) scheduleDashboardUpdate(interaction.client, config.id);
       await interaction.editReply(
         res.ok
-          ? `🚚 Véhicule **${res.data.make} ${res.data.plate}** enregistré.`
+          ? `🚚 Véhicule **${res.data.make} ${res.data.plate}** enregistré` +
+              (res.data.ownerNomRP ? ` → attribué à **${res.data.ownerNomRP}**.` : ' (disponible à donner).')
           : `Échec : ${res.reason}`,
       );
       return;

@@ -48,6 +48,7 @@ const CHANNEL_MAP = [
   { opt: 'prime', field: 'channelBonusBoard' },
   { opt: 'planning', field: 'channelPlanning' },
   { opt: 'stock', field: 'channelStock' },
+  { opt: 'garage', field: 'channelGarage' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -176,6 +177,12 @@ export const configCommand: SlashCommand = {
           o
             .setName('stock')
             .setDescription('Salon employé « stock » (saucisses par véhicule + péremption)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('garage')
+            .setDescription('Salon « garage » (catalogue des véhicules + attribution)')
             .addChannelTypes(ChannelType.GuildText),
         ),
     )
@@ -365,6 +372,7 @@ export const configCommand: SlashCommand = {
         'channelBonusBoard',
         'channelPlanning',
         'channelStock',
+        'channelGarage',
       ];
       const tasks: Array<Promise<unknown>> = [];
       if (dashboardFields.some((f) => touched.has(f))) {

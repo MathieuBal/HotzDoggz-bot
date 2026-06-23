@@ -137,6 +137,7 @@ model GuildConfig {
   channelBonusBoard     String? // salon employe "prime" (repartition degressive live)
   channelPlanning       String? // salon employe "planning" (agenda commandes + positionnement)
   channelStock          String? // salon employe "stock" (saucisses par vehicule + peremption)
+  channelGarage         String? // salon "garage" (catalogue des vehicules + attribution)
 
   // Vitrines editables (texte du corps ; le titre/style est gere par le bot)
   welcomeBoardText String?
@@ -163,6 +164,7 @@ model GuildConfig {
   msgBonusBoard       String? // tableau "prime" (repartition degressive, permanent)
   msgPlanningBoard    String? // agenda "planning" (commandes de la semaine, permanent)
   msgStockBoard       String? // tableau "stock" (saucisses + lots de hot dogs, permanent)
+  msgGarageBoard      String? // catalogue "garage" (vehicules, permanent)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
@@ -374,6 +376,7 @@ model Employee {
   advances           SalaryAdvance[]
   orderSignups       OrderSignup[]
   eventSignups       EventSignup[]
+  ownedVehicles      Vehicle[]     @relation("OwnedVehicles")
 }
 
 enum SalaryAdvanceStatus {
@@ -398,6 +401,13 @@ model Vehicle {
   plate     String // plaque d'immatriculation
   saucisses Int     @default(0) // stock de saucisses en cours
   active    Boolean @default(true)
+
+  // Catalogue garage
+  owner     Employee? @relation("OwnedVehicles", fields: [ownerId], references: [id])
+  ownerId   String? // proprietaire (employe) ; null = disponible a donner
+  capacity  Int       @default(0) // poids transportable (capacite de charge)
+  photoKey  String? // cle de stockage de la photo
+  photoName String? // nom de fichier d'origine
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
