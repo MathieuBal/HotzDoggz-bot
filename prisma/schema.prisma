@@ -184,6 +184,7 @@ model GuildConfig {
   directSales  DirectSale[]
   partners     Partner[]
   advances     SalaryAdvance[]
+  events       Event[]
 }
 
 /// Partenaire B2B (autre org/business). Porte un objectif unique cumulatif de
@@ -368,11 +369,53 @@ model Employee {
   directSales        DirectSale[]
   advances           SalaryAdvance[]
   orderSignups       OrderSignup[]
+  eventSignups       EventSignup[]
 }
 
 enum SalaryAdvanceStatus {
   ACTIVE
   CANCELLED
+}
+
+enum EventStatus {
+  ACTIVE
+  CANCELLED
+}
+
+/// Evenement RP auquel HotzDoggz participe (expo, soiree, marche...). Affiche
+/// dans l'agenda planning ; les employes s'y positionnent (presence/aide).
+model Event {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+
+  title       String
+  startAt     DateTime // date + heure de l'evenement
+  location    String?
+  ourRole     String? // notre role sur place (exposant, tombola...)
+  description String?
+  status      EventStatus @default(ACTIVE)
+
+  createdByDiscordId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  signups EventSignup[]
+
+  @@index([guildConfigId, status, startAt])
+}
+
+/// Positionnement d'un employe sur un evenement (toggle).
+model EventSignup {
+  id         String   @id @default(cuid())
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId    String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  createdAt  DateTime @default(now())
+
+  @@unique([eventId, employeeId])
+  @@index([eventId])
 }
 
 /// Avance / acompte sur salaire verse en cours de semaine (plafonne au gagne).

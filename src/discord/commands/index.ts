@@ -5,6 +5,7 @@ import { commandeCommand } from './commande.js';
 import { configCommand } from './config.js';
 import { diagnosticCommand } from './diagnostic.js';
 import { employeCommand } from './employe.js';
+import { eventCommand } from './event.js';
 import { exportCommand } from './export.js';
 import { factureCommand } from './facture.js';
 import { gestionCommand } from './gestion.js';
@@ -27,6 +28,7 @@ const all: SlashCommand[] = [
   configCommand,
   diagnosticCommand,
   employeCommand,
+  eventCommand,
   exportCommand,
   factureCommand,
   gestionCommand,

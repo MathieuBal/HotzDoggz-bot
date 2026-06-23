@@ -3,6 +3,7 @@ import {
   getEmployeeByDiscordId,
   getGuildConfigByGuildId,
 } from '../../modules/employees/employeeService.js';
+import { toggleEventSignup } from '../../modules/events/eventService.js';
 import { toggleSignup } from '../../modules/planning/planningService.js';
 import { PlanningSelectId } from '../components/ids.js';
 import { publishPlanningBoard } from './planningBoard.js';
@@ -32,25 +33,43 @@ export async function handlePlanningSelect(
     return true;
   }
 
-  const orderId = interaction.values[0];
-  if (!orderId) {
+  const value = interaction.values[0];
+  if (!value) {
     await interaction.reply({ content: 'Sélection vide.', flags: ephemeral });
     return true;
   }
 
-  const res = await toggleSignup(config.id, orderId, employee.id);
-  if (!res.ok) {
-    await interaction.reply({ content: `❌ ${res.reason}`, flags: ephemeral });
-    return true;
+  // Valeur prefixee : "o:<id>" = commande, "e:<id>" = evenement.
+  const [kind, id] = [value.slice(0, 1), value.slice(2)];
+  let positioned: boolean;
+  let label: string;
+  let suffix = '';
+  if (kind === 'e') {
+    const res = await toggleEventSignup(config.id, id, employee.id);
+    if (!res.ok) {
+      await interaction.reply({ content: `❌ ${res.reason}`, flags: ephemeral });
+      return true;
+    }
+    positioned = res.positioned;
+    label = res.title;
+  } else {
+    const res = await toggleSignup(config.id, id, employee.id);
+    if (!res.ok) {
+      await interaction.reply({ content: `❌ ${res.reason}`, flags: ephemeral });
+      return true;
+    }
+    positioned = res.positioned;
+    label = res.reference;
+    if (positioned) suffix = ' Pense à produire puis fais valider via `/commande contribuer`.';
   }
 
   // Rafraichit l'agenda (la liste des positionnes change).
   await publishPlanningBoard(interaction.client, config.id).catch(() => undefined);
 
   await interaction.reply({
-    content: res.positioned
-      ? `✅ Tu t’es positionné sur **${res.reference}**. Pense à produire puis fais valider via \`/commande contribuer\`.`
-      : `↩️ Tu t’es retiré de **${res.reference}**.`,
+    content: positioned
+      ? `✅ Tu t’es positionné sur **${label}**.${suffix}`
+      : `↩️ Tu t’es retiré de **${label}**.`,
     flags: ephemeral,
   });
   return true;
