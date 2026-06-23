@@ -128,10 +128,11 @@ export function computeWeekReport(
 }
 
 /**
- * Repartition DEGRESSIVE de la prime a la cloture, sur le classement AJUSTE
- * (bracelet neutralise) : le 1er touche la plus grosse part, le dernier 0 $.
- * Poids lineaires (n-1, n-2, …, 0). Cas d'un seul eligible : prime entiere.
- * Le residu d'arrondi va aux mieux classes. La somme = prime exactement.
+ * Repartition de la prime a la cloture, PROPORTIONNELLE a l'effort produit
+ * (production ajustee, bracelet neutralise). Des qu'on produit, on touche une
+ * part ; seuls ceux qui n'ont rien fait touchent 0. Naturellement degressif
+ * (plus tu produis, plus ta part est grosse). Methode du plus grand reste pour
+ * que la somme = prime exactement.
  *
  * @returns Map employeeId -> montant de prime (entier).
  */
@@ -142,39 +143,22 @@ export function computeBonusShares(report: WeekReport): Map<string, number> {
   const eligible = report.employees
     .filter((e) => e.eligible && e.adjustedQuantity > 0)
     .sort((a, b) => b.adjustedQuantity - a.adjustedQuantity || a.nomRP.localeCompare(b.nomRP));
-  const n = eligible.length;
-  if (n === 0) return shares;
-  if (n === 1) {
-    shares.set(eligible[0]!.employeeId, report.bonus);
-    return shares;
-  }
+  const totalAdj = eligible.reduce((s, e) => s + e.adjustedQuantity, 0);
+  if (eligible.length === 0 || totalAdj <= 0) return shares;
 
-  // Poids de position degressifs (premier = n-1, dernier = 0). Les ex aequo
-  // (meme effort ajuste) partagent la moyenne de leurs poids -> parts egales.
-  const posWeights = eligible.map((_, i) => n - 1 - i);
-  const weights = new Array<number>(n);
-  for (let i = 0; i < n; ) {
-    let j = i;
-    while (j < n && eligible[j]!.adjustedQuantity === eligible[i]!.adjustedQuantity) j++;
-    let sum = 0;
-    for (let k = i; k < j; k++) sum += posWeights[k]!;
-    const avg = sum / (j - i);
-    for (let k = i; k < j; k++) weights[k] = avg;
-    i = j;
-  }
-  const sumW = weights.reduce((s, w) => s + w, 0); // n(n-1)/2
-  if (sumW <= 0) return shares;
-
-  const amounts = eligible.map((_, i) => Math.floor((report.bonus * weights[i]!) / sumW));
-  let residual = report.bonus - amounts.reduce((s, a) => s + a, 0);
-  for (let i = 0; i < n && residual > 0; i++) {
-    if (weights[i]! <= 0) continue; // jamais au dernier (poids 0)
-    amounts[i]!++;
+  const parts = eligible.map((e) => {
+    const exact = (report.bonus * e.adjustedQuantity) / totalAdj;
+    const amt = Math.floor(exact);
+    return { id: e.employeeId, amt, rem: exact - amt };
+  });
+  let residual = report.bonus - parts.reduce((s, p) => s + p.amt, 0);
+  // Residu aux plus grands restes (ordre stable : plus gros producteurs d'abord).
+  const byRemainder = [...parts].sort((a, b) => b.rem - a.rem);
+  for (let i = 0; i < byRemainder.length && residual > 0; i++) {
+    byRemainder[i]!.amt += 1;
     residual--;
   }
-  eligible.forEach((e, i) => {
-    if (amounts[i]! > 0) shares.set(e.employeeId, amounts[i]!);
-  });
+  for (const p of parts) if (p.amt > 0) shares.set(p.id, p.amt);
   return shares;
 }
 

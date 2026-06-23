@@ -35,8 +35,8 @@ export function buildEmployeeBoard(report: WeekReport, startAt: Date, endAt: Dat
 
   const best = report.bestEmployee
     ? report.bestTie
-      ? `Egalite a ${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts — a departager a la cloture`
-      : `**${report.bestEmployee.nomRP}** (${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts d’effort) — prime repartie`
+      ? `Egalite a ${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts d’effort`
+      : `**${report.bestEmployee.nomRP}** (${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts d’effort)`
     : '—';
 
   return new EmbedBuilder()
@@ -116,7 +116,7 @@ export function buildPersonalBoard(
       { name: 'Meilleur (effort ajuste)', value: best, inline: true },
       { name: 'Objectif', value: objectiveMessage(view) },
     )
-    .setFooter({ text: 'Provisoire — prime repartie selon l’effort ajuste (bracelet neutralise)' })
+    .setFooter({ text: 'Provisoire — prime proportionnelle a l’effort produit (bracelet neutralise)' })
     .setTimestamp(new Date());
 }
 
@@ -154,7 +154,7 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
     (leader ? ` — en tête : **${leader.nomRP}**` : ' — à jouer !');
   embed.addFields({
     name: '🏆 Prime de la semaine',
-    value: `${bonusValue}\n_Répartie à la clôture selon l’effort (ajusté du bracelet), du 1er au dernier._`,
+    value: `${bonusValue}\n_Répartie à la clôture, proportionnellement à l’effort produit (bracelet neutralisé)._`,
   });
 
   const news: string[] = [];
@@ -187,9 +187,9 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
 }
 
 /**
- * Tableau "Prime de la semaine" (cote employes) : repartition DEGRESSIVE en
- * direct. Chaque employe eligible voit son rang (effort ajuste, bracelet
- * neutralise) et sa part provisoire ; le dernier touche 0. Total = la cagnotte.
+ * Tableau "Prime de la semaine" (cote employes) : repartition PROPORTIONNELLE a
+ * l'effort produit (ajuste du bracelet), en direct. Chaque producteur voit sa
+ * part provisoire ; seuls ceux qui n'ont rien fait sont a 0. Total = la cagnotte.
  */
 export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date): EmbedBuilder {
   const shares = computeBonusShares(report);
@@ -205,7 +205,7 @@ export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date):
       `${dateRange(startAt, endAt)}\n\n` +
         '_La cagnotte se remplit dès les premières ventes validées… Vendez ! 🌭_',
     );
-    return embed.setFooter({ text: 'Provisoire — ajusté du bracelet, dégressif jusqu’à 0' });
+    return embed.setFooter({ text: 'Provisoire — proportionnel à l’effort (bracelet neutralisé)' });
   }
 
   const lines = eligible
@@ -226,7 +226,7 @@ export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date):
         `🏆 **Cagnotte : ${money(report.bonus)}**\n\n${lines}`,
     )
     .setFooter({
-      text: 'En direct — part selon l’effort ajusté (bracelet neutralisé), du 1er au dernier (0 $)',
+      text: 'En direct — part proportionnelle à l’effort produit (bracelet neutralisé)',
     });
 }
 
