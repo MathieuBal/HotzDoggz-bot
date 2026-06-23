@@ -79,7 +79,8 @@ export async function handleReviewModal(interaction: ModalSubmitInteraction): Pr
       logger.warn({ err }, 'Publication de la carte d’avis KO');
     }
   }
-  await updateReviewBoard(interaction.client, config.id).catch(() => undefined);
+  // Collant : on repose le bandeau sous la nouvelle carte d'avis.
+  await updateReviewBoard(interaction.client, config.id, { sticky: true }).catch(() => undefined);
 
   await interaction.editReply('Merci pour ton avis ! 🌭');
   return true;

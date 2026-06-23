@@ -1,4 +1,4 @@
-import { LedgerEntryType, SaleStatus } from '@prisma/client';
+import { LedgerEntryType, PayrollStatus, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
 import { collectWeekReportInputs } from './weekInputs.js';
@@ -87,18 +87,43 @@ export async function closeWeek(
       },
     });
 
-    // Fiches de paie par employe (salaire de production + part de prime).
-    if (report.employees.length > 0) {
+    // Avances versees durant la semaine (deduites du net a payer).
+    const advanceRows = await tx.salaryAdvance.groupBy({
+      by: ['employeeId'],
+      where: { weekId: week.id, status: 'ACTIVE' },
+      _sum: { amount: true },
+    });
+    const advancesByEmployee = new Map<string, number>(
+      advanceRows.map((r) => [r.employeeId, r._sum.amount ?? 0]),
+    );
+
+    // Fiches de paie par employe (salaire + prime − acomptes deja verses).
+    // Inclut aussi un employe qui aurait recu une avance sans vente retenue.
+    const employeeIds = new Set<string>([
+      ...report.employees.map((e) => e.employeeId),
+      ...advancesByEmployee.keys(),
+    ]);
+    const salaryById = new Map(report.employees.map((e) => [e.employeeId, e.salary]));
+    if (employeeIds.size > 0) {
       await tx.payroll.createMany({
-        data: report.employees.map((e) => {
-          const bonus = bonusShares.get(e.employeeId) ?? 0;
+        data: [...employeeIds].map((employeeId) => {
+          const salary = salaryById.get(employeeId) ?? 0;
+          const bonus = bonusShares.get(employeeId) ?? 0;
+          const total = salary + bonus;
+          const advanced = advancesByEmployee.get(employeeId) ?? 0;
+          // Plus rien a verser si l'acompte couvre deja le total -> regle.
+          const settled = advanced >= total;
           return {
             guildConfigId,
-            employeeId: e.employeeId,
+            employeeId,
             weekId: week.id,
-            salaryAmount: e.salary,
+            salaryAmount: salary,
             bonusAmount: bonus,
-            totalAmount: e.salary + bonus,
+            advancedAmount: advanced,
+            totalAmount: total,
+            status: settled ? PayrollStatus.PAID : PayrollStatus.PENDING,
+            paidAt: settled ? new Date() : null,
+            payerDiscordId: settled ? actorId : null,
           };
         }),
       });

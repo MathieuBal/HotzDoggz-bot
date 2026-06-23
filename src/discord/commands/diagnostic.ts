@@ -79,8 +79,8 @@ const EMBED = PermissionsBitField.Flags.EmbedLinks;
 
 export const diagnosticCommand: SlashCommand = {
   data: new SlashCommandBuilder()
-    .setName('hotzdogz')
-    .setDescription('Bot de gestion HotzDogz')
+    .setName('hotzdoggz')
+    .setDescription('Bot de gestion HotzDoggz')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) =>
       sub
@@ -107,7 +107,7 @@ export const diagnosticCommand: SlashCommand = {
       include: { gradeRates: true, forumTags: true },
     });
 
-    const embed = new EmbedBuilder().setTitle('Diagnostic HotzDogz').setColor(0xff7a00);
+    const embed = new EmbedBuilder().setTitle('Diagnostic HotzDoggz').setColor(0xff7a00);
 
     if (!config) {
       embed
@@ -129,6 +129,7 @@ export const diagnosticCommand: SlashCommand = {
       roleLine(guild, 'Experimente', config.roleExperimente),
       roleLine(guild, 'Novice', config.roleNovice),
       roleLine(guild, 'Stagiaire', config.roleStagiaire),
+      roleLine(guild, 'Client (visiteurs)', config.roleClient),
     ];
 
     // Salons
@@ -150,6 +151,18 @@ export const diagnosticCommand: SlashCommand = {
       ]),
       channelLine(guild, 'Commandes (direction)', config.channelOrders, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Avis clients (public)', config.channelReviews, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Partenariats (employes)', config.channelPartnerships, [
+        VIEW,
+        SEND,
+        EMBED,
+      ]),
+      channelLine(guild, 'Guide direction', config.channelGuideDirection, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Accueil (arrivants)', config.channelWelcome, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Règlement (sas)', config.channelReglement, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Menu & tarifs (public)', config.channelMenuBoard, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Événement (vitrine)', config.channelEvent, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Prime (employés)', config.channelBonusBoard, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Planning (employés)', config.channelPlanning, [VIEW, SEND, EMBED]),
     ]);
 
     // Tarifs de grade
@@ -188,6 +201,17 @@ export const diagnosticCommand: SlashCommand = {
       ),
       messageLine(guild, 'Commandes a realiser', config.channelOrders, config.msgOrdersBoard),
       messageLine(guild, 'Bandeau avis clients', config.channelReviews, config.msgReviewBoard),
+      messageLine(
+        guild,
+        'Objectifs partenariats',
+        config.channelPartnerships ?? config.channelCompanyBoard ?? config.channelWeeklyBoard,
+        config.msgPartnershipBoard,
+      ),
+      messageLine(guild, 'Sas règlement (bouton)', config.channelReglement, config.msgVerification),
+      messageLine(guild, 'Menu & tarifs (public)', config.channelMenuBoard, config.msgMenuBoard),
+      messageLine(guild, 'Vitrine événement', config.channelEvent, config.msgEventBoard),
+      messageLine(guild, 'Tableau prime', config.channelBonusBoard, config.msgBonusBoard),
+      messageLine(guild, 'Agenda planning', config.channelPlanning, config.msgPlanningBoard),
     ]);
 
     // Semaine comptable ouverte

@@ -21,6 +21,7 @@ export interface CreateOrderInput {
   negotiatedPrice: number;
   deadline: Date | null;
   createdByDiscordId: string;
+  partnerId?: string | null;
 }
 
 /** Cree une commande client (direction). Reference CMD-AAAA-NNNN. */
@@ -45,6 +46,7 @@ export async function createOrder(
             negotiatedPrice: input.negotiatedPrice,
             deadline: input.deadline,
             createdByDiscordId: input.createdByDiscordId,
+            partnerId: input.partnerId ?? null,
           },
         });
         await writeAudit(tx, {

@@ -9,6 +9,14 @@ import {
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../../modules/audit/auditService.js';
 import { upsertGradeRate } from '../../modules/employees/employeeService.js';
+import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
+import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
+import { publishDirectionGuide } from '../guides/directionGuide.js';
+import { publishVerification } from '../verification/verificationBoard.js';
+import { publishMenuBoard } from '../menu/menuBoard.js';
+import { publishEventBoard } from '../vitrine/vitrineBoards.js';
+import { logger } from '../../infrastructure/logging/logger.js';
+import { renderWelcomeMessage } from '../../modules/welcome/welcomeMessage.js';
 import type { SlashCommand } from './types.js';
 
 // Liaison option -> champ GuildConfig + libelle/tarif du grade.
@@ -30,6 +38,15 @@ const CHANNEL_MAP = [
   { opt: 'developpement', field: 'channelCompanyBoard' },
   { opt: 'commandes', field: 'channelOrders' },
   { opt: 'avis', field: 'channelReviews' },
+  { opt: 'partenariats', field: 'channelPartnerships' },
+  { opt: 'guide_direction', field: 'channelGuideDirection' },
+  { opt: 'guide_equipe', field: 'channelGuideEmployee' },
+  { opt: 'accueil', field: 'channelWelcome' },
+  { opt: 'reglement', field: 'channelReglement' },
+  { opt: 'menu', field: 'channelMenuBoard' },
+  { opt: 'evenement', field: 'channelEvent' },
+  { opt: 'prime', field: 'channelBonusBoard' },
+  { opt: 'planning', field: 'channelPlanning' },
 ] as const;
 
 export const configCommand: SlashCommand = {
@@ -46,7 +63,10 @@ export const configCommand: SlashCommand = {
         .addRoleOption((o) => o.setName('chef_equipe').setDescription("Role Chef d'equipe"))
         .addRoleOption((o) => o.setName('experimente').setDescription('Role Experimente'))
         .addRoleOption((o) => o.setName('novice').setDescription('Role Novice'))
-        .addRoleOption((o) => o.setName('stagiaire').setDescription('Role Stagiaire')),
+        .addRoleOption((o) => o.setName('stagiaire').setDescription('Role Stagiaire'))
+        .addRoleOption((o) =>
+          o.setName('client').setDescription('Role Client (visiteurs ayant accepté le règlement)'),
+        ),
     )
     .addSubcommand((s) =>
       s
@@ -96,6 +116,77 @@ export const configCommand: SlashCommand = {
             .setName('avis')
             .setDescription("Salon public 'avis clients'")
             .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('partenariats')
+            .setDescription("Salon employe 'objectifs partenariats'")
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('guide_direction')
+            .setDescription('Salon tuto direction (guide des commandes)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('guide_equipe')
+            .setDescription('Salon tuto employes (process)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('accueil')
+            .setDescription('Salon d’accueil des nouveaux arrivants')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('reglement')
+            .setDescription('Salon règlement (reçoit le bouton de validation d’accès)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('menu')
+            .setDescription('Salon public menu & tarifs (maintenu par le bot)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('evenement')
+            .setDescription('Salon événement (vitrine maintenue par le bot)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('prime')
+            .setDescription('Salon employé « prime » (répartition dégressive en direct)')
+            .addChannelTypes(ChannelType.GuildText),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('planning')
+            .setDescription('Salon employé « planning » (agenda commandes + positionnement)')
+            .addChannelTypes(ChannelType.GuildText),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName('accueil')
+        .setDescription('Personnaliser le message de bienvenue (placeholders {membre} {serveur})')
+        .addStringOption((o) =>
+          o
+            .setName('message')
+            .setDescription('Texte RP. Laisse vide pour voir/réinitialiser. {membre} = mention.')
+            .setRequired(false),
+        )
+        .addBooleanOption((o) =>
+          o
+            .setName('defaut')
+            .setDescription('Remettre le message d’accueil par défaut')
+            .setRequired(false),
         ),
     )
     .toJSON(),
@@ -118,6 +209,66 @@ export const configCommand: SlashCommand = {
     const guildId = interaction.guild.id;
     const sub = interaction.options.getSubcommand();
 
+    if (sub === 'accueil') {
+      const message = interaction.options.getString('message')?.trim() || null;
+      const reset = interaction.options.getBoolean('defaut') ?? false;
+
+      // Sans argument : on affiche un apercu du message courant.
+      if (!message && !reset) {
+        const current = await prisma.guildConfig.findUnique({
+          where: { guildId },
+          select: { welcomeMessage: true, channelWelcome: true },
+        });
+        const preview = renderWelcomeMessage(current?.welcomeMessage ?? null, {
+          mention: `@${interaction.user.username}`,
+          guildName: interaction.guild.name,
+        });
+        const channelNote = current?.channelWelcome
+          ? `Salon d’accueil : <#${current.channelWelcome}>`
+          : '⚠️ Aucun salon d’accueil lié (`/config salons accueil:#…`).';
+        await interaction.editReply({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle('Message d’accueil')
+              .setColor(0xff7a00)
+              .setDescription(preview)
+              .setFooter({
+                text: 'Placeholders : {membre}, {serveur}. Modifie avec /config accueil message:…',
+              }),
+          ],
+          content: channelNote,
+        });
+        return;
+      }
+
+      const newValue = reset ? null : message;
+      const config = await prisma.guildConfig.upsert({
+        where: { guildId },
+        create: { guildId, timezone: 'Europe/Paris', welcomeMessage: newValue },
+        update: { welcomeMessage: newValue },
+      });
+      await writeAudit(prisma, {
+        guildConfigId: config.id,
+        action: 'CONFIG_WELCOME_SET',
+        authorDiscordId: interaction.user.id,
+        after: { welcomeMessage: newValue ?? '(défaut)' },
+      });
+      const shown = renderWelcomeMessage(newValue, {
+        mention: `@${interaction.user.username}`,
+        guildName: interaction.guild.name,
+      });
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(reset ? 'Message d’accueil réinitialisé' : 'Message d’accueil mis à jour')
+            .setColor(0x2ecc71)
+            .setDescription(shown)
+            .setFooter({ text: 'Aperçu (la mention pingera vraiment le nouvel arrivant)' }),
+        ],
+      });
+      return;
+    }
+
     if (sub === 'roles') {
       const fields: Record<string, string> = {};
       const grades: Array<{ roleId: string; label: string; rate: number }> = [];
@@ -128,6 +279,10 @@ export const configCommand: SlashCommand = {
           grades.push({ roleId: role.id, label: m.label, rate: m.rate });
         }
       }
+      // Le role Client n'est PAS un grade (pas de tarif) : on le lie a part.
+      const clientRole = interaction.options.getRole('client');
+      if (clientRole) fields.roleClient = clientRole.id;
+
       if (Object.keys(fields).length === 0) {
         await interaction.editReply('Aucun role fourni. Renseigne au moins un role.');
         return;
@@ -148,10 +303,14 @@ export const configCommand: SlashCommand = {
         after: fields,
       });
 
-      const lines = grades.map((g) => `• ${g.label} → <@&${g.roleId}> (${g.rate} $/u)`).join('\n');
+      const lines = grades.map((g) => `• ${g.label} → <@&${g.roleId}> (${g.rate} $/u)`);
+      if (clientRole) lines.push(`• Client → <@&${clientRole.id}> (accès visiteurs)`);
       await interaction.editReply({
         embeds: [
-          new EmbedBuilder().setTitle('Roles configures').setColor(0x2ecc71).setDescription(lines),
+          new EmbedBuilder()
+            .setTitle('Roles configures')
+            .setColor(0x2ecc71)
+            .setDescription(lines.join('\n')),
         ],
       });
       return;
@@ -183,12 +342,66 @@ export const configCommand: SlashCommand = {
         authorDiscordId: interaction.user.id,
         after: fields,
       });
+
+      // Republication immediate dans les salons concernes (plus besoin de
+      // redemarrer le bot). On ne touche qu'aux supports lies au(x) salon(s)
+      // qui viennent d'etre configures.
+      const published: string[] = [];
+      const touched = new Set(Object.keys(fields));
+      const dashboardFields = [
+        'channelWeeklyBoard',
+        'channelAccounting',
+        'channelPayroll',
+        'channelCompanyBoard',
+        'channelOrders',
+        'channelPartnerships',
+        'channelBonusBoard',
+        'channelPlanning',
+      ];
+      const tasks: Array<Promise<unknown>> = [];
+      if (dashboardFields.some((f) => touched.has(f))) {
+        tasks.push(updateDashboardsNow(interaction.client, config.id));
+        published.push('tableaux de bord');
+      }
+      if (touched.has('channelReviews')) {
+        tasks.push(updateReviewBoard(interaction.client, config.id));
+        published.push('bandeau avis clients');
+      }
+      if (touched.has('channelGuideDirection')) {
+        tasks.push(publishDirectionGuide(interaction.client, config.id));
+        published.push('guide direction');
+      }
+      if (touched.has('channelReglement')) {
+        tasks.push(publishVerification(interaction.client, config.id));
+        published.push('sas d’accès (règlement)');
+      }
+      if (touched.has('channelMenuBoard')) {
+        tasks.push(publishMenuBoard(interaction.client, config.id));
+        published.push('menu & tarifs');
+      }
+      if (touched.has('channelEvent')) {
+        tasks.push(publishEventBoard(interaction.client, config.id));
+        published.push('vitrine événement');
+      }
+      const results = await Promise.allSettled(tasks);
+      const failed = results.filter((r) => r.status === 'rejected');
+      for (const r of failed) {
+        logger.warn({ err: (r as PromiseRejectedResult).reason }, 'Republication post-config KO');
+      }
+
+      const footer =
+        published.length > 0
+          ? failed.length > 0
+            ? `\n\n⚠️ Publication tentée (${published.join(', ')}) mais au moins un support a échoué — vérifie les permissions du bot puis relance \`/hotzdoggz diagnostic\`.`
+            : `\n\n📢 Publié automatiquement : ${published.join(', ')}.`
+          : '';
+
       await interaction.editReply({
         embeds: [
           new EmbedBuilder()
             .setTitle('Salons configures')
-            .setColor(0x2ecc71)
-            .setDescription(summary.join('\n')),
+            .setColor(failed.length > 0 ? 0xe67e22 : 0x2ecc71)
+            .setDescription(summary.join('\n') + footer),
         ],
       });
     }

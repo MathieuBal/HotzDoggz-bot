@@ -1,8 +1,10 @@
 import { EmbedBuilder } from 'discord.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
+import { computeBonusShares } from '../accounting/weekReport.js';
 import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
 import type { CompanyBoardData } from './companyBoard.js';
 import type { OrderSummary } from '../orders/orderService.js';
+import type { PartnerProgress } from '../partners/partnerService.js';
 import type { PayrollLine } from '../payroll/payrollService.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
@@ -26,14 +28,15 @@ export function buildEmployeeBoard(report: WeekReport, startAt: Date, endAt: Dat
           .map((e, i) => {
             const rank = MEDALS[i] ?? `**${i + 1}.**`;
             const star = e.eligible ? '' : ' _(hors prime)_';
-            return `${rank} **${e.nomRP}** — ${qty(e.quantity)} u — ${money(e.salary)} (${e.gradeLabel ?? '—'})${star}`;
+            const brace = e.multiplier > 1 ? ` ×${e.multiplier}` : '';
+            return `${rank} **${e.nomRP}** — ${qty(e.quantity)} u${brace} — ${money(e.salary)} (${e.gradeLabel ?? '—'})${star}`;
           })
           .join('\n');
 
   const best = report.bestEmployee
     ? report.bestTie
-      ? `Egalite a ${qty(report.bestEmployee.quantity)} u — a departager a la cloture`
-      : `**${report.bestEmployee.nomRP}** (${qty(report.bestEmployee.quantity)} u) — prime provisoire ${money(report.bonus)}`
+      ? `Egalite a ${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts — a departager a la cloture`
+      : `**${report.bestEmployee.nomRP}** (${qty(Math.round(report.bestEmployee.adjustedQuantity))} pts d’effort) — prime repartie`
     : '—';
 
   return new EmbedBuilder()
@@ -83,7 +86,7 @@ function objectiveMessage(view: PersonalView): string {
       ? '🤝 Egalite en tete — accelere pour prendre le large !'
       : '🏆 Tu es en tete ! Garde le rythme.';
   }
-  return `Plus que **${qty(view.gapToBest)} u** pour ravir la premiere place a ${view.best.nomRP} !`;
+  return `Plus que **${qty(Math.ceil(view.gapToBest))} pts** d’effort pour ravir la premiere place a ${view.best.nomRP} !`;
 }
 
 /** Fiche perso de suivi de compta d'un employe (CDC §7.4). */
@@ -95,20 +98,25 @@ export function buildPersonalBoard(
 ): EmbedBuilder {
   const rank =
     view.rankAmongEligible !== null ? `#${view.rankAmongEligible}` : '— (hors prime, direction)';
-  const best = view.best ? `${view.best.nomRP} — ${qty(view.best.quantity)} u` : '—';
+  const best = view.best ? `${view.best.nomRP} — ${qty(Math.round(view.best.adjustedQuantity))} pts` : '—';
+  // "pts" = production ajustee (bracelet neutralise) qui sert a la prime.
+  const prod =
+    view.multiplier > 1
+      ? `${qty(view.quantity)} u (×${view.multiplier} → ${qty(Math.round(view.adjustedQuantity))} pts)`
+      : `${qty(view.quantity)} u`;
 
   return new EmbedBuilder()
     .setTitle(`Ta comptabilite — ${nomRP}`)
     .setDescription(dateRange(startAt, endAt))
     .setColor(view.isLeader ? 0xf1c40f : 0xff7a00)
     .addFields(
-      { name: 'Production validee', value: `${qty(view.quantity)} u`, inline: true },
+      { name: 'Production validee', value: prod, inline: true },
       { name: 'Salaire provisoire', value: money(view.salary), inline: true },
       { name: 'Rang (course a la prime)', value: rank, inline: true },
-      { name: 'Meilleur employe', value: best, inline: true },
+      { name: 'Meilleur (effort ajuste)', value: best, inline: true },
       { name: 'Objectif', value: objectiveMessage(view) },
     )
-    .setFooter({ text: 'Provisoire — definitif a la cloture' })
+    .setFooter({ text: 'Provisoire — prime repartie selon l’effort ajuste (bracelet neutralise)' })
     .setTimestamp(new Date());
 }
 
@@ -135,9 +143,19 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
   ].join('\n');
 
   const embed = new EmbedBuilder()
-    .setTitle('📊 HotzDogz — Developpement de l’entreprise')
+    .setTitle('📊 HotzDoggz — Developpement de l’entreprise')
     .setDescription(`${dateRange(data.weekStart, data.weekEnd)}\n\n${activity}`)
     .setColor(0xff7a00);
+
+  // Prime de la semaine (provisoire), repartie de facon degressive selon l'effort.
+  const leader = data.topSellers[0];
+  const bonusValue =
+    `**${money(data.bonusPot)}**` +
+    (leader ? ` — en tête : **${leader.nomRP}**` : ' — à jouer !');
+  embed.addFields({
+    name: '🏆 Prime de la semaine',
+    value: `${bonusValue}\n_Répartie à la clôture selon l’effort (ajusté du bracelet), du 1er au dernier._`,
+  });
 
   const news: string[] = [];
   if (data.newEmployees.length > 0) {
@@ -152,14 +170,64 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
 
   if (data.topSellers.length > 0) {
     const top = data.topSellers
-      .map((e, i) => `${MEDALS[i] ?? `**${i + 1}.**`} **${e.nomRP}** — ${qty(e.quantity)} u`)
+      .map((e, i) => {
+        const medal = MEDALS[i] ?? `**${i + 1}.**`;
+        // Classement par effort ajuste ; on montre le bracelet pour la transparence.
+        return e.multiplier > 1
+          ? `${medal} **${e.nomRP}** — ${qty(Math.round(e.adjustedQuantity))} pts _(${qty(e.quantity)} u ×${e.multiplier})_`
+          : `${medal} **${e.nomRP}** — ${qty(e.quantity)} u`;
+      })
       .join('\n');
-    embed.addFields({ name: '🏆 Top vendeurs', value: top });
+    embed.addFields({ name: '🏆 Top (effort ajusté)', value: top });
   }
 
   return embed
     .setFooter({ text: 'Mis a jour en direct — comparaison avec la semaine precedente' })
     .setTimestamp(new Date());
+}
+
+/**
+ * Tableau "Prime de la semaine" (cote employes) : repartition DEGRESSIVE en
+ * direct. Chaque employe eligible voit son rang (effort ajuste, bracelet
+ * neutralise) et sa part provisoire ; le dernier touche 0. Total = la cagnotte.
+ */
+export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date): EmbedBuilder {
+  const shares = computeBonusShares(report);
+  const eligible = report.employees.filter((e) => e.eligible && e.adjustedQuantity > 0);
+
+  const embed = new EmbedBuilder()
+    .setTitle('💸 Prime de la semaine — répartition en direct')
+    .setColor(0xf1c40f)
+    .setTimestamp(new Date());
+
+  if (report.bonus <= 0 || eligible.length === 0) {
+    embed.setDescription(
+      `${dateRange(startAt, endAt)}\n\n` +
+        '_La cagnotte se remplit dès les premières ventes validées… Vendez ! 🌭_',
+    );
+    return embed.setFooter({ text: 'Provisoire — ajusté du bracelet, dégressif jusqu’à 0' });
+  }
+
+  const lines = eligible
+    .map((e, i) => {
+      const medal = MEDALS[i] ?? `**${i + 1}.**`;
+      const share = shares.get(e.employeeId) ?? 0;
+      const adj =
+        e.multiplier > 1
+          ? `${qty(Math.round(e.adjustedQuantity))} pts _(${qty(e.quantity)} u ×${e.multiplier})_`
+          : `${qty(e.quantity)} u`;
+      return `${medal} **${e.nomRP}** — ${adj} → **${money(share)}**`;
+    })
+    .join('\n');
+
+  return embed
+    .setDescription(
+      `${dateRange(startAt, endAt)}\n\n` +
+        `🏆 **Cagnotte : ${money(report.bonus)}**\n\n${lines}`,
+    )
+    .setFooter({
+      text: 'En direct — part selon l’effort ajusté (bracelet neutralisé), du 1er au dernier (0 $)',
+    });
 }
 
 /** Tableau "commandes client a realiser" (cote direction). */
@@ -197,7 +265,61 @@ export function buildOrdersBoard(orders: readonly OrderSummary[], timezone: stri
     .setTimestamp(new Date());
 }
 
+/** Barre de progression textuelle (pure, testable). Ex. 52 % → █████░░░░░. */
+export function progressBar(current: number, target: number, width = 10): string {
+  if (target <= 0) return '░'.repeat(width);
+  const ratio = Math.max(0, Math.min(1, current / target));
+  const filled = Math.round(ratio * width);
+  return '█'.repeat(filled) + '░'.repeat(width - filled);
+}
+
+/** Tableau "Objectifs partenariats" (cote employes, live). */
+export function buildPartnershipBoard(rows: readonly PartnerProgress[]): EmbedBuilder {
+  const lines = rows
+    .map((r) => {
+      if (r.target === null) {
+        return `🤝 **${r.name}** — ${qty(r.delivered)} u cette semaine _(pas d'objectif)_`;
+      }
+      const pct = r.target > 0 ? Math.round((r.delivered / r.target) * 100) : 0;
+      const mark = r.reached ? ' ✅' : '';
+      return (
+        `🤝 **${r.name}**${mark}\n` +
+        `${progressBar(r.delivered, r.target)} ${qty(r.delivered)}/${qty(r.target)} u (${pct} %)`
+      );
+    })
+    .join('\n\n');
+
+  return new EmbedBuilder()
+    .setTitle('🤝 Objectifs partenariats (cette semaine)')
+    .setColor(0x9b59b6)
+    .setDescription(rows.length > 0 ? lines : '_Aucun partenaire pour le moment._')
+    .setFooter({ text: 'Objectif hebdomadaire — se réinitialise chaque semaine' })
+    .setTimestamp(new Date());
+}
+
 /** Bilan final de cloture (CDC §6.6). */
+/** Celebration de fin de semaine, cote employes (sans la partie direction). */
+export function buildWeekCelebration(summary: ClosureSummary, weekLabel: string): EmbedBuilder {
+  const best = summary.bestEmployeeName
+    ? summary.bestTie
+      ? `🏆 **${summary.bestEmployeeName}** (ex æquo !)`
+      : `🏆 **${summary.bestEmployeeName}**`
+    : '—';
+  const lines = [
+    `🌭 **Chiffre d’affaires de la semaine : ${money(summary.totalRevenue)}**`,
+    `👏 Employé(e) de la semaine : ${best}`,
+    `🧾 ${summary.payrollCount} fiche${summary.payrollCount > 1 ? 's' : ''} de paie envoyée${summary.payrollCount > 1 ? 's' : ''} en MP.`,
+    '',
+    'Merci à toute l’équipe pour le travail accompli — on remet ça cette semaine ! 🔥',
+  ];
+  return new EmbedBuilder()
+    .setTitle(`🎉 Semaine bouclée — bravo l’équipe ! (${weekLabel})`)
+    .setColor(0xf1c40f)
+    .setDescription(lines.join('\n'))
+    .setFooter({ text: 'HotzDoggz – Le goût qui fait la différence 🔥' })
+    .setTimestamp(new Date());
+}
+
 export function buildClosureSummary(summary: ClosureSummary, weekLabel: string): EmbedBuilder {
   const best = summary.bestEmployeeName
     ? summary.bestTie
@@ -218,6 +340,7 @@ export function buildClosureSummary(summary: ClosureSummary, weekLabel: string):
       { name: 'Co-directeur (25 %)', value: money(summary.coDirectorShare), inline: true },
       { name: 'Fiches de paie', value: String(summary.payrollCount), inline: true },
     )
+    .setFooter({ text: '▶️ Semaine suivante ouverte automatiquement.' })
     .setTimestamp(new Date());
 }
 
@@ -226,20 +349,45 @@ export function buildPayrollList(
   weekLabel: string,
   payrolls: readonly PayrollLine[],
 ): EmbedBuilder {
+  // Non payes d'abord (ce qui reste a verser), puis les payes ; chaque groupe
+  // par montant decroissant pour reperer les grosses paies en premier.
+  const ordered = [...payrolls].sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'PAID' ? 1 : -1;
+    return b.totalAmount - a.totalAmount;
+  });
+
+  const net = (p: PayrollLine): number => Math.max(0, p.totalAmount - p.advancedAmount);
   const lines =
-    payrolls.length === 0
+    ordered.length === 0
       ? '_Aucune fiche de paie._'
-      : payrolls
+      : ordered
           .map((p) => {
             const mark = p.status === 'PAID' ? '✅' : '⏳';
             const bonus = p.bonusAmount > 0 ? ` (+${money(p.bonusAmount)} prime)` : '';
-            return `${mark} **${p.employee.nomRP}** — ${money(p.totalAmount)}${bonus} — ${p.status === 'PAID' ? 'payee' : 'a payer'}`;
+            const adv = p.advancedAmount > 0 ? ` − acompte ${money(p.advancedAmount)}` : '';
+            const reste = p.status === 'PAID' ? 'payée' : `**${money(net(p))}** à verser`;
+            return `${mark} **${p.employee.nomRP}** — ${money(p.totalAmount)}${bonus}${adv} → ${reste}`;
           })
           .join('\n');
+
+  const total = payrolls.reduce((s, p) => s + p.totalAmount, 0);
+  const advances = payrolls.reduce((s, p) => s + p.advancedAmount, 0);
+  const due = payrolls.filter((p) => p.status !== 'PAID').reduce((s, p) => s + net(p), 0);
+  const dueCount = payrolls.filter((p) => p.status !== 'PAID').length;
+
+  const summary =
+    payrolls.length === 0
+      ? ''
+      : '\n\n━━━━━━━━━━━━━━━\n' +
+        `💰 **Reste à verser : ${money(due)}** (${dueCount} employé${dueCount > 1 ? 's' : ''})\n` +
+        `Total des paies : ${money(total)}` +
+        (advances > 0 ? ` · acomptes déjà versés : ${money(advances)}` : '');
+
   return new EmbedBuilder()
     .setTitle(`Paies — semaine du ${weekLabel}`)
-    .setColor(0x8e44ad)
-    .setDescription(lines)
+    .setColor(due > 0 ? 0xe67e22 : 0x27ae60)
+    .setDescription(lines + summary)
+    .setFooter({ text: 'Marque un versement : /paie marquer-payee membre:@…' })
     .setTimestamp(new Date());
 }
 

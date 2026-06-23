@@ -40,6 +40,27 @@ export async function upsertProduct(
   return { ok: true, data: product };
 }
 
+/** Associe une image (deja stockee) + accroche optionnelle a un produit actif. */
+export async function setProductImage(
+  guildConfigId: string,
+  name: string,
+  imageKey: string,
+  imageName: string,
+  description?: string | null,
+): Promise<ActionResult<Product>> {
+  const product = await findActiveProductByName(guildConfigId, name);
+  if (!product) return { ok: false, reason: 'Produit introuvable.' };
+  const updated = await prisma.product.update({
+    where: { id: product.id },
+    data: {
+      imageKey,
+      imageName,
+      ...(description !== undefined ? { description: description || null } : {}),
+    },
+  });
+  return { ok: true, data: updated };
+}
+
 /** Desactive un produit (conserve l'historique des ventes). */
 export async function deactivateProduct(
   guildConfigId: string,

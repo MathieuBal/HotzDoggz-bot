@@ -33,12 +33,12 @@ export function buildReviewCard(data: ReviewCardData): EmbedBuilder {
 
 /** Bandeau permanent : note moyenne + bouton "Laisser un avis". */
 export function buildReviewBoardMessage(stats: ReviewStats): BaseMessageOptions {
-  const embed = new EmbedBuilder().setTitle('⭐ Avis clients — HotzDogz').setColor(0xf1c40f);
+  const embed = new EmbedBuilder().setTitle('⭐ Avis clients — HotzDoggz').setColor(0xf1c40f);
   embed.setDescription(
     stats.count > 0
       ? `Note moyenne : **${formatAverage(stats.average)}/5** ${stars(stats.average)}\n` +
-          `**${stats.count}** avis client(s).\n\nUn passage chez HotzDogz ? Dis-nous tout 👇`
-      : 'Aucun avis pour le moment — sois le premier à donner ton avis sur HotzDogz 👇',
+          `**${stats.count}** avis client(s).\n\nUn passage chez HotzDoggz ? Dis-nous tout 👇`
+      : 'Aucun avis pour le moment — sois le premier à donner ton avis sur HotzDoggz 👇',
   );
 
   const button = new ButtonBuilder()

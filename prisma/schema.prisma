@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════════
-// HotzDogz · Modele de donnees (CDC §9)
+// HotzDoggz · Modele de donnees (CDC §9)
 // PostgreSQL est la source officielle ; Discord n'est que l'interface.
 // Principes : montants entiers, append-only pour l'audit/le journal financier,
 // idempotence (threadId unique), snapshots figes a la validation.
@@ -116,25 +116,51 @@ model GuildConfig {
   roleExperimente String?
   roleNovice      String?
   roleStagiaire   String?
+  roleClient      String? // role attribue aux visiteurs ayant accepte le reglement
 
   // Salons (IDs Discord)
-  channelControl      String? // Forum prive de controle (1 fiche / vente)
-  channelAccounting   String? // comptabilite
-  channelPayroll      String? // paies
-  channelLogs         String? // logs-et-archives
-  channelWeeklyBoard  String? // tableau-de-bord-hebdo
-  channelCompanyBoard String? // salon employe "Developpement de l'entreprise"
-  channelOrders       String? // salon direction "commandes client a realiser"
-  channelReviews      String? // salon public "avis clients"
+  channelControl        String? // Forum prive de controle (1 fiche / vente)
+  channelAccounting     String? // comptabilite
+  channelPayroll        String? // paies
+  channelLogs           String? // logs-et-archives
+  channelWeeklyBoard    String? // tableau-de-bord-hebdo
+  channelCompanyBoard   String? // salon employe "Developpement de l'entreprise"
+  channelOrders         String? // salon direction "commandes client a realiser"
+  channelReviews        String? // salon public "avis clients"
+  channelPartnerships   String? // salon employe "objectifs partenariats" (live)
+  channelGuideDirection String? // salon tuto direction (guide des commandes)
+  channelGuideEmployee  String? // salon tuto employes (process)
+  channelWelcome        String? // salon d'accueil des nouveaux arrivants
+  channelReglement      String? // salon reglement (porte le bouton de validation)
+  channelMenuBoard      String? // salon public "menu et tarifs" (maintenu par le bot)
+  channelEvent          String? // salon "evenement" (vitrine maintenue par le bot)
+  channelBonusBoard     String? // salon employe "prime" (repartition degressive live)
+  channelPlanning       String? // salon employe "planning" (agenda commandes + positionnement)
+
+  // Vitrines editables (texte du corps ; le titre/style est gere par le bot)
+  welcomeBoardText String?
+  eventText        String?
+
+  // Message d'accueil RP personnalisable ({membre} = mention du nouveau)
+  welcomeMessage String?
 
   // Messages permanents edites par le bot (CDC §5.5 / §7.4)
-  msgWeeklyEmployees String?
-  msgAccounting      String?
-  msgPayroll         String?
-  msgSalaryGrid      String?
-  msgCompanyBoard    String? // tableau "Developpement de l'entreprise" (cote employes)
-  msgOrdersBoard     String? // tableau "commandes client a realiser" (direction)
-  msgReviewBoard     String? // bandeau "avis clients" (note moyenne + bouton)
+  msgWeeklyEmployees  String?
+  msgAccounting       String?
+  msgPayroll          String?
+  msgSalaryGrid       String?
+  msgCompanyBoard     String? // tableau "Developpement de l'entreprise" (cote employes)
+  msgOrdersBoard      String? // tableau "commandes client a realiser" (direction)
+  msgReviewBoard      String? // bandeau "avis clients" (note moyenne + bouton)
+  msgPartnershipBoard String? // tableau "objectifs partenariats" (cote employes)
+  msgGuideDirection   String? // guide tuto direction (permanent)
+  msgGuideEmployee    String? // guide tuto employes (permanent)
+  msgVerification     String? // message permanent "valider le reglement" (bouton)
+  msgMenuBoard        String? // menu public "menu et tarifs" (permanent)
+  msgWelcomeBoard     String? // vitrine "bienvenue" (permanent)
+  msgEventBoard       String? // vitrine "evenement" (permanent)
+  msgBonusBoard       String? // tableau "prime" (repartition degressive, permanent)
+  msgPlanningBoard    String? // agenda "planning" (commandes de la semaine, permanent)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
@@ -156,6 +182,27 @@ model GuildConfig {
   reviews      Review[]
   products     Product[]
   directSales  DirectSale[]
+  partners     Partner[]
+  advances     SalaryAdvance[]
+  events       Event[]
+}
+
+/// Partenaire B2B (autre org/business). Porte un objectif unique cumulatif de
+/// quantite a fournir ; la progression = total livre via ses commandes payees.
+model Partner {
+  id              String      @id @default(cuid())
+  guildConfig     GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId   String
+  name            String
+  objectiveTarget Int? // objectif de quantite (cumulatif), null = pas d'objectif
+  active          Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  orders ClientOrder[]
+
+  @@unique([guildConfigId, name])
+  @@index([guildConfigId, active])
 }
 
 /// Catalogue de produits vendus en main en main (CDC : menu). Prix de detail
@@ -167,6 +214,9 @@ model Product {
   guildConfigId String
   name          String
   retailPrice   Int // prix de detail au joueur (entier, $)
+  description   String? // courte accroche affichee au menu public
+  imageKey      String? // cle de stockage de la photo du produit
+  imageName     String? // nom de fichier d'origine (extension pour l'affichage)
   active        Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -304,6 +354,10 @@ model Employee {
   lastGradeLabel  String?
   lastGradeRate   Int?
 
+  // Multiplicateur "bracelet" (x2/x3 achete en vrai argent) : neutralise pour la
+  // course a la prime (production ajustee = quantite / multiplicateur). 1 = aucun.
+  bonusMultiplier Int @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -313,6 +367,77 @@ model Employee {
   orderContributions OrderContribution[]
   reviews            Review[]
   directSales        DirectSale[]
+  advances           SalaryAdvance[]
+  orderSignups       OrderSignup[]
+  eventSignups       EventSignup[]
+}
+
+enum SalaryAdvanceStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum EventStatus {
+  ACTIVE
+  CANCELLED
+}
+
+/// Evenement RP auquel HotzDoggz participe (expo, soiree, marche...). Affiche
+/// dans l'agenda planning ; les employes s'y positionnent (presence/aide).
+model Event {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+
+  title       String
+  startAt     DateTime // date + heure de l'evenement
+  location    String?
+  ourRole     String? // notre role sur place (exposant, tombola...)
+  description String?
+  status      EventStatus @default(ACTIVE)
+
+  createdByDiscordId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  signups EventSignup[]
+
+  @@index([guildConfigId, status, startAt])
+}
+
+/// Positionnement d'un employe sur un evenement (toggle).
+model EventSignup {
+  id         String   @id @default(cuid())
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId    String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  createdAt  DateTime @default(now())
+
+  @@unique([eventId, employeeId])
+  @@index([eventId])
+}
+
+/// Avance / acompte sur salaire verse en cours de semaine (plafonne au gagne).
+/// Deduit du net a payer a la cloture ; sortie tracee au journal des le versement.
+model SalaryAdvance {
+  id            String              @id @default(cuid())
+  guildConfig   GuildConfig         @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  week          AccountingWeek      @relation(fields: [weekId], references: [id])
+  weekId        String
+  employee      Employee            @relation(fields: [employeeId], references: [id])
+  employeeId    String
+  amount        Int
+  status        SalaryAdvanceStatus @default(ACTIVE)
+  note          String?
+
+  createdByDiscordId   String
+  createdAt            DateTime  @default(now())
+  cancelledAt          DateTime?
+  cancelledByDiscordId String?
+
+  @@index([weekId, employeeId])
 }
 
 /// Avis client (RP) laisse via un bouton dans le salon public. Note 1-5 + texte,
@@ -387,6 +512,7 @@ model AccountingWeek {
   ledger       LedgerEntry[]
   clientOrders ClientOrder[]
   directSales  DirectSale[]
+  advances     SalaryAdvance[]
 }
 
 // ── Commandes client ────────────────────────────────────────────────────────
@@ -406,6 +532,10 @@ model ClientOrder {
   negotiatedPrice Int // prix total negocie (entier, $)
   deadline        DateTime?
 
+  // Rattachement a un partenaire (objectifs partenariats), optionnel.
+  partner   Partner? @relation(fields: [partnerId], references: [id])
+  partnerId String?
+
   status ClientOrderStatus @default(OUVERTE)
 
   // Livraison & paiement (CDC : suivi simple paye/non-paye + preuve)
@@ -424,9 +554,26 @@ model ClientOrder {
   updatedAt          DateTime @updatedAt
 
   contributions OrderContribution[]
+  signups       OrderSignup[]
 
   @@index([guildConfigId, status])
   @@index([weekId])
+  @@index([partnerId])
+}
+
+/// Positionnement d'un employe sur une commande via l'agenda planning : signal
+/// "je vais aider" (volontariat). La contribution reelle (avec preuves) reste
+/// /commande contribuer. Toggle : se positionner / se retirer.
+model OrderSignup {
+  id         String      @id @default(cuid())
+  order      ClientOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  employee   Employee    @relation(fields: [employeeId], references: [id])
+  employeeId String
+  createdAt  DateTime    @default(now())
+
+  @@unique([orderId, employeeId])
+  @@index([orderId])
 }
 
 /// Contribution de production d'un employe a une commande (CDC : multi-employes).
@@ -580,6 +727,7 @@ model Payroll {
 
   salaryAmount Int // salaire de production
   bonusAmount  Int           @default(0) // prime meilleur employe (le cas echeant)
+  advancedAmount Int         @default(0) // acomptes deja verses durant la semaine
   totalAmount  Int
   status       PayrollStatus @default(PENDING)
 

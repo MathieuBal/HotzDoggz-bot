@@ -1,5 +1,6 @@
 import { AttachmentType, ClientOrderStatus } from '@prisma/client';
 import {
+  type AutocompleteInteraction,
   EmbedBuilder,
   MessageFlags,
   PermissionFlagsBits,
@@ -13,6 +14,10 @@ import {
   getGuildConfigByGuildId,
   resolveMemberGrade,
 } from '../../modules/employees/employeeService.js';
+import {
+  findActivePartnerByName,
+  listActivePartners,
+} from '../../modules/partners/partnerService.js';
 import { mentionDirection, postToLogs } from '../notify.js';
 import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
 import { riskBadge } from '../../modules/sales/fraud.js';
@@ -83,6 +88,13 @@ export const commandeCommand: SlashCommand = {
         )
         .addStringOption((o) =>
           o.setName('echeance').setDescription('Échéance JJ/MM/AAAA').setRequired(false),
+        )
+        .addStringOption((o) =>
+          o
+            .setName('partenaire')
+            .setDescription('Rattacher à un partenaire (objectif)')
+            .setAutocomplete(true)
+            .setRequired(false),
         ),
     )
     .addSubcommand((s) =>
@@ -145,6 +157,20 @@ export const commandeCommand: SlashCommand = {
     )
     .toJSON(),
 
+  async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+    if (!interaction.inGuild()) return void interaction.respond([]);
+    const config = await getGuildConfigByGuildId(interaction.guildId);
+    if (!config) return void interaction.respond([]);
+    const focused = interaction.options.getFocused().toString().toLowerCase();
+    const partners = await listActivePartners(config.id);
+    await interaction.respond(
+      partners
+        .filter((p) => p.name.toLowerCase().includes(focused))
+        .slice(0, 25)
+        .map((p) => ({ name: p.name, value: p.name })),
+    );
+  },
+
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.inGuild() || !interaction.guild) {
       await interaction.reply({ content: 'Serveur requis.', flags: MessageFlags.Ephemeral });
@@ -173,6 +199,14 @@ export const commandeCommand: SlashCommand = {
       const description = interaction.options.getString('description')?.trim() || null;
       const echeanceRaw = interaction.options.getString('echeance');
       const deadline = parseDeadline(echeanceRaw);
+      const partnerName = interaction.options.getString('partenaire')?.trim();
+      const partner = partnerName ? await findActivePartnerByName(config.id, partnerName) : null;
+      if (partnerName && !partner) {
+        await interaction.editReply(
+          `Partenaire introuvable : « ${partnerName} ». Vois \`/partenaire voir\`.`,
+        );
+        return;
+      }
 
       const res = await createOrder({
         guildConfigId: config.id,
@@ -182,13 +216,16 @@ export const commandeCommand: SlashCommand = {
         negotiatedPrice: prix,
         deadline,
         createdByDiscordId: interaction.user.id,
+        partnerId: partner?.id ?? null,
       });
       if (!res.ok) {
         await interaction.editReply(`Échec : ${res.reason}`);
         return;
       }
+      const partnerNote = partner ? `\n🤝 Rattachée au partenaire **${partner.name}**.` : '';
       const note =
-        echeanceRaw && !deadline ? '\n⚠️ Échéance ignorée (format attendu : JJ/MM/AAAA).' : '';
+        (echeanceRaw && !deadline ? '\n⚠️ Échéance ignorée (format attendu : JJ/MM/AAAA).' : '') +
+        partnerNote;
       await interaction.editReply(
         `✅ Commande **${res.data.reference}** créée pour **${clientName}** — objectif ${nf.format(volume)} u, ${money(prix)}.${note}`,
       );

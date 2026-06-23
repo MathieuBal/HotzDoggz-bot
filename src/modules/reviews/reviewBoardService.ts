@@ -9,15 +9,24 @@ import { getReviewStats } from './reviewService.js';
 const queue = new KeyedSerialQueue();
 
 /**
- * Met a jour le bandeau "avis clients" (note moyenne + bouton). Le bandeau est
- * "collant" : on le re-poste en bas du salon a chaque avis pour que le bouton
- * reste toujours accessible sous les dernieres cartes.
+ * Met a jour le bandeau "avis clients" (note moyenne + bouton).
+ *
+ * `sticky` (defaut false) : re-poste le bandeau en bas du salon — utile UNIQUEMENT
+ * a l'arrivee d'un nouvel avis, pour que le bouton reste sous la derniere carte.
+ * Sinon (demarrage, config, moderation), on edite le message existant en place :
+ * pas de spam d'un nouveau message a chaque redemarrage.
  */
-export function updateReviewBoard(client: Client, guildConfigId: string): Promise<void> {
-  return queue.enqueue(`reviews:${guildConfigId}`, () => doUpdate(client, guildConfigId));
+export function updateReviewBoard(
+  client: Client,
+  guildConfigId: string,
+  opts: { sticky?: boolean } = {},
+): Promise<void> {
+  return queue.enqueue(`reviews:${guildConfigId}`, () =>
+    doUpdate(client, guildConfigId, opts.sticky ?? false),
+  );
 }
 
-async function doUpdate(client: Client, guildConfigId: string): Promise<void> {
+async function doUpdate(client: Client, guildConfigId: string, sticky: boolean): Promise<void> {
   const config = await prisma.guildConfig.findUnique({ where: { id: guildConfigId } });
   if (!config?.channelReviews) return;
 
@@ -30,12 +39,23 @@ async function doUpdate(client: Client, guildConfigId: string): Promise<void> {
   const stats = await getReviewStats(guildConfigId);
   const payload = buildReviewBoardMessage(stats);
 
-  // Supprime l'ancien bandeau pour le re-poster en dernier (toujours visible).
   if (config.msgReviewBoard) {
-    await channel.messages
-      .fetch(config.msgReviewBoard)
-      .then((m) => m.delete())
-      .catch(() => undefined);
+    if (!sticky) {
+      // Edition en place : aucun nouveau message (pas de spam au redemarrage).
+      try {
+        const msg = await channel.messages.fetch(config.msgReviewBoard);
+        await msg.edit(payload);
+        return;
+      } catch {
+        // message supprime -> on le recree plus bas
+      }
+    } else {
+      // Collant : on supprime l'ancien pour le reposter sous la derniere carte.
+      await channel.messages
+        .fetch(config.msgReviewBoard)
+        .then((m) => m.delete())
+        .catch(() => undefined);
+    }
   }
   const created = await channel.send(payload);
   await prisma.guildConfig.update({

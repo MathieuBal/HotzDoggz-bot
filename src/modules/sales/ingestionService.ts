@@ -2,7 +2,6 @@ import { AttachmentType, ForumTagKey, Prisma, SaleRisk, SaleStatus } from '@pris
 import {
   ChannelType,
   type AnyThreadChannel,
-  type Attachment,
   type ForumChannel,
   type Guild,
   type Message,
@@ -20,7 +19,12 @@ import {
 } from '../employees/employeeService.js';
 import { setCasierTag } from '../lockers/casierTags.js';
 import { createControlPost } from '../verification/controlPost.js';
-import { downloadAndStore, isImageAttachment, type StoredAttachment } from './attachments.js';
+import {
+  type AttachmentSource,
+  downloadAndStore,
+  isImageAttachment,
+  type StoredAttachment,
+} from './attachments.js';
 import { riskBadge } from './fraud.js';
 import { evaluateFraud } from './fraudService.js';
 import { recordGradeResolution } from './gradeTracking.js';
@@ -443,8 +447,8 @@ export interface AssistedSaleParams {
   weekId: string;
   quantity: number;
   starterMessageId: string;
-  attachmentPlein: Attachment;
-  attachmentVide: Attachment;
+  attachmentPlein: AttachmentSource;
+  attachmentVide: AttachmentSource;
   gradeLabel: string | null;
   gradeRoleId: string | null;
   salaryRate: number | null;
@@ -459,7 +463,9 @@ export interface AssistedSaleParams {
  */
 export async function ingestAssistedSale(
   params: AssistedSaleParams,
-): Promise<{ ok: true; reference: string } | { ok: false; reason: string }> {
+): Promise<
+  { ok: true; reference: string; ficheCreated: boolean } | { ok: false; reason: string }
+> {
   const { thread, guild, config, employee } = params;
   const parentId = thread.parentId;
   if (!parentId) return { ok: false, reason: 'Casier introuvable.' };
@@ -526,6 +532,7 @@ export async function ingestAssistedSale(
     return { ok: false, reason: 'Cette vente est deja enregistree.' };
   }
 
+  let ficheCreated = false;
   if (config.channelControl) {
     try {
       const controlChannel = await guild.channels.fetch(config.channelControl);
@@ -551,6 +558,7 @@ export async function ingestAssistedSale(
           where: { id: result.saleId },
           data: { controlThreadId: controlThread.id },
         });
+        ficheCreated = true;
       }
     } catch (err) {
       logger.error({ err }, 'Fiche de controle (assistee) echouee');
@@ -572,5 +580,5 @@ export async function ingestAssistedSale(
     .send(`✅ Vente enregistree — reference **${result.reference}**.\nStatut : A verifier.${note}`)
     .catch(() => undefined);
 
-  return { ok: true, reference: result.reference };
+  return { ok: true, reference: result.reference, ficheCreated };
 }

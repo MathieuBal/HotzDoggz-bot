@@ -61,15 +61,21 @@ export async function markPayrollPaid(
       return { ok: false, reason: 'Paie deja reglee (aucune double paie sans correction).' };
     }
 
+    // On ne verse que le solde : le total moins les acomptes deja donnes
+    // (ceux-ci ont deja leur propre sortie au journal).
+    const netToPay = Math.max(0, payroll.totalAmount - payroll.advancedAmount);
     await tx.ledgerEntry.create({
       data: {
         guildConfigId,
         type: LedgerEntryType.PAYMENT,
-        amount: payroll.totalAmount,
+        amount: netToPay,
         weekId: payroll.weekId,
         employeeId,
         payrollId: payroll.id,
-        description: `Paiement ${payroll.employee.nomRP}`,
+        description:
+          payroll.advancedAmount > 0
+            ? `Solde ${payroll.employee.nomRP} (acompte ${payroll.advancedAmount} $ déduit)`
+            : `Paiement ${payroll.employee.nomRP}`,
         correlationId,
       },
     });
@@ -93,7 +99,7 @@ export async function markPayrollPaid(
       ok: true,
       data: {
         nomRP: payroll.employee.nomRP,
-        totalAmount: payroll.totalAmount,
+        totalAmount: netToPay,
         weekId: payroll.weekId,
       },
     };

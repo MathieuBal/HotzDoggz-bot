@@ -4,6 +4,10 @@ import { logger } from '../../infrastructure/logging/logger.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { startProactiveNotifications } from '../../modules/notifications/scheduler.js';
 import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
+import { publishDirectionGuide } from '../guides/directionGuide.js';
+import { publishVerification } from '../verification/verificationBoard.js';
+import { publishMenuBoard } from '../menu/menuBoard.js';
+import { publishEventBoard } from '../vitrine/vitrineBoards.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { reconcileActiveThreads } from '../../modules/sales/reconcile.js';
 import { commandData } from '../commands/index.js';
@@ -44,6 +48,18 @@ export function registerReady(client: Client): void {
         );
         await updateReviewBoard(c, config.id).catch((err) =>
           logger.warn({ err, guildId: guild.id }, 'Publication du bandeau avis au demarrage KO'),
+        );
+        await publishDirectionGuide(c, config.id).catch((err) =>
+          logger.warn({ err, guildId: guild.id }, 'Publication du guide direction au demarrage KO'),
+        );
+        await publishVerification(c, config.id).catch((err) =>
+          logger.warn({ err, guildId: guild.id }, 'Publication du sas reglement au demarrage KO'),
+        );
+        await publishMenuBoard(c, config.id).catch((err) =>
+          logger.warn({ err, guildId: guild.id }, 'Publication du menu public au demarrage KO'),
+        );
+        await publishEventBoard(c, config.id).catch((err) =>
+          logger.warn({ err, guildId: guild.id }, 'Publication vitrine evenement au demarrage KO'),
         );
       }
     }

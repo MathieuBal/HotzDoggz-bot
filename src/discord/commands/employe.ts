@@ -11,12 +11,13 @@ import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { writeAudit } from '../../modules/audit/auditService.js';
 import {
-  archiveEmployee,
   associateEmployee,
   getGuildConfigByGuildId,
 } from '../../modules/employees/employeeService.js';
 import { mapForumTags } from '../../modules/lockers/forumTags.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
+import { buildConfirmMessage } from '../panel/confirmUi.js';
+import { putPending } from '../panel/pending.js';
 import { isDirection } from '../permissions.js';
 import type { SlashCommand } from './types.js';
 
@@ -62,6 +63,20 @@ export const employeCommand: SlashCommand = {
         .setDescription('Archiver un employe (conserve l’historique)')
         .addUserOption((o) =>
           o.setName('membre').setDescription('Membre a archiver').setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('bracelet')
+        .setDescription('Définir le multiplicateur bracelet d’un employé (équité de la prime)')
+        .addUserOption((o) => o.setName('membre').setDescription('Employé').setRequired(true))
+        .addIntegerOption((o) =>
+          o
+            .setName('multiplicateur')
+            .setDescription('1 = aucun, 2 = x2, 3 = x3…')
+            .setMinValue(1)
+            .setMaxValue(10)
+            .setRequired(true),
         ),
     )
     .toJSON(),
@@ -150,18 +165,54 @@ export const employeCommand: SlashCommand = {
         await interaction.editReply('Aucun employe associe a ce membre.');
         return;
       }
-      const employee = await archiveEmployee(member.id);
+      if (existing.status === 'ARCHIVED') {
+        await interaction.editReply(`**${existing.nomRP}** est déjà archivé.`);
+        return;
+      }
+      const token = putPending(interaction.user.id, {
+        kind: 'archive',
+        guildConfigId: config.id,
+        discordUserId: member.id,
+        nomRP: existing.nomRP,
+      });
+      await interaction.editReply(
+        buildConfirmMessage({
+          title: '📦 Archiver un employé',
+          description: `Archiver **${existing.nomRP}** (<@${member.id}>) ? Ses futures ventes ne seront plus comptées, mais tout l’historique est conservé.`,
+          token,
+          confirmLabel: 'Archiver',
+          danger: true,
+        }),
+      );
+      return;
+    }
+
+    if (sub === 'bracelet') {
+      const multiplier = interaction.options.getInteger('multiplicateur', true);
+      const existing = await prisma.employee.findUnique({ where: { discordUserId: member.id } });
+      if (!existing || existing.guildConfigId !== config.id) {
+        await interaction.editReply('Aucun employé associé à ce membre.');
+        return;
+      }
+      await prisma.employee.update({
+        where: { id: existing.id },
+        data: { bonusMultiplier: multiplier },
+      });
       await writeAudit(prisma, {
         guildConfigId: config.id,
-        action: 'EMPLOYEE_ARCHIVED',
+        action: 'EMPLOYEE_BRACELET_SET',
         authorDiscordId: interaction.user.id,
         entityType: 'Employee',
-        entityId: employee.id,
-        before: { status: existing.status },
-        after: { status: 'ARCHIVED' },
+        entityId: existing.id,
+        before: { bonusMultiplier: existing.bonusMultiplier },
+        after: { bonusMultiplier: multiplier },
       });
-      await interaction.editReply(`Employe **${employee.nomRP}** archive. Historique conserve.`);
-      logger.info({ employeeId: employee.id }, 'Employe archive');
+      scheduleDashboardUpdate(interaction.client, config.id);
+      await interaction.editReply(
+        multiplier === 1
+          ? `✅ **${existing.nomRP}** : aucun bracelet (×1). Sa production compte telle quelle pour la prime.`
+          : `✅ **${existing.nomRP}** : bracelet **×${multiplier}**. Pour la prime, sa production sera divisée par ${multiplier} (équité).`,
+      );
     }
   },
 };

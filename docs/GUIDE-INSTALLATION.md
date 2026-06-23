@@ -1,4 +1,4 @@
-# Guide clé en main — HotzDogz Bot
+# Guide clé en main — HotzDoggz Bot
 
 Ce guide t'amène de zéro à un bot **fonctionnel et branché sur ton serveur**.
 Aucune connaissance technique poussée requise : suis les étapes dans l'ordre.
@@ -51,6 +51,7 @@ serveur pour `avis-clients`) :
 | --------------- | ----- | -------------------------------------------------------------- |
 | `developpement` | Texte | Tableau « Développement de l'entreprise » (croissance, public) |
 | `avis-clients`  | Texte | Avis clients (bouton « Laisser un avis » + note moyenne)       |
+| `partenariats`  | Texte | Tableau « Objectifs partenariats » (progression en live)       |
 
 > 💡 `developpement` ne montre que la croissance (ventes, CA, nouveaux,
 > promotions, top vendeurs) — **jamais** les marges ni les salaires/primes de
@@ -75,7 +76,7 @@ Sur chaque casier, crée ces **6 tags** (le bot les reconnaît par leur nom) :
 ## 2. Créer le bot (Discord Developer Portal)
 
 1. Va sur https://discord.com/developers/applications → **New Application**,
-   nomme-la _HotzDogz_.
+   nomme-la _HotzDoggz_.
 2. Onglet **Bot** :
    - clique **Reset Token** → **copie le token** (tu le mettras dans `.env`).
    - Active **MESSAGE CONTENT INTENT** et **SERVER MEMBERS INTENT** (obligatoire).
@@ -165,6 +166,7 @@ Dans ton serveur (les réponses sont privées) :
    /config salons controle:#controle-des-ventes comptabilite:#comptabilite
            paies:#paies logs:#logs-et-archives tableau:#tableau-de-bord-hebdo
            developpement:#developpement commandes:#commandes avis:#avis-clients
+           partenariats:#partenariats
    ```
 
    (`developpement` = tableau de croissance employés ; `commandes` = commandes
@@ -182,7 +184,7 @@ Dans ton serveur (les réponses sont privées) :
 4. **Vérifier que tout est au vert** :
 
    ```
-   /hotzdogz diagnostic
+   /hotzdoggz diagnostic
    ```
 
    Corrige ce qui est ❌ ou ⚠️, puis relance jusqu'au tout vert.
@@ -257,6 +259,37 @@ formulaire (note /5, commentaire, employé qui l'a servi) → le bot publie une
 
 ---
 
+## 6.quater Ventes main en main (facture)
+
+Pour les ventes directes à un joueur, avec un **menu de produits** :
+
+1. **La direction crée le menu** : `/menu ajouter nom:Simple prix:350`,
+   `/menu ajouter nom:Halal prix:450`, `/menu ajouter nom:Truffe prix:550`
+   (prix modifiables à tout moment ; `/menu voir` pour l'afficher).
+2. **L'employé déclare** : `/facture produit1:Simple quantite1:2 produit2:Truffe
+quantite2:1 facture:<photo>` (le bot propose les produits en autocomplétion).
+3. Une **fiche de contrôle** apparaît dans `controle-des-ventes` → la direction
+   **Prend en charge → Valide** (en ajustant la quantité par produit si besoin,
+   après vérif sur le PC). Le CA (prix du menu) et le salaire (tarif du grade)
+   rejoignent la semaine.
+
+---
+
+## 6.quinquies Partenariats & objectifs
+
+Pour suivre des objectifs avec des partenaires (autres orgs), avec un tableau
+**live visible par les employés** :
+
+1. **Crée un partenaire** : `/partenaire creer nom:Vagos`.
+2. **Fixe son objectif** : `/partenaire objectif nom:Vagos quantite:5000`.
+3. **Rattache les commandes** : `/commande creer client:Vagos volume:… prix:…
+partenaire:Vagos`. Dès que la commande est **payée**, sa production fait monter
+   la barre du partenaire.
+4. Le tableau **Objectifs partenariats** (salon `partenariats`) se met à jour en
+   direct ; ✅ quand l'objectif est atteint.
+
+---
+
 ## 7. Permissions du bot par salon (récap)
 
 | Salon                       | Permissions du bot                                                           |
@@ -308,7 +341,7 @@ Ces trois mécanismes tournent tout seuls une fois le bot lancé :
 - [ ] Rôles créés et liés (`/config roles`)
 - [ ] Salons créés et liés (`/config salons`, dont `developpement`, `commandes`, `avis-clients`)
 - [ ] Au moins un casier (Forum) avec les 6 tags, employé associé
-- [ ] `/hotzdogz diagnostic` tout au vert
+- [ ] `/hotzdoggz diagnostic` tout au vert
 - [ ] `/semaine ouvrir` effectué, tableaux visibles
 - [ ] Cycle test déclaration → validation → clôture → paie → export OK
 

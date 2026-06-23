@@ -54,3 +54,100 @@ export const ReviewFieldId = {
   COMMENT: 'comment',
   EMPLOYEE: 'employee',
 } as const;
+
+export const VerificationButtonId = {
+  ACCEPT: 'verify:accept',
+} as const;
+
+export const VerificationModalId = {
+  SUBMIT: 'verify:submit',
+} as const;
+
+export const VerificationFieldId = {
+  NOM_RP: 'nom_rp',
+} as const;
+
+export const VitrineModalId = {
+  WELCOME: 'vitrine:welcome:modal',
+  EVENT: 'vitrine:event:modal',
+} as const;
+
+export const VitrineFieldId = {
+  TEXT: 'text',
+} as const;
+
+export const DirectSaleButtonId = {
+  TAKE: 'direct:take',
+  VALIDATE: 'direct:validate',
+  REFUSE: 'direct:refuse',
+} as const;
+
+export const DirectSaleModalId = {
+  VALIDATE: 'direct:validate:modal',
+  REFUSE: 'direct:refuse:modal',
+} as const;
+
+export const DirectSaleFieldId = {
+  NOTE: 'note',
+  REASON: 'reason',
+} as const;
+
+export const PanelButtonId = {
+  OPEN_WEEK: 'panel:openweek',
+  CLOSE_WEEK: 'panel:closeweek',
+  REFRESH_BOARDS: 'panel:refreshboards',
+  REFRESH: 'panel:refresh',
+} as const;
+
+export const PanelSelectId = {
+  EDIT: 'panel:edit',
+} as const;
+
+export const PlanningSelectId = {
+  SIGNUP: 'planning:signup',
+} as const;
+
+/** Selecteurs de second niveau : choisir l'entite (grade/partenaire/produit). */
+export const PanelPickId = {
+  SALAIRE: 'panel:pick:salaire',
+  PARTENAIRE: 'panel:pick:partenaire',
+  MENU_RETIRER: 'panel:pick:menuretirer',
+} as const;
+
+/** Boutons de confirmation (jeton ephemere appose : `panel:confirm:<token>`). */
+export const PanelConfirmId = {
+  CONFIRM: 'panel:confirm',
+  CANCEL: 'panel:cancel',
+} as const;
+
+export const PanelEditValue = {
+  SALAIRE: 'salaire',
+  MENU: 'menu',
+  MENU_RETIRER: 'menu_retirer',
+  PARTENAIRE: 'partenaire',
+  PARTENAIRE_CREER: 'partenaire_creer',
+  COMMANDE_CREER: 'commande_creer',
+  PNJ_PRIX: 'pnj_prix',
+} as const;
+
+export const PanelModalId = {
+  SALAIRE: 'panel:salaire:modal',
+  MENU: 'panel:menu:modal',
+  MENU_REMOVE: 'panel:menuremove:modal',
+  PARTNER_CREATE: 'panel:partnercreate:modal',
+  PARTENAIRE: 'panel:partenaire:modal',
+  ORDER_CREATE: 'panel:ordercreate:modal',
+  PNJ_PRICE: 'panel:pnjprice:modal',
+} as const;
+
+export const PanelFieldId = {
+  GRADE: 'grade',
+  MONTANT: 'montant',
+  NOM: 'nom',
+  PRIX: 'prix',
+  OBJECTIF: 'objectif',
+  CLIENT: 'client',
+  VOLUME: 'volume',
+  PARTENAIRE: 'partenaire',
+  ECHEANCE: 'echeance',
+} as const;

@@ -1,13 +1,31 @@
-import type { Client } from 'discord.js';
+import type { Client, EmbedBuilder } from 'discord.js';
 import type { ClosureSummary } from '../../modules/accounting/closureService.js';
 import { prisma } from '../../infrastructure/database/client.js';
+import { logger } from '../../infrastructure/logging/logger.js';
+import { openWeek } from '../../modules/accounting/accountingService.js';
+import { buildWeekCelebration } from '../../modules/dashboards/embeds.js';
 import { postClosureReport } from '../../modules/dashboards/dashboardService.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { sendPayslips } from '../../modules/notifications/proactive.js';
 
+/** Poste le recap festif dans un salon visible des employes (sans la partie direction). */
+async function postCelebration(
+  client: Client,
+  config: { channelCompanyBoard: string | null; channelWeeklyBoard: string | null },
+  embed: EmbedBuilder,
+): Promise<void> {
+  const channelId = config.channelCompanyBoard ?? config.channelWeeklyBoard;
+  if (!channelId) return;
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  if (channel?.isTextBased() && 'send' in channel) {
+    await channel.send({ embeds: [embed] }).catch((err) => logger.warn({ err }, 'Celebration KO'));
+  }
+}
+
 /**
- * Apres une cloture : publie le bilan final dans comptabilite et reinitialise
- * les tableaux permanents (plus de semaine ouverte). Retourne le libelle de semaine.
+ * Apres une cloture : publie le bilan final dans comptabilite, envoie les fiches
+ * de paie, ENCHAINE sur la semaine suivante, rafraichit les tableaux et celebre
+ * la semaine ecoulee aupres des employes. Retourne le libelle de semaine.
  */
 export async function finalizeClosure(
   client: Client,
@@ -19,9 +37,30 @@ export async function finalizeClosure(
     select: { startAt: true },
   });
   const label = week ? week.startAt.toISOString().slice(0, 10) : '';
+  const config = await prisma.guildConfig.findUnique({
+    where: { id: guildConfigId },
+    select: { guildId: true, timezone: true, channelCompanyBoard: true, channelWeeklyBoard: true },
+  });
+
   await postClosureReport(client, guildConfigId, summary, label);
-  await updateDashboardsNow(client, guildConfigId);
   // Fiche de paie individuelle en DM a chaque employe (CDC §6.7).
   await sendPayslips(client, guildConfigId).catch(() => undefined);
+
+  // Enchaine automatiquement sur la semaine suivante (le verrou est libere a la cloture).
+  if (config) {
+    const opened = await openWeek(guildConfigId, config.guildId, config.timezone);
+    if (!opened.ok) {
+      logger.warn({ guildConfigId, reason: opened.reason }, 'Ouverture auto de la semaine suivante KO');
+    }
+  }
+
+  // Tableaux a jour (nouvelle semaine ouverte + paies de la semaine close).
+  await updateDashboardsNow(client, guildConfigId);
+
+  // Celebration cote employes.
+  if (config) {
+    await postCelebration(client, config, buildWeekCelebration(summary, label));
+  }
+
   return label;
 }
