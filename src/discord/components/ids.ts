@@ -110,6 +110,9 @@ export const PlanningSelectId = {
 export const GarageId = {
   PICK: 'garage:pick', // select d'un vehicule disponible a attribuer
   ASSIGN_TO: 'garage:assignto', // user-select, suffixe :<vehicleId>
+  OPEN: 'garage:open', // select : ouvrir la carte d'un vehicule
+  VEH_RAMASSER: 'garage:veh:ramasser', // bouton sur la carte, suffixe :<vehicleId>
+  VEH_TRANSFORMER: 'garage:veh:transformer', // bouton sur la carte, suffixe :<vehicleId>
 } as const;
 
 /** Tableau stock : menus de selection de vehicule + modals de quantite. */

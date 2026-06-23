@@ -92,8 +92,26 @@ export async function buildGarageMessage(guildConfigId: string): Promise<BaseMes
 
   header.setFooter({ text: 'Direction : « Attribuer » ci-dessous pour donner un véhicule disponible' });
 
-  // Menu d'attribution (véhicules disponibles).
   const components: ActionRowBuilder<StringSelectMenuBuilder>[] = [];
+
+  // Menu « ouvrir un véhicule » (tout le monde) : ouvre la carte ; si c'est le
+  // tien (ou direction), des boutons permettent de gérer ton stock direct.
+  const all = [...garage.available, ...garage.byOwner.flatMap((g) => g.vehicles)];
+  if (all.length > 0) {
+    const open = new StringSelectMenuBuilder()
+      .setCustomId(GarageId.OPEN)
+      .setPlaceholder('🚗 Ouvrir un véhicule (et gérer mon stock)…')
+      .addOptions(
+        all.slice(0, 25).map((v) => ({
+          label: vehicleTitle(v).slice(0, 100),
+          description: `${v.ownerNomRP ? `à ${v.ownerNomRP}` : 'disponible'} · ${v.saucisses} saucisses`.slice(0, 100),
+          value: v.id,
+        })),
+      );
+    components.push(new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(open));
+  }
+
+  // Menu d'attribution (véhicules disponibles) — direction.
   if (garage.available.length > 0) {
     const menu = new StringSelectMenuBuilder()
       .setCustomId(GarageId.PICK)
