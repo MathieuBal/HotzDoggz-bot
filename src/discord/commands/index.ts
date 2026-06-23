@@ -16,7 +16,9 @@ import { paieCommand } from './paie.js';
 import { panelCommand } from './panel.js';
 import { partenaireCommand } from './partenaire.js';
 import { semaineCommand } from './semaine.js';
+import { stockCommand } from './stock.js';
 import { tableauCommand } from './tableau.js';
+import { vehiculeCommand } from './vehicule.js';
 import { vendreCommand } from './vendre.js';
 import { vitrineCommand } from './vitrine.js';
 import type { SlashCommand } from './types.js';
@@ -39,7 +41,9 @@ const all: SlashCommand[] = [
   panelCommand,
   partenaireCommand,
   semaineCommand,
+  stockCommand,
   tableauCommand,
+  vehiculeCommand,
   vendreCommand,
   vitrineCommand,
 ];

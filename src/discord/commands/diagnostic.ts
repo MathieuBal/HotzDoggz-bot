@@ -163,6 +163,7 @@ export const diagnosticCommand: SlashCommand = {
       channelLine(guild, 'Événement (vitrine)', config.channelEvent, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Prime (employés)', config.channelBonusBoard, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Planning (employés)', config.channelPlanning, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Stock (employés)', config.channelStock, [VIEW, SEND, EMBED]),
     ]);
 
     // Tarifs de grade
@@ -212,6 +213,7 @@ export const diagnosticCommand: SlashCommand = {
       messageLine(guild, 'Vitrine événement', config.channelEvent, config.msgEventBoard),
       messageLine(guild, 'Tableau prime', config.channelBonusBoard, config.msgBonusBoard),
       messageLine(guild, 'Agenda planning', config.channelPlanning, config.msgPlanningBoard),
+      messageLine(guild, 'Tableau stock', config.channelStock, config.msgStockBoard),
     ]);
 
     // Semaine comptable ouverte

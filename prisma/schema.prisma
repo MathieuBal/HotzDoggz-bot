@@ -136,6 +136,7 @@ model GuildConfig {
   channelEvent          String? // salon "evenement" (vitrine maintenue par le bot)
   channelBonusBoard     String? // salon employe "prime" (repartition degressive live)
   channelPlanning       String? // salon employe "planning" (agenda commandes + positionnement)
+  channelStock          String? // salon employe "stock" (saucisses par vehicule + peremption)
 
   // Vitrines editables (texte du corps ; le titre/style est gere par le bot)
   welcomeBoardText String?
@@ -161,6 +162,7 @@ model GuildConfig {
   msgEventBoard       String? // vitrine "evenement" (permanent)
   msgBonusBoard       String? // tableau "prime" (repartition degressive, permanent)
   msgPlanningBoard    String? // agenda "planning" (commandes de la semaine, permanent)
+  msgStockBoard       String? // tableau "stock" (saucisses + lots de hot dogs, permanent)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
@@ -185,6 +187,8 @@ model GuildConfig {
   partners     Partner[]
   advances     SalaryAdvance[]
   events       Event[]
+  vehicles     Vehicle[]
+  hotdogBatches HotdogBatch[]
 }
 
 /// Partenaire B2B (autre org/business). Porte un objectif unique cumulatif de
@@ -380,6 +384,47 @@ enum SalaryAdvanceStatus {
 enum EventStatus {
   ACTIVE
   CANCELLED
+}
+
+/// Vehicule de l'entreprise : contient le stock de SAUCISSES (matiere premiere,
+/// non perissable). Identifie par marque + plaque.
+model Vehicle {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+
+  name      String? // petit nom (optionnel)
+  make      String // marque
+  plate     String // plaque d'immatriculation
+  saucisses Int     @default(0) // stock de saucisses en cours
+  active    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  batches HotdogBatch[]
+
+  @@unique([guildConfigId, plate])
+  @@index([guildConfigId, active])
+}
+
+/// Lot de hot dogs issus d'une transformation (saucisses -> hot dogs, 1:1).
+/// PERISSABLE : expire 6j17h apres la production.
+model HotdogBatch {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  vehicle       Vehicle?    @relation(fields: [vehicleId], references: [id])
+  vehicleId     String?
+
+  quantity  Int // quantite produite
+  remaining Int // reste en stock (non ecoule)
+  producedAt DateTime @default(now())
+  expiresAt  DateTime // producedAt + 6j17h
+
+  createdByDiscordId String?
+
+  @@index([guildConfigId, remaining, expiresAt])
 }
 
 /// Evenement RP auquel HotzDoggz participe (expo, soiree, marche...). Affiche
