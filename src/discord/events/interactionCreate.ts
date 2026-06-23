@@ -14,6 +14,7 @@ import { handleReviewModal } from '../modals/reviewModalHandlers.js';
 import { handleSaleModal } from '../modals/saleModalHandlers.js';
 import { handleWeekModal } from '../modals/weekModalHandlers.js';
 import { handlePanelPick } from '../panel/pickers.js';
+import { handlePlanningSelect } from '../planning/planningSelect.js';
 import { handlePanelSelect } from '../selects/panelSelect.js';
 import {
   handleVerificationButton,
@@ -59,6 +60,7 @@ export function registerInteractionCreate(client: Client): void {
         return;
       }
       if (interaction.isStringSelectMenu()) {
+        if (await handlePlanningSelect(interaction)) return;
         if (await handlePanelPick(interaction)) return;
         await handlePanelSelect(interaction);
         return;

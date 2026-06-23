@@ -135,6 +135,7 @@ model GuildConfig {
   channelMenuBoard      String? // salon public "menu et tarifs" (maintenu par le bot)
   channelEvent          String? // salon "evenement" (vitrine maintenue par le bot)
   channelBonusBoard     String? // salon employe "prime" (repartition degressive live)
+  channelPlanning       String? // salon employe "planning" (agenda commandes + positionnement)
 
   // Vitrines editables (texte du corps ; le titre/style est gere par le bot)
   welcomeBoardText String?
@@ -159,6 +160,7 @@ model GuildConfig {
   msgWelcomeBoard     String? // vitrine "bienvenue" (permanent)
   msgEventBoard       String? // vitrine "evenement" (permanent)
   msgBonusBoard       String? // tableau "prime" (repartition degressive, permanent)
+  msgPlanningBoard    String? // agenda "planning" (commandes de la semaine, permanent)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
@@ -365,6 +367,7 @@ model Employee {
   reviews            Review[]
   directSales        DirectSale[]
   advances           SalaryAdvance[]
+  orderSignups       OrderSignup[]
 }
 
 enum SalaryAdvanceStatus {
@@ -508,10 +511,26 @@ model ClientOrder {
   updatedAt          DateTime @updatedAt
 
   contributions OrderContribution[]
+  signups       OrderSignup[]
 
   @@index([guildConfigId, status])
   @@index([weekId])
   @@index([partnerId])
+}
+
+/// Positionnement d'un employe sur une commande via l'agenda planning : signal
+/// "je vais aider" (volontariat). La contribution reelle (avec preuves) reste
+/// /commande contribuer. Toggle : se positionner / se retirer.
+model OrderSignup {
+  id         String      @id @default(cuid())
+  order      ClientOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  employee   Employee    @relation(fields: [employeeId], references: [id])
+  employeeId String
+  createdAt  DateTime    @default(now())
+
+  @@unique([orderId, employeeId])
+  @@index([orderId])
 }
 
 /// Contribution de production d'un employe a une commande (CDC : multi-employes).

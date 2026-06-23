@@ -103,6 +103,10 @@ export const PanelSelectId = {
   EDIT: 'panel:edit',
 } as const;
 
+export const PlanningSelectId = {
+  SIGNUP: 'planning:signup',
+} as const;
+
 /** Selecteurs de second niveau : choisir l'entite (grade/partenaire/produit). */
 export const PanelPickId = {
   SALAIRE: 'panel:pick:salaire',

@@ -6,6 +6,7 @@ import { getOpenWeekSnapshot } from '../accounting/accountingService.js';
 import { listActiveOrders } from '../orders/orderService.js';
 import { getPartnershipBoardData } from '../partners/partnerService.js';
 import { getCompanyBoardData } from './companyBoard.js';
+import { publishPlanningBoard } from '../../discord/planning/planningBoard.js';
 import {
   buildAccountingBoard,
   buildBonusBoard,
@@ -131,6 +132,11 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   if (Object.keys(data).length > 0) {
     await prisma.guildConfig.update({ where: { id: guildConfigId }, data });
   }
+
+  // Agenda planning (embed + menu de positionnement) : gere son propre message.
+  await publishPlanningBoard(client, guildConfigId).catch((err) =>
+    logger.warn({ err, guildConfigId }, 'Mise a jour de l agenda planning KO'),
+  );
 }
 
 /**

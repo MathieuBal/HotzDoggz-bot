@@ -35,7 +35,9 @@ export function buildDirectionGuideEmbeds(): EmbedBuilder[] {
         '• **`/commande contribuer`** — production d’un employé (+ 2 preuves).\n' +
         '• **`/commande livrer`** — marquer livrée.\n' +
         '• **`/commande payer`** — encaisser → le CA rejoint la semaine.\n' +
-        '• **`/commande voir`** · **`/commande annuler`**.',
+        '• **`/commande voir`** · **`/commande annuler`**.\n' +
+        '• 🗓️ Les commandes apparaissent dans le salon **`planning`** (employés) : ' +
+        'ils s’y **positionnent** pour aider (`/config salons planning:#…`).',
     );
 
   const ventes = new EmbedBuilder()
