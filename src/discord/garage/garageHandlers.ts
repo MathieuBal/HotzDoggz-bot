@@ -76,8 +76,8 @@ export async function handleGarageOpen(interaction: StringSelectMenuInteraction)
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`${GarageId.VEH_RAMASSER}:${vehicle.id}`)
-          .setLabel('Ramasser des saucisses')
-          .setEmoji('🥩')
+          .setLabel('Stock de saucisses')
+          .setEmoji('📦')
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
           .setCustomId(`${GarageId.VEH_TRANSFORMER}:${vehicle.id}`)
@@ -128,12 +128,12 @@ export async function handleGarageVehButton(interaction: ButtonInteraction): Pro
   const modalBase = ram ? StockModalId.RAMASSER : StockModalId.TRANSFORMER;
   const modal = new ModalBuilder()
     .setCustomId(`${modalBase}:${vehicle.id}`)
-    .setTitle(ram ? 'Ramasser des saucisses' : 'Transformer en hot dogs')
+    .setTitle(ram ? 'Stock de saucisses' : 'Transformer en hot dogs')
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId(StockFieldId.QTE)
-          .setLabel(ram ? 'Combien de saucisses ?' : 'Combien transformer ?')
+          .setLabel(ram ? 'Saucisses dans le coffre (total)' : 'Combien transformer ?')
           .setStyle(TextInputStyle.Short)
           .setRequired(true),
       ),

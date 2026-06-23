@@ -77,7 +77,7 @@ export async function buildStockMessage(guildConfigId: string): Promise<BaseMess
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId(StockSelectId.RAMASSER)
-          .setPlaceholder('🥩 Ramasser des saucisses dans…')
+          .setPlaceholder('📦 Mettre à jour le stock de saucisses (véhicule)…')
           .addOptions(opts),
       ),
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(

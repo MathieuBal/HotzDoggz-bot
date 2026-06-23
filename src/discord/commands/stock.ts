@@ -10,9 +10,9 @@ import {
   getGuildConfigByGuildId,
 } from '../../modules/employees/employeeService.js';
 import {
-  addSaucisses,
   consumeHotdogs,
   listVehicles,
+  setSaucisses,
   transformToHotdogs,
 } from '../../modules/stock/stockService.js';
 import { buildStockEmbed } from '../stock/stockBoard.js';
@@ -26,13 +26,13 @@ export const stockCommand: SlashCommand = {
     .setDescription('Stock de saucisses & hot dogs (production en 2 temps)')
     .addSubcommand((s) =>
       s
-        .setName('ramasser')
-        .setDescription('Déclarer des saucisses ramassées (ajout au véhicule)')
+        .setName('saucisses')
+        .setDescription('Définir le stock de saucisses d’un véhicule (total vu dans le coffre)')
         .addStringOption((o) =>
           o.setName('vehicule').setDescription('Véhicule').setAutocomplete(true).setRequired(true),
         )
         .addIntegerOption((o) =>
-          o.setName('quantite').setDescription('Nombre de saucisses').setMinValue(1).setRequired(true),
+          o.setName('quantite').setDescription('Total de saucisses dans le coffre').setMinValue(0).setRequired(true),
         ),
     )
     .addSubcommand((s) =>
@@ -101,8 +101,8 @@ export const stockCommand: SlashCommand = {
       return;
     }
 
-    if (sub === 'ramasser') {
-      const res = await addSaucisses(
+    if (sub === 'saucisses') {
+      const res = await setSaucisses(
         config.id,
         interaction.options.getString('vehicule', true),
         interaction.options.getInteger('quantite', true),
@@ -111,7 +111,7 @@ export const stockCommand: SlashCommand = {
       if (res.ok) scheduleDashboardUpdate(interaction.client, config.id);
       await interaction.editReply(
         res.ok
-          ? `🥩 ${interaction.options.getInteger('quantite', true)} saucisse(s) ajoutée(s) au **${res.data.vehicle.make} ${res.data.vehicle.plate}** (total : ${res.data.vehicle.saucisses}).`
+          ? `📦 Stock du **${res.data.vehicle.make} ${res.data.vehicle.plate}** mis à jour : **${res.data.vehicle.saucisses}** saucisse(s) _(avant : ${res.data.previous})_.`
           : `Échec : ${res.reason}`,
       );
       return;

@@ -86,31 +86,32 @@ export async function listVehicles(guildConfigId: string): Promise<VehicleView[]
   return vs.map(toVehicle);
 }
 
-/** Ramassage de saucisses (employe) : ajoute au stock d'un vehicule. */
-export async function addSaucisses(
+/** Definit le stock de saucisses d'un vehicule (valeur ABSOLUE = ce que montre le coffre). */
+export async function setSaucisses(
   guildConfigId: string,
   vehicleId: string,
   quantity: number,
   byDiscordId: string,
-): Promise<ActionResult<{ vehicle: VehicleView }>> {
-  if (!Number.isInteger(quantity) || quantity < 1) {
-    return { ok: false, reason: 'Quantité invalide (entier positif).' };
+): Promise<ActionResult<{ vehicle: VehicleView; previous: number }>> {
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    return { ok: false, reason: 'Quantité invalide (0 ou plus).' };
   }
   const v = await prisma.vehicle.findFirst({ where: { id: vehicleId, guildConfigId, active: true } });
   if (!v) return { ok: false, reason: 'Véhicule introuvable.' };
   const updated = await prisma.vehicle.update({
     where: { id: v.id },
-    data: { saucisses: { increment: quantity } },
+    data: { saucisses: quantity },
   });
   await writeAudit(prisma, {
     guildConfigId,
-    action: 'SAUCISSES_COLLECTED',
+    action: 'SAUCISSES_SET',
     authorDiscordId: byDiscordId,
     entityType: 'Vehicle',
     entityId: v.id,
-    after: { added: quantity, total: updated.saucisses },
+    before: { saucisses: v.saucisses },
+    after: { saucisses: quantity },
   });
-  return { ok: true, data: { vehicle: toVehicle(updated) } };
+  return { ok: true, data: { vehicle: toVehicle(updated), previous: v.saucisses } };
 }
 
 /** Transformation saucisses -> hot dogs (1:1). Cree un lot perissable. */
