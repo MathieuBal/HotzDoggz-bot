@@ -48,3 +48,23 @@ export const GRADE_RATES: Record<Grade, number> = {
   CHEF_EQUIPE: 175,
   DIRECTION: 185,
 };
+
+/**
+ * Palette semantique des embeds (handoff design HotzDoggz §01/02). Chaque
+ * couleur porte un sens, pas une humeur : on choisit selon le ROLE du tableau,
+ * jamais au hasard.
+ *  - production : tableaux tournes vers les employes (activite, perso, entreprise)
+ *  - direction  : tableaux comptables/pilotage (compta, commandes, cloture)
+ *  - prime      : tout ce qui touche a la cagnotte/recompense
+ *  - paie       : versements, grille salariale (tout est OK, rien ne bloque)
+ *  - alerte     : il reste quelque chose a faire (a verser, force…)
+ *  - neutre     : etats vides / informatifs sans enjeu
+ */
+export const EMBED_COLORS = {
+  production: 0xf26419,
+  direction: 0x3e78b2,
+  prime: 0xe2a03f,
+  paie: 0x3fa66a,
+  alerte: 0xd64545,
+  neutre: 0x7e8794,
+} as const;

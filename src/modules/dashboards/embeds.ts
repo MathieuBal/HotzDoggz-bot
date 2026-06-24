@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+import { EMBED_COLORS } from '../../config/constants.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
 import { computeBonusShares } from '../accounting/weekReport.js';
 import type { PersonalView, WeekReport } from '../accounting/weekReport.js';
@@ -8,8 +9,13 @@ import type { PartnerProgress } from '../partners/partnerService.js';
 import type { PayrollLine } from '../payroll/payrollService.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
-const money = (n: number): string => `${nf.format(n)} $`;
+// Montants en chasse fixe (handoff §03) : aligne les colonnes et fait ressortir
+// le chiffre. `qty` reste en texte courant (les unites sont moins "comptables").
+const money = (n: number): string => `\`${nf.format(n)} $\``;
 const qty = (n: number): string => nf.format(n);
+
+/** Separateur de total unique (handoff §06) — fine barre, jamais plus epaisse. */
+const TOTAL_SEPARATOR = '━━━━━━━━━━━━━━━';
 
 function dateRange(startAt: Date, endAt: Date): string {
   const fmt = (d: Date): string =>
@@ -42,7 +48,7 @@ export function buildEmployeeBoard(report: WeekReport, startAt: Date, endAt: Dat
   return new EmbedBuilder()
     .setTitle('Tableau hebdomadaire — Employes')
     .setDescription(`${dateRange(startAt, endAt)}\n\n${lines}`)
-    .setColor(0xff7a00)
+    .setColor(EMBED_COLORS.production)
     .addFields({ name: 'Meilleur employe (provisoire)', value: best })
     .setFooter({ text: 'Provisoire — definitif a la cloture' })
     .setTimestamp(new Date());
@@ -58,7 +64,7 @@ export function buildAccountingBoard(
   return new EmbedBuilder()
     .setTitle('Tableau comptable — Direction')
     .setDescription(dateRange(startAt, endAt))
-    .setColor(0x2e86de)
+    .setColor(EMBED_COLORS.direction)
     .addFields(
       { name: "Chiffre d'affaires", value: money(report.totalRevenue), inline: true },
       { name: 'Salaires valides', value: money(report.totalSalaries), inline: true },
@@ -108,7 +114,7 @@ export function buildPersonalBoard(
   return new EmbedBuilder()
     .setTitle(`Ta comptabilite — ${nomRP}`)
     .setDescription(dateRange(startAt, endAt))
-    .setColor(view.isLeader ? 0xf1c40f : 0xff7a00)
+    .setColor(view.isLeader ? EMBED_COLORS.prime : EMBED_COLORS.production)
     .addFields(
       { name: 'Production validee', value: prod, inline: true },
       { name: 'Salaire provisoire', value: money(view.salary), inline: true },
@@ -136,16 +142,16 @@ export function formatDelta(current: number, previous: number | null): string {
 export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
   const prev = data.previous;
   const activity = [
-    `🌭 Hot dogs vendus : **${qty(data.current.units)}**${formatDelta(data.current.units, prev?.units ?? null)}`,
-    `💰 Chiffre d'affaires : **${money(data.current.revenue)}**${formatDelta(data.current.revenue, prev?.revenue ?? null)}`,
-    `🧾 Ventes validees : **${data.current.salesCount}**${formatDelta(data.current.salesCount, prev?.salesCount ?? null)}`,
-    `👥 Vendeurs actifs : **${data.current.activeSellers}**`,
+    `Hot dogs vendus : **${qty(data.current.units)}**${formatDelta(data.current.units, prev?.units ?? null)}`,
+    `Chiffre d'affaires : ${money(data.current.revenue)}${formatDelta(data.current.revenue, prev?.revenue ?? null)}`,
+    `Ventes validées : **${data.current.salesCount}**${formatDelta(data.current.salesCount, prev?.salesCount ?? null)}`,
+    `Vendeurs actifs : **${data.current.activeSellers}**`,
   ].join('\n');
 
   const embed = new EmbedBuilder()
     .setTitle('📊 HotzDoggz — Developpement de l’entreprise')
     .setDescription(`${dateRange(data.weekStart, data.weekEnd)}\n\n${activity}`)
-    .setColor(0xff7a00);
+    .setColor(EMBED_COLORS.production);
 
   // Prime de la semaine (provisoire), repartie de facon degressive selon l'effort.
   const leader = data.topSellers[0];
@@ -159,10 +165,10 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
 
   const news: string[] = [];
   if (data.newEmployees.length > 0) {
-    news.push(`🆕 Bienvenue a : ${data.newEmployees.join(', ')}`);
+    news.push(`Bienvenue à : ${data.newEmployees.join(', ')}`);
   }
   for (const p of data.promotions) {
-    news.push(`🎉 Promotion : **${p.nomRP}** → ${p.toLabel}`);
+    news.push(`Promotion : **${p.nomRP}** → ${p.toLabel}`);
   }
   if (news.length > 0) {
     embed.addFields({ name: 'Du nouveau cette semaine', value: news.join('\n') });
@@ -196,14 +202,14 @@ export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date):
   const eligible = report.employees.filter((e) => e.eligible && e.adjustedQuantity > 0);
 
   const embed = new EmbedBuilder()
-    .setTitle('💸 Prime de la semaine — répartition en direct')
-    .setColor(0xf1c40f)
+    .setTitle('💰 Prime de la semaine — répartition en direct')
+    .setColor(EMBED_COLORS.prime)
     .setTimestamp(new Date());
 
   if (report.bonus <= 0 || eligible.length === 0) {
     embed.setDescription(
       `${dateRange(startAt, endAt)}\n\n` +
-        '_La cagnotte se remplit dès les premières ventes validées… Vendez ! 🌭_',
+        '_La cagnotte se remplit dès les premières ventes validées… Vendez !_',
     );
     return embed.setFooter({ text: 'Provisoire — proportionnel à l’effort (bracelet neutralisé)' });
   }
@@ -223,7 +229,7 @@ export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date):
   return embed
     .setDescription(
       `${dateRange(startAt, endAt)}\n\n` +
-        `🏆 **Cagnotte : ${money(report.bonus)}**\n\n${lines}`,
+        `**Cagnotte : ${money(report.bonus)}**\n\n${lines}`,
     )
     .setFooter({
       text: 'En direct — part proportionnelle à l’effort produit (bracelet neutralisé)',
@@ -238,7 +244,7 @@ export function buildOrdersBoard(orders: readonly OrderSummary[], timezone: stri
       : '—';
 
   const blocks = orders.slice(0, 15).map((o) => {
-    const head = o.status === 'LIVREE' ? '📦' : '🟡';
+    const head = o.status === 'LIVREE' ? '✅' : '⏳';
     const contrib =
       o.contributors.length > 0
         ? o.contributors.map((c) => `${c.nomRP} ${qty(c.quantity)}`).join(', ')
@@ -259,7 +265,7 @@ export function buildOrdersBoard(orders: readonly OrderSummary[], timezone: stri
 
   return new EmbedBuilder()
     .setTitle('📋 Commandes client — à réaliser')
-    .setColor(0x2e86de)
+    .setColor(EMBED_COLORS.direction)
     .setDescription(description)
     .setFooter({ text: 'Mis à jour en direct · /commande pour gérer' })
     .setTimestamp(new Date());
@@ -278,12 +284,12 @@ export function buildPartnershipBoard(rows: readonly PartnerProgress[]): EmbedBu
   const lines = rows
     .map((r) => {
       if (r.target === null) {
-        return `🤝 **${r.name}** — ${qty(r.delivered)} u cette semaine _(pas d'objectif)_`;
+        return `**${r.name}** — ${qty(r.delivered)} u cette semaine _(pas d'objectif)_`;
       }
       const pct = r.target > 0 ? Math.round((r.delivered / r.target) * 100) : 0;
       const mark = r.reached ? ' ✅' : '';
       return (
-        `🤝 **${r.name}**${mark}\n` +
+        `**${r.name}**${mark}\n` +
         `${progressBar(r.delivered, r.target)} ${qty(r.delivered)}/${qty(r.target)} u (${pct} %)`
       );
     })
@@ -291,7 +297,7 @@ export function buildPartnershipBoard(rows: readonly PartnerProgress[]): EmbedBu
 
   return new EmbedBuilder()
     .setTitle('🤝 Objectifs partenariats (cette semaine)')
-    .setColor(0x9b59b6)
+    .setColor(EMBED_COLORS.production)
     .setDescription(rows.length > 0 ? lines : '_Aucun partenaire pour le moment._')
     .setFooter({ text: 'Objectif hebdomadaire — se réinitialise chaque semaine' })
     .setTimestamp(new Date());
@@ -306,15 +312,15 @@ export function buildWeekCelebration(summary: ClosureSummary, weekLabel: string)
       : `🏆 **${summary.bestEmployeeName}**`
     : '—';
   const lines = [
-    `🌭 **Chiffre d’affaires de la semaine : ${money(summary.totalRevenue)}**`,
-    `👏 Employé(e) de la semaine : ${best}`,
-    `🧾 ${summary.payrollCount} fiche${summary.payrollCount > 1 ? 's' : ''} de paie envoyée${summary.payrollCount > 1 ? 's' : ''} en MP.`,
+    `**Chiffre d’affaires de la semaine : ${money(summary.totalRevenue)}**`,
+    `Employé(e) de la semaine : ${best}`,
+    `${summary.payrollCount} fiche${summary.payrollCount > 1 ? 's' : ''} de paie envoyée${summary.payrollCount > 1 ? 's' : ''} en MP.`,
     '',
-    'Merci à toute l’équipe pour le travail accompli — on remet ça cette semaine ! 🔥',
+    'Merci à toute l’équipe pour le travail accompli — on remet ça cette semaine !',
   ];
   return new EmbedBuilder()
-    .setTitle(`🎉 Semaine bouclée — bravo l’équipe ! (${weekLabel})`)
-    .setColor(0xf1c40f)
+    .setTitle(`🏆 Semaine bouclée — bravo l’équipe ! (${weekLabel})`)
+    .setColor(EMBED_COLORS.prime)
     .setDescription(lines.join('\n'))
     .setFooter({ text: 'HotzDoggz – Le goût qui fait la différence 🔥' })
     .setTimestamp(new Date());
@@ -328,7 +334,7 @@ export function buildClosureSummary(summary: ClosureSummary, weekLabel: string):
     : '—';
   return new EmbedBuilder()
     .setTitle(`Cloture de la semaine du ${weekLabel}${summary.forced ? ' (forcee)' : ''}`)
-    .setColor(summary.forced ? 0xe67e22 : 0x2ecc71)
+    .setColor(summary.forced ? EMBED_COLORS.alerte : EMBED_COLORS.direction)
     .addFields(
       { name: "Chiffre d'affaires", value: money(summary.totalRevenue), inline: true },
       { name: 'Salaires', value: money(summary.totalSalaries), inline: true },
@@ -340,7 +346,7 @@ export function buildClosureSummary(summary: ClosureSummary, weekLabel: string):
       { name: 'Co-directeur (25 %)', value: money(summary.coDirectorShare), inline: true },
       { name: 'Fiches de paie', value: String(summary.payrollCount), inline: true },
     )
-    .setFooter({ text: '▶️ Semaine suivante ouverte automatiquement.' })
+    .setFooter({ text: 'Semaine suivante ouverte automatiquement.' })
     .setTimestamp(new Date());
 }
 
@@ -378,14 +384,14 @@ export function buildPayrollList(
   const summary =
     payrolls.length === 0
       ? ''
-      : '\n\n━━━━━━━━━━━━━━━\n' +
-        `💰 **Reste à verser : ${money(due)}** (${dueCount} employé${dueCount > 1 ? 's' : ''})\n` +
+      : `\n\n${TOTAL_SEPARATOR}\n` +
+        `**Reste à verser : ${money(due)}** (${dueCount} employé${dueCount > 1 ? 's' : ''})\n` +
         `Total des paies : ${money(total)}` +
         (advances > 0 ? ` · acomptes déjà versés : ${money(advances)}` : '');
 
   return new EmbedBuilder()
     .setTitle(`Paies — semaine du ${weekLabel}`)
-    .setColor(due > 0 ? 0xe67e22 : 0x27ae60)
+    .setColor(due > 0 ? EMBED_COLORS.alerte : EMBED_COLORS.paie)
     .setDescription(lines + summary)
     .setFooter({ text: 'Marque un versement : /paie marquer-payee membre:@…' })
     .setTimestamp(new Date());
@@ -407,7 +413,7 @@ export function buildSalaryGrid(
     .join('\n');
   return new EmbedBuilder()
     .setTitle('Grille salariale')
-    .setColor(0x27ae60)
+    .setColor(EMBED_COLORS.paie)
     .setDescription(
       `Prix de vente PNJ : **${money(pnjUnitPrice)}/u**\n\n${lines || '_Aucun tarif actif._'}`,
     )
