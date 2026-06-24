@@ -122,7 +122,7 @@ export function buildPersonalBoard(
       { name: 'Meilleur (effort ajuste)', value: best, inline: true },
       { name: 'Objectif', value: objectiveMessage(view) },
     )
-    .setFooter({ text: 'Provisoire — prime proportionnelle a l’effort produit (bracelet neutralise)' })
+    .setFooter({ text: 'C’est pas encore figé, tout peut bouger d’ici dimanche soir. Alors tu lâches rien.' })
     .setTimestamp(new Date());
 }
 
@@ -211,7 +211,9 @@ export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date):
       `${dateRange(startAt, endAt)}\n\n` +
         '_La cagnotte se remplit dès les premières ventes validées… Vendez !_',
     );
-    return embed.setFooter({ text: 'Provisoire — proportionnel à l’effort (bracelet neutralisé)' });
+    return embed.setFooter({
+      text: 'Cagnotte à zéro pour l’instant. Le grill est chaud, les clients poireautent, on attrape les pinces.',
+    });
   }
 
   const lines = eligible
@@ -232,7 +234,7 @@ export function buildBonusBoard(report: WeekReport, startAt: Date, endAt: Date):
         `**Cagnotte : ${money(report.bonus)}**\n\n${lines}`,
     )
     .setFooter({
-      text: 'En direct — part proportionnelle à l’effort produit (bracelet neutralisé)',
+      text: 'En direct les amis. Plus tu vends, plus ta part gonfle. Tu fais le calcul.',
     });
 }
 
@@ -322,7 +324,7 @@ export function buildWeekCelebration(summary: ClosureSummary, weekLabel: string)
     .setTitle(`🏆 Semaine bouclée — bravo l’équipe ! (${weekLabel})`)
     .setColor(EMBED_COLORS.prime)
     .setDescription(lines.join('\n'))
-    .setFooter({ text: 'HotzDoggz – Le goût qui fait la différence 🔥' })
+    .setFooter({ text: 'Semaine pliée, vous avez tout déchiré. Le goût qui fait la diff, encore une fois. 🔥' })
     .setTimestamp(new Date());
 }
 
@@ -346,7 +348,7 @@ export function buildClosureSummary(summary: ClosureSummary, weekLabel: string):
       { name: 'Co-directeur (25 %)', value: money(summary.coDirectorShare), inline: true },
       { name: 'Fiches de paie', value: String(summary.payrollCount), inline: true },
     )
-    .setFooter({ text: 'Semaine suivante ouverte automatiquement.' })
+    .setFooter({ text: 'Semaine clôturée par la direction. Rangez les pinces et comptez vos sous.' })
     .setTimestamp(new Date());
 }
 
@@ -393,7 +395,7 @@ export function buildPayrollList(
     .setTitle(`Paies — semaine du ${weekLabel}`)
     .setColor(due > 0 ? EMBED_COLORS.alerte : EMBED_COLORS.paie)
     .setDescription(lines + summary)
-    .setFooter({ text: 'Marque un versement : /paie marquer-payee membre:@…' })
+    .setFooter({ text: 'Tant que c’est en attente, c’est que j’ai pas encore sorti les billets. /paie marquer-payee une fois réglé.' })
     .setTimestamp(new Date());
 }
 
