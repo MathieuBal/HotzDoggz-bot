@@ -5,6 +5,7 @@ import { disconnectPrisma, prisma } from './infrastructure/database/client.js';
 import { logger } from './infrastructure/logging/logger.js';
 import { flushDashboards } from './modules/dashboards/scheduler.js';
 import { stopProactiveNotifications } from './modules/notifications/scheduler.js';
+import { stopStoragePurge } from './modules/storage/scheduler.js';
 
 /**
  * Point d'entree du bot HotzDoggz.
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
     logger.info({ signal }, 'Arret en cours...');
     try {
       stopProactiveNotifications();
+      stopStoragePurge();
       await flushDashboards();
       await client.destroy();
       await disconnectPrisma();

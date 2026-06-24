@@ -3,6 +3,7 @@ import { loadEnv } from '../../config/env.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { startProactiveNotifications } from '../../modules/notifications/scheduler.js';
+import { startStoragePurge } from '../../modules/storage/scheduler.js';
 import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { publishVerification } from '../verification/verificationBoard.js';
@@ -66,5 +67,7 @@ export function registerReady(client: Client): void {
 
     // Notifications proactives (relances, rappel de cloture) — CDC §5.6.
     startProactiveNotifications(c);
+    // Purge periodique des preuves images (anti-saturation disque) — §10.4.
+    startStoragePurge();
   });
 }

@@ -33,8 +33,16 @@ services:
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TIMEZONE: ${TIMEZONE:-Europe/Paris}
+      # Stockage durable des preuves (factures, photos vehicules/produits).
+      # Pointe sur un volume nomme => survit aux rebuilds/redeploiements.
+      STORAGE_DIR: /app/storage
+      # Purge auto des preuves au-dela de N jours (def. 30). 7 = hebdomadaire.
+      STORAGE_RETENTION_DAYS: ${STORAGE_RETENTION_DAYS:-30}
+    volumes:
+      - hotzdogz_storage:/app/storage
     # Applique les migrations avant de demarrer le bot.
     command: sh -c "npx prisma migrate deploy && node dist/index.js"
 
 volumes:
   hotzdogz_pgdata:
+  hotzdogz_storage:

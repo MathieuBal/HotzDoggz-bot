@@ -13,12 +13,23 @@ export interface PutObjectInput {
   contentType: string;
 }
 
+/** Metadonnees d'un objet stocke (inventaire pour la purge §5.3). */
+export interface StoredObjectInfo {
+  key: string;
+  size: number;
+  modifiedAt: Date;
+}
+
 export interface ObjectStorage {
   put(input: PutObjectInput): Promise<{ key: string }>;
   getSignedUrl(key: string, expiresInSeconds?: number): Promise<string>;
   exists(key: string): Promise<boolean>;
   /** Relit les octets d'un objet (ex. ré-attacher une image au menu). */
   get(key: string): Promise<Buffer>;
+  /** Inventaire des objets (cle, taille, date de modif) pour la purge. */
+  list(prefix?: string): Promise<StoredObjectInfo[]>;
+  /** Supprime un objet. Idempotent : ne jette pas si la cle a deja disparu. */
+  delete(key: string): Promise<void>;
 }
 
 /** Implementation par defaut tant que le stockage n'est pas configure (Phase 2). */
@@ -36,6 +47,12 @@ export class UnconfiguredObjectStorage implements ObjectStorage {
     return this.fail();
   }
   get(): Promise<Buffer> {
+    return this.fail();
+  }
+  list(): Promise<StoredObjectInfo[]> {
+    return this.fail();
+  }
+  delete(): Promise<void> {
     return this.fail();
   }
 }
