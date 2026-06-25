@@ -1,4 +1,5 @@
 import { Collection } from 'discord.js';
+import { GARAGE_STOCK_ENABLED } from '../../config/constants.js';
 import { accesCommand } from './acces.js';
 import { avanceCommand } from './avance.js';
 import { commandeCommand } from './commande.js';
@@ -41,11 +42,12 @@ const all: SlashCommand[] = [
   panelCommand,
   partenaireCommand,
   semaineCommand,
-  stockCommand,
   tableauCommand,
-  vehiculeCommand,
   vendreCommand,
   vitrineCommand,
+  // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : commandes
+  // enregistrees uniquement si le module est reactive.
+  ...(GARAGE_STOCK_ENABLED ? [stockCommand, vehiculeCommand] : []),
 ];
 
 /** Registre nom -> commande, consulte par le handler interactionCreate. */

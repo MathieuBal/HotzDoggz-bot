@@ -10,6 +10,15 @@
 /** Prix de vente d'un hot dog au PNJ, verse a la caisse de l'entreprise. */
 export const PNJ_UNIT_PRICE = 210;
 
+/**
+ * Interrupteur du module garage / gestion des stocks (vehicules, saucisses,
+ * lots de hot dogs). Mis de cote pour le moment (peu utile au lancement) :
+ * a `false`, les commandes `/stock` et `/vehicule` ne sont pas enregistrees et
+ * les tableaux stock/garage ne sont plus publies. Le code et les donnees en base
+ * restent intacts — repasser a `true` reactive tout, sans migration.
+ */
+export const GARAGE_STOCK_ENABLED = false;
+
 /** Reserve de securite : 5 % du CA, jamais utilisee pour payer (§1.4). */
 export const RESERVE_RATE_PERCENT = 5;
 
