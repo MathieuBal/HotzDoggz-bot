@@ -397,6 +397,10 @@ model Employee {
   orderSignups       OrderSignup[]
   eventSignups       EventSignup[]
   ownedVehicles      Vehicle[]     @relation("OwnedVehicles")
+
+  // Recherche d'employes d'un serveur par statut (match par nom RP, embauches
+  // de la semaine). Volume faible, mais cadre les lectures par serveur.
+  @@index([guildConfigId, status])
 }
 
 enum SalaryAdvanceStatus {
@@ -588,6 +592,11 @@ model AccountingWeek {
   clientOrders ClientOrder[]
   directSales  DirectSale[]
   advances     SalaryAdvance[]
+
+  // getOpenWeek (status=OPEN) est sur le chemin chaud (chaque refresh panel/tableau),
+  // et la derniere semaine CLOSED est lue par ordre de endAt decroissant (export,
+  // tableau "developpement"). Sans index, seq-scan d'une table qui grossit (1/semaine).
+  @@index([guildConfigId, status, endAt])
 }
 
 // ── Commandes client ────────────────────────────────────────────────────────
@@ -751,6 +760,11 @@ model Sale {
 
   @@index([weekId, status])
   @@index([employeeId, weekId])
+  // Anti-fraude "rafale" : compte les ventes recentes d'un employe a CHAQUE
+  // declaration (chemin chaud) — Sale est append-only, l'historique croit sans purge.
+  @@index([guildConfigId, employeeId, createdAt])
+  // Rappel des validations en attente : filtre serveur+statut, fenetre submittedAt.
+  @@index([guildConfigId, status, submittedAt])
 }
 
 /// Preuves : copie durable obligatoire en stockage objet (CDC §5.3).

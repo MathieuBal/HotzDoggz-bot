@@ -29,6 +29,17 @@ import {
 } from '../verification/verificationHandlers.js';
 import { handleVitrineModal } from '../vitrine/vitrineHandlers.js';
 
+/** Codes Discord d'interaction perdue : inutile (et impossible) d'y repondre. */
+const EXPIRED_INTERACTION_CODES = new Set([
+  10062, // Unknown interaction (token expire : >3 s sans accuse de reception)
+  40060, // Interaction deja acquittee
+]);
+
+function isExpiredInteraction(err: unknown): boolean {
+  const code = (err as { code?: number } | null)?.code;
+  return code !== undefined && EXPIRED_INTERACTION_CODES.has(code);
+}
+
 async function notifyError(interaction: Interaction, correlationId: string): Promise<void> {
   if (!interaction.isRepliable()) return;
   const payload = {
@@ -105,6 +116,13 @@ export function registerInteractionCreate(client: Client): void {
         await command.execute(interaction);
       }
     } catch (err) {
+      // Interaction expiree/deja acquittee : on ne peut plus repondre, et tenter
+      // de le faire ne ferait que lever un nouveau 10062. On logge en debug et on
+      // s'arrete la (evite le bruit et un second appel API voue a l'echec).
+      if (isExpiredInteraction(err)) {
+        log.debug({ type: interaction.type }, 'Interaction expiree (ignoree)');
+        return;
+      }
       log.error({ err, type: interaction.type }, 'Erreur de traitement d’une interaction');
       await notifyError(interaction, correlationId);
     }

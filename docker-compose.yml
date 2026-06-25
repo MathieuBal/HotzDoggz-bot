@@ -6,10 +6,13 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: hotzdogz
-      POSTGRES_PASSWORD: hotzdogz
+      # Mot de passe injecte par .env en prod (defaut dev = hotzdogz).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hotzdogz}
       POSTGRES_DB: hotzdogz
+    # Lie au loopback uniquement : le bot accede a Postgres par le reseau Docker
+    # interne, l'exposition publique n'est jamais necessaire en prod.
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - hotzdogz_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -17,6 +20,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Rotation des logs : evite que stdout JSON sature le disque du VPS.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
 
   bot:
     build: .
@@ -27,7 +36,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://hotzdogz:hotzdogz@postgres:5432/hotzdogz?schema=public
+      DATABASE_URL: postgresql://hotzdogz:${POSTGRES_PASSWORD:-hotzdogz}@postgres:5432/hotzdogz?schema=public
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
@@ -40,6 +49,22 @@ services:
       STORAGE_RETENTION_DAYS: ${STORAGE_RETENTION_DAYS:-30}
     volumes:
       - hotzdogz_storage:/app/storage
+    # Detecte un bot "zombie" (vivant mais Gateway perdue) et le redemarre.
+    healthcheck:
+      test: ['CMD', 'node', 'scripts/healthcheck.mjs']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    # Garde-fou anti-fuite : borne la RAM du bot pour ne pas faire tomber Postgres
+    # par OOM. Ajuste selon ton VPS.
+    mem_limit: 512m
+    # Rotation des logs : evite que stdout JSON sature le disque du VPS.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
     # Applique les migrations avant de demarrer le bot.
     command: sh -c "npx prisma migrate deploy && node dist/index.js"
 

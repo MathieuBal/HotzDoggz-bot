@@ -66,16 +66,33 @@ export async function deactivatePartner(
   return { ok: true, data: updated };
 }
 
-/** Total livre a un partenaire SUR UNE SEMAINE (commandes payees de la semaine). */
-export async function deliveredToPartnerInWeek(partnerId: string, weekId: string): Promise<number> {
-  const agg = await prisma.orderContribution.aggregate({
+/**
+ * Total livre PAR partenaire sur une semaine, en UNE seule requete (au lieu d'une
+ * agregation par partenaire). On charge les contributions payees de la semaine
+ * puis on additionne par partenaire en memoire => evite le N+1 sur les tableaux.
+ */
+export async function deliveredByPartnerInWeek(
+  weekId: string,
+  partnerIds: readonly string[],
+): Promise<Map<string, number>> {
+  const totals = new Map<string, number>();
+  if (partnerIds.length === 0) return totals;
+  const contributions = await prisma.orderContribution.findMany({
     where: {
       status: OrderContributionStatus.ACTIVE,
-      order: { partnerId, status: ClientOrderStatus.PAYEE, weekId },
+      order: {
+        status: ClientOrderStatus.PAYEE,
+        weekId,
+        partnerId: { in: [...partnerIds] },
+      },
     },
-    _sum: { quantity: true },
+    select: { quantity: true, order: { select: { partnerId: true } } },
   });
-  return agg._sum.quantity ?? 0;
+  for (const c of contributions) {
+    const pid = c.order.partnerId;
+    if (pid) totals.set(pid, (totals.get(pid) ?? 0) + c.quantity);
+  }
+  return totals;
 }
 
 export interface PartnerProgress {
@@ -96,15 +113,19 @@ export async function getPartnershipBoardData(guildConfigId: string): Promise<Pa
     select: { id: true },
   });
   const partners = await listActivePartners(guildConfigId);
-  const rows: PartnerProgress[] = [];
-  for (const p of partners) {
-    const delivered = week ? await deliveredToPartnerInWeek(p.id, week.id) : 0;
-    rows.push({
+  const delivered = week
+    ? await deliveredByPartnerInWeek(
+        week.id,
+        partners.map((p) => p.id),
+      )
+    : new Map<string, number>();
+  return partners.map((p) => {
+    const d = delivered.get(p.id) ?? 0;
+    return {
       name: p.name,
       target: p.objectiveTarget,
-      delivered,
-      reached: p.objectiveTarget !== null && delivered >= p.objectiveTarget,
-    });
-  }
-  return rows;
+      delivered: d,
+      reached: p.objectiveTarget !== null && d >= p.objectiveTarget,
+    };
+  });
 }

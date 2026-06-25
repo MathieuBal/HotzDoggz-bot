@@ -2,6 +2,7 @@ import { loadEnv } from './config/env.js';
 import { createDiscordClient } from './discord/client.js';
 import { registerEvents } from './discord/events/index.js';
 import { disconnectPrisma, prisma } from './infrastructure/database/client.js';
+import { stopHeartbeat } from './infrastructure/health/heartbeat.js';
 import { logger } from './infrastructure/logging/logger.js';
 import { flushDashboards } from './modules/dashboards/scheduler.js';
 import { stopProactiveNotifications } from './modules/notifications/scheduler.js';
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
     try {
       stopProactiveNotifications();
       stopStoragePurge();
+      stopHeartbeat();
       await flushDashboards();
       await client.destroy();
       await disconnectPrisma();
@@ -44,9 +46,13 @@ async function main(): Promise<void> {
   process.on('unhandledRejection', (reason) =>
     logger.error({ reason }, 'Rejet de promesse non gere'),
   );
+  // On NE coupe PAS le bot sur une exception non capturee : une seule donnee mal
+  // formee (ex. un embed construit hors interaction) ne doit jamais eteindre un
+  // process 24/7, ni provoquer des redemarrages en boucle. On logge en fatal
+  // pour investigation ; l'arret propre reste reserve aux signaux (SIGINT/TERM)
+  // et a la session Discord invalidee.
   process.on('uncaughtException', (err) => {
-    logger.fatal({ err }, 'Exception non capturee');
-    void shutdown('uncaughtException');
+    logger.fatal({ err }, 'Exception non capturee (process maintenu en vie)');
   });
 
   await client.login(env.DISCORD_TOKEN);
