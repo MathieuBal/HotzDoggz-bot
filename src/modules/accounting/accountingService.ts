@@ -3,6 +3,7 @@ import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
 import { computeIsoWeekBounds } from './week.js';
 import { collectWeekReportInputs } from './weekInputs.js';
+import { ratesFromConfig } from './finance.js';
 import { computeWeekReport, type WeekReport } from './weekReport.js';
 
 /** Statuts de vente "en cours" (en attente de decision) pour la semaine. */
@@ -25,14 +26,25 @@ export async function getOpenWeekSnapshot(guildConfigId: string): Promise<WeekSn
 
   const config = await prisma.guildConfig.findUnique({
     where: { id: guildConfigId },
-    select: { roleDirecteur: true, roleCoDirecteur: true },
+    select: {
+      roleDirecteur: true,
+      roleCoDirecteur: true,
+      reserveRatePercent: true,
+      bonusRatePercent: true,
+      directorRatePercent: true,
+    },
   });
   const directionRoleIds = [config?.roleDirecteur, config?.roleCoDirecteur].filter(
     (id): id is string => Boolean(id),
   );
 
   const { lines, extraRevenue } = await collectWeekReportInputs(prisma, week.id);
-  const report = computeWeekReport(lines, directionRoleIds, extraRevenue);
+  const report = computeWeekReport(
+    lines,
+    directionRoleIds,
+    extraRevenue,
+    config ? ratesFromConfig(config) : undefined,
+  );
 
   const pendingCount = await prisma.sale.count({
     where: { weekId: week.id, status: { in: PENDING_STATUSES } },

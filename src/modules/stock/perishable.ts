@@ -4,9 +4,9 @@
  */
 export const HOTDOG_LIFETIME_MS = (6 * 24 + 17) * 3600 * 1000;
 
-/** Date de peremption d'un lot produit a `producedAt`. */
-export function expiryOf(producedAt: Date): Date {
-  return new Date(producedAt.getTime() + HOTDOG_LIFETIME_MS);
+/** Date de peremption d'un lot produit a `producedAt` (duree de vie configurable). */
+export function expiryOf(producedAt: Date, lifetimeMs: number = HOTDOG_LIFETIME_MS): Date {
+  return new Date(producedAt.getTime() + lifetimeMs);
 }
 
 /** Formate un temps restant en "Jj Hh" (ou "expiré"). */

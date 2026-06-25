@@ -95,12 +95,44 @@ Les réponses du bot ne sont visibles **que par toi** (sauf les tableaux publics
 | `/hotzdoggz diagnostic` | Vérifier que tout est bien réglé (rôles, salons, permissions). |
 | `/config roles`        | Lier les rôles de grade et de direction.                       |
 | `/config salons`       | Lier les salons utilisés par le bot.                           |
+| `/config accueil`      | Personnaliser le message de bienvenue.                         |
+| `/panel`               | **Panneau de gestion central** : tout piloter depuis Discord.  |
+
+---
+
+## 🎛️ Le panneau de gestion (`/panel`)
+
+`/panel` ouvre une vue d'ensemble (semaine, commandes, partenaires, menu, grille
+salariale, **et tous les réglages économiques**) avec un menu déroulant
+**« Gérer »** pour tout modifier **sans toucher au code**. Les changements sont
+tracés (audit) et n'altèrent jamais l'historique déjà clôturé.
+
+Ce que le menu « Gérer » permet de régler :
+
+| Réglage                       | Effet                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------- |
+| Salaire d'un grade            | Tarif au hot dog d'un grade (s'applique aux futures ventes).                           |
+| Menu : ajouter / modifier     | Produit du menu main en main et son prix.                                             |
+| Menu : retirer                | Sortir un produit du menu.                                                            |
+| Prix de vente PNJ             | Prix encaissé par hot dog vendu au PNJ.                                               |
+| Créer un partenaire / objectif| Gérer les partenaires B2B et leurs objectifs hebdo.                                   |
+| Créer une commande client     | Enregistrer une commande négociée.                                                   |
+| **Répartition des bénéfices** | Réserve %, prime du meilleur %, part Directeur %. Le Co-directeur reçoit le reste.    |
+| **Péremption d'un hot dog**   | Durée de vie d'un lot (jours + heures) avant péremption.                              |
+| **Seuils anti-fraude**        | Volume max plausible, et seuil de « rafale » (nb de ventes / fenêtre en minutes).    |
+| **Rappel clôture & fuseau**   | Jour + plage horaire du rappel du dimanche, et fuseau horaire du serveur.            |
+
+> Les valeurs par défaut suivent le cahier des charges (réserve 5 % · prime 35 % ·
+> Directeur 40 % · Co-directeur 25 % ; péremption 6 j 17 h ; fraude > 1000 u ou
+> 3 ventes/10 min ; rappel dimanche 20–23 h). Tu ne touches que ce que tu veux changer.
 
 ---
 
 ## 🖱️ La vérification des ventes (sans commande)
 
 Quand une vente arrive, le bot crée une **fiche** dans `controle-des-ventes`.
+Pour une vente **main en main**, la **photo de la facture est jointe directement
+à la fiche** : la direction la voit tout de suite, avant même de valider.
 La direction la traite avec des **boutons** sur la fiche :
 
 - **Prendre en charge** — je m'occupe de cette vente.

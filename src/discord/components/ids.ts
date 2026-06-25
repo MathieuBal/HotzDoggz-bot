@@ -151,6 +151,10 @@ export const PanelEditValue = {
   PARTENAIRE_CREER: 'partenaire_creer',
   COMMANDE_CREER: 'commande_creer',
   PNJ_PRIX: 'pnj_prix',
+  REPARTITION: 'repartition',
+  PEREMPTION: 'peremption',
+  FRAUDE: 'fraude',
+  RAPPEL: 'rappel',
 } as const;
 
 export const PanelModalId = {
@@ -161,6 +165,10 @@ export const PanelModalId = {
   PARTENAIRE: 'panel:partenaire:modal',
   ORDER_CREATE: 'panel:ordercreate:modal',
   PNJ_PRICE: 'panel:pnjprice:modal',
+  REPARTITION: 'panel:repartition:modal',
+  PEREMPTION: 'panel:peremption:modal',
+  FRAUDE: 'panel:fraude:modal',
+  RAPPEL: 'panel:rappel:modal',
 } as const;
 
 export const PanelFieldId = {
@@ -173,4 +181,20 @@ export const PanelFieldId = {
   VOLUME: 'volume',
   PARTENAIRE: 'partenaire',
   ECHEANCE: 'echeance',
+  // Repartition des benefices
+  RESERVE: 'reserve',
+  PRIME: 'prime',
+  DIRECTEUR: 'directeur',
+  // Peremption
+  JOURS: 'jours',
+  HEURES: 'heures',
+  // Anti-fraude
+  SEUIL_VOLUME: 'seuil_volume',
+  RAFALE_NB: 'rafale_nb',
+  FENETRE_MIN: 'fenetre_min',
+  // Rappel cloture + fuseau
+  JOUR: 'jour',
+  HEURE_DEBUT: 'heure_debut',
+  HEURE_FIN: 'heure_fin',
+  FUSEAU: 'fuseau',
 } as const;

@@ -1,4 +1,9 @@
-import { distributeWeek, type ProfitDistribution } from './finance.js';
+import {
+  DEFAULT_DISTRIBUTION_RATES,
+  distributeWeek,
+  type DistributionRates,
+  type ProfitDistribution,
+} from './finance.js';
 
 /**
  * Construction du rapport comptable hebdomadaire (CDC §6) a partir des ventes
@@ -48,6 +53,7 @@ export function computeWeekReport(
   sales: readonly ValidatedSaleInput[],
   directionRoleIds: readonly string[],
   extraRevenue = 0,
+  rates: DistributionRates = DEFAULT_DISTRIBUTION_RATES,
 ): WeekReport {
   const directionRoles = new Set(directionRoleIds.filter(Boolean));
 
@@ -102,7 +108,7 @@ export function computeWeekReport(
   // donc elles n'ajoutent que du salaire ; leur revenu est porte ici, une fois.
   const totalRevenue = employees.reduce((s, e) => s + e.revenue, 0) + extraRevenue;
   const totalSalaries = employees.reduce((s, e) => s + e.salary, 0);
-  const distribution = distributeWeek(totalRevenue, totalSalaries);
+  const distribution = distributeWeek(totalRevenue, totalSalaries, rates);
 
   // Meilleur employe eligible : production AJUSTEE la plus elevee (bracelet neutralise).
   const eligible = employees.filter((e) => e.eligible && e.adjustedQuantity > 0);

@@ -57,7 +57,14 @@ async function checkClosureReminder(client: Client, guildConfigId: string): Prom
   if (!config?.channelLogs) return;
 
   const { weekday, hour } = localWeekdayHour(new Date(), config.timezone);
-  if (!isClosureReminderWindow(weekday, hour)) return;
+  if (
+    !isClosureReminderWindow(weekday, hour, {
+      weekday: config.closureReminderWeekday,
+      hourStart: config.closureReminderHourStart,
+      hourEnd: config.closureReminderHourEnd,
+    })
+  )
+    return;
 
   const week = await prisma.accountingWeek.findFirst({
     where: { guildConfigId, status: 'OPEN' },

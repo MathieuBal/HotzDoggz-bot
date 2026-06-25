@@ -1,6 +1,7 @@
 import { type DirectSale, type DirectSaleLine, SaleRisk, SaleStatus } from '@prisma/client';
 import {
   ActionRowBuilder,
+  type Attachment,
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
@@ -90,11 +91,17 @@ function buildComponents(status: SaleStatus): ActionRowBuilder<ButtonBuilder>[] 
   ];
 }
 
-/** Cree la fiche de controle d'une vente main en main dans le Forum de controle. */
+/**
+ * Cree la fiche de controle d'une vente main en main dans le Forum de controle.
+ * La photo de la facture est jointe DES la creation : la direction la voit au
+ * moment de verifier (les refresh ulterieurs n'editent que l'embed/les boutons,
+ * donc la piece jointe persiste). Sans elle, le controle se ferait a l'aveugle.
+ */
 export async function createDirectControlPost(
   controlForum: ForumChannel,
   sale: FicheSale,
   mentionContent: string,
+  proof?: Attachment,
 ): Promise<ThreadChannel> {
   return controlForum.threads.create({
     name: `${sale.reference} — ${sale.employee.nomRP}`,
@@ -102,6 +109,7 @@ export async function createDirectControlPost(
       content: mentionContent || undefined,
       embeds: [buildEmbed(sale)],
       components: buildComponents(sale.status),
+      files: proof ? [proof] : undefined,
     },
   });
 }

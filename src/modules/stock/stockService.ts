@@ -134,8 +134,12 @@ export async function transformToHotdogs(
       where: { id: v.id },
       data: { saucisses: { decrement: quantity } },
     });
+    const cfg = await tx.guildConfig.findUnique({
+      where: { id: guildConfigId },
+      select: { hotdogLifetimeMinutes: true },
+    });
     const producedAt = new Date();
-    const expiresAt = expiryOf(producedAt);
+    const expiresAt = expiryOf(producedAt, (cfg?.hotdogLifetimeMinutes ?? 9660) * 60_000);
     await tx.hotdogBatch.create({
       data: {
         guildConfigId,

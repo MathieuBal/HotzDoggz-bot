@@ -20,6 +20,32 @@ export const FRAUD = {
   BURST_WINDOW_MINUTES: 10,
 } as const;
 
+/** Seuils anti-fraude effectifs (pilotables depuis le panel, sinon defauts FRAUD). */
+export interface FraudThresholds {
+  quantityThreshold: number;
+  burstCount: number;
+  burstWindowMinutes: number;
+}
+
+export const DEFAULT_FRAUD_THRESHOLDS: FraudThresholds = {
+  quantityThreshold: FRAUD.QUANTITY_THRESHOLD,
+  burstCount: FRAUD.BURST_COUNT,
+  burstWindowMinutes: FRAUD.BURST_WINDOW_MINUTES,
+};
+
+/** Construit les seuils a partir d'un GuildConfig. */
+export function fraudThresholdsFromConfig(config: {
+  fraudQuantityThreshold: number;
+  fraudBurstCount: number;
+  fraudBurstWindowMinutes: number;
+}): FraudThresholds {
+  return {
+    quantityThreshold: config.fraudQuantityThreshold,
+    burstCount: config.fraudBurstCount,
+    burstWindowMinutes: config.fraudBurstWindowMinutes,
+  };
+}
+
 export interface RiskInput {
   /** References des ventes existantes reutilisant une des preuves fournies. */
   duplicateRefs: readonly string[];
@@ -35,7 +61,10 @@ export interface RiskVerdict {
 }
 
 /** Classement pur du risque (testable, sans I/O). */
-export function classifyRisk(input: RiskInput): RiskVerdict {
+export function classifyRisk(
+  input: RiskInput,
+  thresholds: FraudThresholds = DEFAULT_FRAUD_THRESHOLDS,
+): RiskVerdict {
   const reasons: string[] = [];
   let level: SaleRisk = SaleRisk.CLEAN;
 
@@ -43,14 +72,14 @@ export function classifyRisk(input: RiskInput): RiskVerdict {
     level = SaleRisk.FLAGGED;
     reasons.push(`Preuve deja utilisee sur ${input.duplicateRefs.join(', ')}.`);
   }
-  if (input.quantity > FRAUD.QUANTITY_THRESHOLD) {
+  if (input.quantity > thresholds.quantityThreshold) {
     if (level === SaleRisk.CLEAN) level = SaleRisk.SUSPECT;
-    reasons.push(`Volume eleve (${input.quantity} u > ${FRAUD.QUANTITY_THRESHOLD}).`);
+    reasons.push(`Volume eleve (${input.quantity} u > ${thresholds.quantityThreshold}).`);
   }
-  if (input.recentCount >= FRAUD.BURST_COUNT) {
+  if (input.recentCount >= thresholds.burstCount) {
     if (level === SaleRisk.CLEAN) level = SaleRisk.SUSPECT;
     reasons.push(
-      `Cadence rapprochee (${input.recentCount} ventes en ${FRAUD.BURST_WINDOW_MINUTES} min).`,
+      `Cadence rapprochee (${input.recentCount} ventes en ${thresholds.burstWindowMinutes} min).`,
     );
   }
 

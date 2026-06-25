@@ -266,6 +266,7 @@ export const factureCommand: SlashCommand = {
               controlChannel as ForumChannel,
               sale,
               mentionDirection(config),
+              facture,
             );
             await prisma.directSale.update({
               where: { id: created.data.id },
