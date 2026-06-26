@@ -8,6 +8,7 @@ import {
   type Guild,
   type GuildBasedChannel,
 } from 'discord.js';
+import { GARAGE_STOCK_ENABLED } from '../../config/constants.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import type { SlashCommand } from './types.js';
@@ -163,8 +164,13 @@ export const diagnosticCommand: SlashCommand = {
       channelLine(guild, 'Événement (vitrine)', config.channelEvent, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Prime (employés)', config.channelBonusBoard, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Planning (employés)', config.channelPlanning, [VIEW, SEND, EMBED]),
-      channelLine(guild, 'Stock (employés)', config.channelStock, [VIEW, SEND, EMBED]),
-      channelLine(guild, 'Garage', config.channelGarage, [VIEW, SEND, EMBED]),
+      // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED).
+      ...(GARAGE_STOCK_ENABLED
+        ? [
+            channelLine(guild, 'Stock (employés)', config.channelStock, [VIEW, SEND, EMBED]),
+            channelLine(guild, 'Garage', config.channelGarage, [VIEW, SEND, EMBED]),
+          ]
+        : []),
     ]);
 
     // Tarifs de grade
@@ -214,8 +220,13 @@ export const diagnosticCommand: SlashCommand = {
       messageLine(guild, 'Vitrine événement', config.channelEvent, config.msgEventBoard),
       messageLine(guild, 'Tableau prime', config.channelBonusBoard, config.msgBonusBoard),
       messageLine(guild, 'Agenda planning', config.channelPlanning, config.msgPlanningBoard),
-      messageLine(guild, 'Tableau stock', config.channelStock, config.msgStockBoard),
-      messageLine(guild, 'Catalogue garage', config.channelGarage, config.msgGarageBoard),
+      // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED).
+      ...(GARAGE_STOCK_ENABLED
+        ? [
+            messageLine(guild, 'Tableau stock', config.channelStock, config.msgStockBoard),
+            messageLine(guild, 'Catalogue garage', config.channelGarage, config.msgGarageBoard),
+          ]
+        : []),
     ]);
 
     // Semaine comptable ouverte

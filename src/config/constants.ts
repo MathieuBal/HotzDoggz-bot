@@ -10,6 +10,15 @@
 /** Prix de vente d'un hot dog au PNJ, verse a la caisse de l'entreprise. */
 export const PNJ_UNIT_PRICE = 210;
 
+/**
+ * Interrupteur du module garage / gestion des stocks (vehicules, saucisses,
+ * lots de hot dogs). Mis de cote pour le moment (peu utile au lancement) :
+ * a `false`, les commandes `/stock` et `/vehicule` ne sont pas enregistrees et
+ * les tableaux stock/garage ne sont plus publies. Le code et les donnees en base
+ * restent intacts — repasser a `true` reactive tout, sans migration.
+ */
+export const GARAGE_STOCK_ENABLED = false;
+
 /** Reserve de securite : 5 % du CA, jamais utilisee pour payer (§1.4). */
 export const RESERVE_RATE_PERCENT = 5;
 
@@ -48,3 +57,23 @@ export const GRADE_RATES: Record<Grade, number> = {
   CHEF_EQUIPE: 175,
   DIRECTION: 185,
 };
+
+/**
+ * Palette semantique des embeds (handoff design HotzDoggz §01/02). Chaque
+ * couleur porte un sens, pas une humeur : on choisit selon le ROLE du tableau,
+ * jamais au hasard.
+ *  - production : tableaux tournes vers les employes (activite, perso, entreprise)
+ *  - direction  : tableaux comptables/pilotage (compta, commandes, cloture)
+ *  - prime      : tout ce qui touche a la cagnotte/recompense
+ *  - paie       : versements, grille salariale (tout est OK, rien ne bloque)
+ *  - alerte     : il reste quelque chose a faire (a verser, force…)
+ *  - neutre     : etats vides / informatifs sans enjeu
+ */
+export const EMBED_COLORS = {
+  production: 0xf26419,
+  direction: 0x3e78b2,
+  prime: 0xe2a03f,
+  paie: 0x3fa66a,
+  alerte: 0xd64545,
+  neutre: 0x7e8794,
+} as const;

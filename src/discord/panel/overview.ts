@@ -34,7 +34,20 @@ export async function buildPanelMessage(guildConfigId: string): Promise<BaseMess
     }),
     prisma.guildConfig.findUnique({
       where: { id: guildConfigId },
-      select: { pnjUnitPrice: true },
+      select: {
+        pnjUnitPrice: true,
+        reserveRatePercent: true,
+        bonusRatePercent: true,
+        directorRatePercent: true,
+        hotdogLifetimeMinutes: true,
+        fraudQuantityThreshold: true,
+        fraudBurstCount: true,
+        fraudBurstWindowMinutes: true,
+        closureReminderWeekday: true,
+        closureReminderHourStart: true,
+        closureReminderHourEnd: true,
+        timezone: true,
+      },
     }),
   ]);
 
@@ -104,6 +117,27 @@ export async function buildPanelMessage(guildConfigId: string): Promise<BaseMess
     inline: true,
   });
 
+  if (gconfig) {
+    const coDir = 100 - gconfig.bonusRatePercent - gconfig.directorRatePercent;
+    embed.addFields({
+      name: '⚖️ Répartition bénéfices',
+      value: `Réserve ${gconfig.reserveRatePercent} % · Prime ${gconfig.bonusRatePercent} % · Dir. ${gconfig.directorRatePercent} % · Co-dir ${coDir} %`,
+      inline: true,
+    });
+
+    const jours = Math.floor(gconfig.hotdogLifetimeMinutes / (60 * 24));
+    const heures = Math.floor((gconfig.hotdogLifetimeMinutes % (60 * 24)) / 60);
+    const jourNoms = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'];
+    embed.addFields({
+      name: '⚙️ Règles',
+      value: [
+        `🌭 Péremption : ${jours} j ${heures} h`,
+        `🛡️ Fraude : >${gconfig.fraudQuantityThreshold} u · ${gconfig.fraudBurstCount}/${gconfig.fraudBurstWindowMinutes} min`,
+        `⏰ Rappel : ${jourNoms[gconfig.closureReminderWeekday]} ${gconfig.closureReminderHourStart}-${gconfig.closureReminderHourEnd} h (${gconfig.timezone})`,
+      ].join('\n'),
+    });
+  }
+
   embed.setFooter({ text: 'Menu « Gérer » pour éditer/créer · boutons pour les actions' });
 
   const select = new StringSelectMenuBuilder()
@@ -117,6 +151,10 @@ export async function buildPanelMessage(guildConfigId: string): Promise<BaseMess
       { label: 'Créer un partenaire', value: PanelEditValue.PARTENAIRE_CREER, emoji: '🆕' },
       { label: 'Objectif d’un partenaire', value: PanelEditValue.PARTENAIRE, emoji: '🤝' },
       { label: 'Créer une commande client', value: PanelEditValue.COMMANDE_CREER, emoji: '📦' },
+      { label: 'Répartition des bénéfices', value: PanelEditValue.REPARTITION, emoji: '⚖️' },
+      { label: 'Péremption d’un hot dog', value: PanelEditValue.PEREMPTION, emoji: '🌭' },
+      { label: 'Seuils anti-fraude', value: PanelEditValue.FRAUDE, emoji: '🛡️' },
+      { label: 'Rappel clôture & fuseau', value: PanelEditValue.RAPPEL, emoji: '⏰' },
     );
 
   const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(

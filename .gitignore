@@ -20,8 +20,9 @@ logs/
 # Test / coverage
 coverage/
 
-# Object storage (local dev copies of preuves)
-storage/
+# Object storage (local dev copies of preuves) — ancre a la RACINE pour ne pas
+# avaler le code source src/modules/storage/ (sinon build CI casse : module absent).
+/storage/
 .tmp/
 
 # Sauvegardes base de donnees

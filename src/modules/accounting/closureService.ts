@@ -2,6 +2,7 @@ import { LedgerEntryType, PayrollStatus, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
 import { collectWeekReportInputs } from './weekInputs.js';
+import { ratesFromConfig } from './finance.js';
 import { computeBonusShares, computeWeekReport } from './weekReport.js';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; reason: string };
@@ -58,14 +59,25 @@ export async function closeWeek(
 
     const config = await tx.guildConfig.findUnique({
       where: { id: guildConfigId },
-      select: { roleDirecteur: true, roleCoDirecteur: true },
+      select: {
+        roleDirecteur: true,
+        roleCoDirecteur: true,
+        reserveRatePercent: true,
+        bonusRatePercent: true,
+        directorRatePercent: true,
+      },
     });
     const directionRoleIds = [config?.roleDirecteur, config?.roleCoDirecteur].filter(
       (id): id is string => Boolean(id),
     );
 
     const { lines, extraRevenue } = await collectWeekReportInputs(tx, week.id);
-    const report = computeWeekReport(lines, directionRoleIds, extraRevenue);
+    const report = computeWeekReport(
+      lines,
+      directionRoleIds,
+      extraRevenue,
+      config ? ratesFromConfig(config) : undefined,
+    );
     const bonusShares = computeBonusShares(report);
 
     // Verrouille les totaux sur la semaine et libere le verrou d'ouverture.

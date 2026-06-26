@@ -24,5 +24,21 @@ export function registerEvents(client: Client): void {
   client.on(Events.Error, (err) => logger.error({ err }, 'Erreur client Discord'));
   client.on(Events.Warn, (msg) => logger.warn({ msg }, 'Avertissement client Discord'));
   client.on(Events.ShardError, (err) => logger.error({ err }, 'Erreur de shard'));
-  client.on(Events.Invalidated, () => logger.fatal('Session Discord invalidee — arret requis'));
+  client.on(Events.ShardDisconnect, (event, id) =>
+    logger.warn({ shardId: id, code: event.code }, 'Shard deconnecte'),
+  );
+  client.on(Events.ShardReconnecting, (id) => logger.warn({ shardId: id }, 'Shard reconnexion...'));
+  client.on(Events.ShardResume, (id, replayed) =>
+    logger.info({ shardId: id, replayed }, 'Shard repris'),
+  );
+
+  // Session invalidee par Discord (token revoque, kick, abus de reconnexion) :
+  // discord.js DETRUIT le client sans se reconnecter. Si on se contentait de
+  // logger, le process resterait vivant mais mort (zombie) et Docker ne le
+  // relancerait jamais. On force donc une sortie en code != 0 pour declencher
+  // le redemarrage du conteneur (restart: unless-stopped), qui retentera login.
+  client.on(Events.Invalidated, () => {
+    logger.fatal('Session Discord invalidee — sortie pour forcer un redemarrage');
+    process.exit(1);
+  });
 }

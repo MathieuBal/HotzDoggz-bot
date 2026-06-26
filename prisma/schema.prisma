@@ -169,6 +169,26 @@ model GuildConfig {
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)
 
+  // --- Leviers economiques pilotables depuis le panel (sinon valeurs par defaut) ---
+  // Repartition hebdomadaire du benefice (§1.4). La part Co-directeur = le reste
+  // (100 - prime - directeur), elle absorbe le residu d'arrondi : pas de champ.
+  reserveRatePercent  Int @default(5) // reserve de securite sur le CA
+  bonusRatePercent    Int @default(35) // prime du meilleur employe
+  directorRatePercent Int @default(40) // part Directeur
+
+  // Duree de vie d'un lot de hot dogs cuits (peremption). Defaut 6 j 17 h.
+  hotdogLifetimeMinutes Int @default(9660)
+
+  // Seuils du controle d'integrite anti-fraude (§10.3).
+  fraudQuantityThreshold  Int @default(1000) // volume unitaire improbable
+  fraudBurstCount         Int @default(3) // nb de ventes rapprochees = rafale
+  fraudBurstWindowMinutes Int @default(10) // fenetre d'observation de la rafale
+
+  // Fenetre du rappel de cloture (0=lundi..6=dimanche, heures locales 0-23).
+  closureReminderWeekday   Int @default(6)
+  closureReminderHourStart Int @default(20)
+  closureReminderHourEnd   Int @default(23)
+
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -377,6 +397,10 @@ model Employee {
   orderSignups       OrderSignup[]
   eventSignups       EventSignup[]
   ownedVehicles      Vehicle[]     @relation("OwnedVehicles")
+
+  // Recherche d'employes d'un serveur par statut (match par nom RP, embauches
+  // de la semaine). Volume faible, mais cadre les lectures par serveur.
+  @@index([guildConfigId, status])
 }
 
 enum SalaryAdvanceStatus {
@@ -568,6 +592,11 @@ model AccountingWeek {
   clientOrders ClientOrder[]
   directSales  DirectSale[]
   advances     SalaryAdvance[]
+
+  // getOpenWeek (status=OPEN) est sur le chemin chaud (chaque refresh panel/tableau),
+  // et la derniere semaine CLOSED est lue par ordre de endAt decroissant (export,
+  // tableau "developpement"). Sans index, seq-scan d'une table qui grossit (1/semaine).
+  @@index([guildConfigId, status, endAt])
 }
 
 // ── Commandes client ────────────────────────────────────────────────────────
@@ -731,6 +760,11 @@ model Sale {
 
   @@index([weekId, status])
   @@index([employeeId, weekId])
+  // Anti-fraude "rafale" : compte les ventes recentes d'un employe a CHAQUE
+  // declaration (chemin chaud) — Sale est append-only, l'historique croit sans purge.
+  @@index([guildConfigId, employeeId, createdAt])
+  // Rappel des validations en attente : filtre serveur+statut, fenetre submittedAt.
+  @@index([guildConfigId, status, submittedAt])
 }
 
 /// Preuves : copie durable obligatoire en stockage objet (CDC §5.3).

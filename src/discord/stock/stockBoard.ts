@@ -1,8 +1,16 @@
-import { EmbedBuilder, type Client, type TextBasedChannel } from 'discord.js';
+import {
+  ActionRowBuilder,
+  EmbedBuilder,
+  StringSelectMenuBuilder,
+  type BaseMessageOptions,
+  type Client,
+  type TextBasedChannel,
+} from 'discord.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { formatCountdown } from '../../modules/stock/perishable.js';
-import { getStockState } from '../../modules/stock/stockService.js';
+import { getStockState, listVehicles } from '../../modules/stock/stockService.js';
+import { StockSelectId } from '../components/ids.js';
 
 const nf = new Intl.NumberFormat('fr-FR');
 
@@ -53,6 +61,36 @@ export async function buildStockEmbed(guildConfigId: string): Promise<EmbedBuild
   });
 }
 
+/** Message complet du tableau stock : embed + menus (ramasser / transformer). */
+export async function buildStockMessage(guildConfigId: string): Promise<BaseMessageOptions> {
+  const embed = await buildStockEmbed(guildConfigId);
+  const vehicles = await listVehicles(guildConfigId);
+  const components: ActionRowBuilder<StringSelectMenuBuilder>[] = [];
+
+  if (vehicles.length > 0) {
+    const opts = vehicles.slice(0, 25).map((v) => ({
+      label: `${v.name ? `${v.name} — ` : ''}${v.make} ${v.plate}`.slice(0, 100),
+      description: `${v.saucisses} saucisse(s)`.slice(0, 100),
+      value: v.id,
+    }));
+    components.push(
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(StockSelectId.RAMASSER)
+          .setPlaceholder('📦 Mettre à jour le stock de saucisses (véhicule)…')
+          .addOptions(opts),
+      ),
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(StockSelectId.TRANSFORMER)
+          .setPlaceholder('🌭 Transformer en hot dogs (véhicule)…')
+          .addOptions(opts),
+      ),
+    );
+  }
+  return { embeds: [embed], components };
+}
+
 /** Publie / met a jour le tableau de stock dans son salon dedie. */
 export async function publishStockBoard(client: Client, guildConfigId: string): Promise<void> {
   const config = await prisma.guildConfig.findUnique({ where: { id: guildConfigId } });
@@ -63,18 +101,18 @@ export async function publishStockBoard(client: Client, guildConfigId: string): 
     logger.warn({ channelId: config.channelStock }, 'Salon stock introuvable');
     return;
   }
-  const embed = await buildStockEmbed(guildConfigId);
+  const payload = await buildStockMessage(guildConfigId);
 
   if (config.msgStockBoard) {
     try {
       const msg = await (channel as TextBasedChannel).messages.fetch(config.msgStockBoard);
-      await msg.edit({ embeds: [embed] });
+      await msg.edit(payload);
       return;
     } catch {
       /* message supprime -> on recree */
     }
   }
-  const created = await channel.send({ embeds: [embed] });
+  const created = await channel.send(payload);
   await prisma.guildConfig.update({
     where: { id: guildConfigId },
     data: { msgStockBoard: created.id },

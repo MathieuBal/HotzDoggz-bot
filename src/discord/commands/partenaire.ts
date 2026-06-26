@@ -14,7 +14,7 @@ import { getGuildConfigByGuildId } from '../../modules/employees/employeeService
 import {
   createPartner,
   deactivatePartner,
-  deliveredToPartnerInWeek,
+  deliveredByPartnerInWeek,
   listActivePartners,
   setPartnerObjective,
 } from '../../modules/partners/partnerService.js';
@@ -160,9 +160,15 @@ export const partenaireCommand: SlashCommand = {
       return;
     }
     const week = await getOpenWeek(config.id);
+    const deliveredMap = week
+      ? await deliveredByPartnerInWeek(
+          week.id,
+          partners.map((p) => p.id),
+        )
+      : new Map<string, number>();
     const lines: string[] = [];
     for (const p of partners) {
-      const delivered = week ? await deliveredToPartnerInWeek(p.id, week.id) : 0;
+      const delivered = deliveredMap.get(p.id) ?? 0;
       const target = p.objectiveTarget;
       lines.push(
         target === null

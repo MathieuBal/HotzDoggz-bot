@@ -345,6 +345,92 @@ Ces trois mécanismes tournent tout seuls une fois le bot lancé :
 - [ ] `/semaine ouvrir` effectué, tableaux visibles
 - [ ] Cycle test déclaration → validation → clôture → paie → export OK
 
-> Besoin d'un hébergement permanent (le bot tourne 24/7 sans ton PC) ? C'est la
-> Phase 6 : un `Dockerfile` de production est déjà prêt. Dis-le-moi et je te
-> prépare le déploiement (Railway/Render/VPS) + sauvegardes.
+---
+
+## 10. Mise en ligne 24/7 sur un VPS (Docker)
+
+Pour que le bot tourne en permanence sans ton PC. Tout est packagé : Postgres,
+migrations et bot démarrent ensemble avec **une seule commande**.
+
+### 10.1 Préparer le serveur
+
+Sur un VPS Debian/Ubuntu (OVH, Hetzner, Contabo…), installe Docker une fois :
+
+```bash
+curl -fsSL https://get.docker.com | sh
+```
+
+### 10.2 Déployer
+
+```bash
+# 1) Récupérer le code
+git clone <url-de-ton-repo> hotzdogz-bot
+cd hotzdogz-bot
+git checkout claude/relaxed-lovelace-t14z5i
+
+# 2) Renseigner les secrets (Docker Compose lit ce fichier .env tout seul)
+cp .env.example .env
+nano .env        # remplis DISCORD_TOKEN, DISCORD_CLIENT_ID, DISCORD_GUILD_ID
+
+# 3) Construire et lancer en arrière-plan
+docker compose up -d --build
+```
+
+C'est tout. Le conteneur applique les **migrations** puis démarre le bot, qui
+**enregistre ses commandes** sur ton serveur. `DATABASE_URL` est géré
+automatiquement par Compose (inutile d'y toucher dans `.env`).
+
+> ℹ️ Le bot redémarre tout seul si le VPS reboote (`restart: unless-stopped`).
+
+### 10.3 Suivre / piloter
+
+```bash
+docker compose logs -f bot      # voir les logs en direct (Ctrl+C pour sortir)
+docker compose ps               # état des conteneurs
+docker compose restart bot      # redémarrer le bot seul
+docker compose down             # tout arrêter (les données restent)
+```
+
+### 10.4 Données persistantes (rien n'est perdu)
+
+Deux volumes Docker survivent aux redémarrages **et** aux reconstructions :
+
+| Volume              | Contenu                                                        |
+| ------------------- | ------------------------------------------------------------- |
+| `hotzdogz_pgdata`   | La base PostgreSQL (ventes, paies, config…)                   |
+| `hotzdogz_storage`  | Les **preuves images** (factures, photos véhicules/produits)  |
+
+### 10.5 Purge automatique des images (anti-saturation)
+
+Pour ne pas saturer le disque, le bot **supprime chaque jour** les preuves
+images plus vieilles que la rétention. Les photos durables (menu, véhicules)
+référencées sont **toujours préservées** — seules les preuves d'audit
+(factures, captures de coffre, preuves de paiement) sont effacées une fois
+périmées.
+
+Réglage dans `.env` :
+
+```ini
+STORAGE_RETENTION_DAYS=30   # garder ~un mois (défaut). Mettre 7 pour 1 semaine.
+```
+
+### 10.6 Mettre à jour le bot
+
+```bash
+git pull
+docker compose up -d --build    # rebuild + redéploie, données conservées
+```
+
+### 10.7 Sauvegardes de la base
+
+Un dump PostgreSQL à la demande (à mettre dans un `cron` quotidien sur le VPS) :
+
+```bash
+docker compose exec -T postgres pg_dump -U hotzdogz hotzdogz > backup-$(date +%F).sql
+```
+
+Restauration :
+
+```bash
+cat backup-AAAA-MM-JJ.sql | docker compose exec -T postgres psql -U hotzdogz -d hotzdogz
+```

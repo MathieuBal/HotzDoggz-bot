@@ -1,0 +1,11 @@
+-- AlterTable
+ALTER TABLE "GuildConfig" ADD COLUMN     "reserveRatePercent" INTEGER NOT NULL DEFAULT 5,
+ADD COLUMN     "bonusRatePercent" INTEGER NOT NULL DEFAULT 35,
+ADD COLUMN     "directorRatePercent" INTEGER NOT NULL DEFAULT 40,
+ADD COLUMN     "hotdogLifetimeMinutes" INTEGER NOT NULL DEFAULT 9660,
+ADD COLUMN     "fraudQuantityThreshold" INTEGER NOT NULL DEFAULT 1000,
+ADD COLUMN     "fraudBurstCount" INTEGER NOT NULL DEFAULT 3,
+ADD COLUMN     "fraudBurstWindowMinutes" INTEGER NOT NULL DEFAULT 10,
+ADD COLUMN     "closureReminderWeekday" INTEGER NOT NULL DEFAULT 6,
+ADD COLUMN     "closureReminderHourStart" INTEGER NOT NULL DEFAULT 20,
+ADD COLUMN     "closureReminderHourEnd" INTEGER NOT NULL DEFAULT 23;

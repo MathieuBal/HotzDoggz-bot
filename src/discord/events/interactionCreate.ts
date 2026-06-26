@@ -13,7 +13,13 @@ import { handlePanelModal } from '../modals/panelModalHandlers.js';
 import { handleReviewModal } from '../modals/reviewModalHandlers.js';
 import { handleSaleModal } from '../modals/saleModalHandlers.js';
 import { handleWeekModal } from '../modals/weekModalHandlers.js';
-import { handleGarageAssign, handleGaragePick } from '../garage/garageHandlers.js';
+import {
+  handleGarageAssign,
+  handleGarageOpen,
+  handleGaragePick,
+  handleGarageVehButton,
+} from '../garage/garageHandlers.js';
+import { handleStockModal, handleStockSelect } from '../stock/stockHandlers.js';
 import { handlePanelPick } from '../panel/pickers.js';
 import { handlePlanningSelect } from '../planning/planningSelect.js';
 import { handlePanelSelect } from '../selects/panelSelect.js';
@@ -22,6 +28,17 @@ import {
   handleVerificationModal,
 } from '../verification/verificationHandlers.js';
 import { handleVitrineModal } from '../vitrine/vitrineHandlers.js';
+
+/** Codes Discord d'interaction perdue : inutile (et impossible) d'y repondre. */
+const EXPIRED_INTERACTION_CODES = new Set([
+  10062, // Unknown interaction (token expire : >3 s sans accuse de reception)
+  40060, // Interaction deja acquittee
+]);
+
+function isExpiredInteraction(err: unknown): boolean {
+  const code = (err as { code?: number } | null)?.code;
+  return code !== undefined && EXPIRED_INTERACTION_CODES.has(code);
+}
 
 async function notifyError(interaction: Interaction, correlationId: string): Promise<void> {
   if (!interaction.isRepliable()) return;
@@ -51,6 +68,7 @@ export function registerInteractionCreate(client: Client): void {
 
     try {
       if (interaction.isButton()) {
+        if (await handleGarageVehButton(interaction)) return;
         if (await handleVerificationButton(interaction)) return;
         if (await handlePanelConfirmButton(interaction)) return;
         if (await handlePanelButton(interaction)) return;
@@ -66,6 +84,8 @@ export function registerInteractionCreate(client: Client): void {
       }
       if (interaction.isStringSelectMenu()) {
         if (await handlePlanningSelect(interaction)) return;
+        if (await handleStockSelect(interaction)) return;
+        if (await handleGarageOpen(interaction)) return;
         if (await handleGaragePick(interaction)) return;
         if (await handlePanelPick(interaction)) return;
         await handlePanelSelect(interaction);
@@ -74,6 +94,7 @@ export function registerInteractionCreate(client: Client): void {
       if (interaction.isModalSubmit()) {
         if (await handleVerificationModal(interaction)) return;
         if (await handleVitrineModal(interaction)) return;
+        if (await handleStockModal(interaction)) return;
         if (await handlePanelModal(interaction)) return;
         if (await handleReviewModal(interaction)) return;
         if (await handleDirectSaleModal(interaction)) return;
@@ -95,6 +116,13 @@ export function registerInteractionCreate(client: Client): void {
         await command.execute(interaction);
       }
     } catch (err) {
+      // Interaction expiree/deja acquittee : on ne peut plus repondre, et tenter
+      // de le faire ne ferait que lever un nouveau 10062. On logge en debug et on
+      // s'arrete la (evite le bruit et un second appel API voue a l'echec).
+      if (isExpiredInteraction(err)) {
+        log.debug({ type: interaction.type }, 'Interaction expiree (ignoree)');
+        return;
+      }
       log.error({ err, type: interaction.type }, 'Erreur de traitement d’une interaction');
       await notifyError(interaction, correlationId);
     }

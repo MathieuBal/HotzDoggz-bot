@@ -26,7 +26,27 @@ export function localWeekdayHour(now: Date, timeZone: string): { weekday: number
   return { weekday: WEEKDAY_INDEX[wd] ?? 0, hour };
 }
 
-/** Fenetre de rappel de cloture : dimanche soir (20h-22h59 local). */
-export function isClosureReminderWindow(weekday: number, hour: number): boolean {
-  return weekday === 6 && hour >= 20 && hour < 23;
+/** Fenetre de rappel de cloture (jour + plage horaire configurables). */
+export interface ClosureReminderWindow {
+  weekday: number; // 0=lundi..6=dimanche
+  hourStart: number; // inclus
+  hourEnd: number; // exclu
+}
+
+export const DEFAULT_CLOSURE_REMINDER_WINDOW: ClosureReminderWindow = {
+  weekday: 6, // dimanche
+  hourStart: 20,
+  hourEnd: 23,
+};
+
+/**
+ * Vrai si (weekday, hour) tombe dans la fenetre de rappel de cloture.
+ * Par defaut : dimanche soir (20h-22h59 local).
+ */
+export function isClosureReminderWindow(
+  weekday: number,
+  hour: number,
+  window: ClosureReminderWindow = DEFAULT_CLOSURE_REMINDER_WINDOW,
+): boolean {
+  return weekday === window.weekday && hour >= window.hourStart && hour < window.hourEnd;
 }

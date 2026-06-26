@@ -153,6 +153,18 @@ export async function listAvailable(guildConfigId: string): Promise<GarageVehicl
   return vs.map((v) => mapVehicle({ ...v, owner: null }));
 }
 
+/** Un vehicule par id (avec proprietaire), ou null. */
+export async function getVehicleById(
+  guildConfigId: string,
+  vehicleId: string,
+): Promise<GarageVehicle | null> {
+  const v = await prisma.vehicle.findFirst({
+    where: { id: vehicleId, guildConfigId, active: true },
+    include: { owner: { select: { nomRP: true, discordUserId: true } } },
+  });
+  return v ? mapVehicle(v) : null;
+}
+
 async function toGarage(id: string): Promise<GarageVehicle> {
   const v = await prisma.vehicle.findUniqueOrThrow({
     where: { id },

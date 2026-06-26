@@ -1,5 +1,6 @@
 import { MessageFlags, type ModalSubmitInteraction } from 'discord.js';
 import { prisma } from '../../infrastructure/database/client.js';
+import { writeAudit } from '../../modules/audit/auditService.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import {
   getGuildConfigByGuildId,
@@ -153,6 +154,157 @@ export async function handlePanelModal(interaction: ModalSubmitInteraction): Pro
     if (res.ok) scheduleDashboardUpdate(interaction.client, config.id);
     await interaction.editReply(
       res.ok ? `🤝 Partenaire **${res.data.name}** créé.` : `Échec : ${res.reason}`,
+    );
+    return true;
+  }
+
+  if (base === PanelModalId.REPARTITION) {
+    const reserve = Number(interaction.fields.getTextInputValue(PanelFieldId.RESERVE).trim());
+    const prime = Number(interaction.fields.getTextInputValue(PanelFieldId.PRIME).trim());
+    const directeur = Number(interaction.fields.getTextInputValue(PanelFieldId.DIRECTEUR).trim());
+    const ints = [reserve, prime, directeur];
+    if (ints.some((n) => !Number.isInteger(n) || n < 0 || n > 100)) {
+      await interaction.editReply('Pourcentages invalides (entiers de 0 à 100 attendus).');
+      return true;
+    }
+    if (prime + directeur > 100) {
+      await interaction.editReply(
+        `Prime (${prime} %) + Directeur (${directeur} %) dépasse 100 % : il ne reste rien pour le Co-directeur.`,
+      );
+      return true;
+    }
+    const coDir = 100 - prime - directeur;
+    const before = {
+      reserveRatePercent: config.reserveRatePercent,
+      bonusRatePercent: config.bonusRatePercent,
+      directorRatePercent: config.directorRatePercent,
+    };
+    await prisma.guildConfig.update({
+      where: { id: config.id },
+      data: { reserveRatePercent: reserve, bonusRatePercent: prime, directorRatePercent: directeur },
+    });
+    await writeAudit(prisma, {
+      guildConfigId: config.id,
+      action: 'CONFIG_DISTRIBUTION_SET',
+      authorDiscordId: interaction.user.id,
+      before,
+      after: { reserveRatePercent: reserve, bonusRatePercent: prime, directorRatePercent: directeur },
+    });
+    scheduleDashboardUpdate(interaction.client, config.id);
+    await interaction.editReply(
+      `💰 Répartition mise à jour : réserve **${reserve} %**, prime **${prime} %**, Directeur **${directeur} %**, Co-directeur **${coDir} %** (le reste).\n_S’applique à la prochaine clôture, sans réécrire l’historique._`,
+    );
+    return true;
+  }
+
+  if (base === PanelModalId.PEREMPTION) {
+    const jours = Number(interaction.fields.getTextInputValue(PanelFieldId.JOURS).trim());
+    const heures = Number(interaction.fields.getTextInputValue(PanelFieldId.HEURES).trim());
+    if (!Number.isInteger(jours) || jours < 0 || !Number.isInteger(heures) || heures < 0 || heures > 23) {
+      await interaction.editReply('Durée invalide (jours ≥ 0, heures entre 0 et 23).');
+      return true;
+    }
+    const minutes = (jours * 24 + heures) * 60;
+    if (minutes <= 0) {
+      await interaction.editReply('La durée de vie doit être supérieure à 0.');
+      return true;
+    }
+    const before = { hotdogLifetimeMinutes: config.hotdogLifetimeMinutes };
+    await prisma.guildConfig.update({
+      where: { id: config.id },
+      data: { hotdogLifetimeMinutes: minutes },
+    });
+    await writeAudit(prisma, {
+      guildConfigId: config.id,
+      action: 'CONFIG_PEREMPTION_SET',
+      authorDiscordId: interaction.user.id,
+      before,
+      after: { hotdogLifetimeMinutes: minutes },
+    });
+    await interaction.editReply(
+      `🌭 Péremption d’un lot : **${jours} j ${heures} h**.\n_S’applique aux lots produits à partir de maintenant._`,
+    );
+    return true;
+  }
+
+  if (base === PanelModalId.FRAUDE) {
+    const volume = Number(interaction.fields.getTextInputValue(PanelFieldId.SEUIL_VOLUME).trim());
+    const rafale = Number(interaction.fields.getTextInputValue(PanelFieldId.RAFALE_NB).trim());
+    const fenetre = Number(interaction.fields.getTextInputValue(PanelFieldId.FENETRE_MIN).trim());
+    if ([volume, rafale, fenetre].some((n) => !Number.isInteger(n) || n < 1)) {
+      await interaction.editReply('Seuils invalides (entiers positifs attendus).');
+      return true;
+    }
+    const before = {
+      fraudQuantityThreshold: config.fraudQuantityThreshold,
+      fraudBurstCount: config.fraudBurstCount,
+      fraudBurstWindowMinutes: config.fraudBurstWindowMinutes,
+    };
+    await prisma.guildConfig.update({
+      where: { id: config.id },
+      data: {
+        fraudQuantityThreshold: volume,
+        fraudBurstCount: rafale,
+        fraudBurstWindowMinutes: fenetre,
+      },
+    });
+    await writeAudit(prisma, {
+      guildConfigId: config.id,
+      action: 'CONFIG_FRAUD_SET',
+      authorDiscordId: interaction.user.id,
+      before,
+      after: { fraudQuantityThreshold: volume, fraudBurstCount: rafale, fraudBurstWindowMinutes: fenetre },
+    });
+    await interaction.editReply(
+      `🛡️ Seuils anti-fraude : volume > **${volume} u**, rafale ≥ **${rafale}** ventes en **${fenetre} min**.`,
+    );
+    return true;
+  }
+
+  if (base === PanelModalId.RAPPEL) {
+    const jour = Number(interaction.fields.getTextInputValue(PanelFieldId.JOUR).trim());
+    const debut = Number(interaction.fields.getTextInputValue(PanelFieldId.HEURE_DEBUT).trim());
+    const fin = Number(interaction.fields.getTextInputValue(PanelFieldId.HEURE_FIN).trim());
+    const fuseau = interaction.fields.getTextInputValue(PanelFieldId.FUSEAU).trim();
+    if (!Number.isInteger(jour) || jour < 0 || jour > 6) {
+      await interaction.editReply('Jour invalide (0 = lundi … 6 = dimanche).');
+      return true;
+    }
+    if (!Number.isInteger(debut) || debut < 0 || debut > 23 || !Number.isInteger(fin) || fin < 1 || fin > 24 || fin <= debut) {
+      await interaction.editReply('Plage horaire invalide (début 0-23, fin 1-24, fin > début).');
+      return true;
+    }
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: fuseau });
+    } catch {
+      await interaction.editReply(`Fuseau horaire inconnu : « ${fuseau} » (ex. Europe/Paris).`);
+      return true;
+    }
+    const before = {
+      closureReminderWeekday: config.closureReminderWeekday,
+      closureReminderHourStart: config.closureReminderHourStart,
+      closureReminderHourEnd: config.closureReminderHourEnd,
+      timezone: config.timezone,
+    };
+    await prisma.guildConfig.update({
+      where: { id: config.id },
+      data: {
+        closureReminderWeekday: jour,
+        closureReminderHourStart: debut,
+        closureReminderHourEnd: fin,
+        timezone: fuseau,
+      },
+    });
+    await writeAudit(prisma, {
+      guildConfigId: config.id,
+      action: 'CONFIG_REMINDER_SET',
+      authorDiscordId: interaction.user.id,
+      before,
+      after: { closureReminderWeekday: jour, closureReminderHourStart: debut, closureReminderHourEnd: fin, timezone: fuseau },
+    });
+    const jours = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    await interaction.editReply(
+      `⏰ Rappel de clôture : **${jours[jour]}** entre **${debut} h** et **${fin} h**. Fuseau : **${fuseau}**.`,
     );
     return true;
   }

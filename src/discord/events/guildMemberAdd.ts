@@ -12,41 +12,46 @@ export function registerGuildMemberAdd(client: Client): void {
   client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
     if (member.user.bot) return; // on n'accueille pas les bots
 
-    const config = await prisma.guildConfig.findUnique({
-      where: { guildId: member.guild.id },
-      select: { channelWelcome: true, welcomeMessage: true, channelReglement: true },
-    });
-    if (!config?.channelWelcome) return;
-
-    const channel = await member.guild.channels.fetch(config.channelWelcome).catch(() => null);
-    if (!channel || !channel.isTextBased() || !('send' in channel)) {
-      logger.warn({ channelId: config.channelWelcome }, 'Salon d’accueil introuvable ou non textuel');
-      return;
-    }
-
-    const text = renderWelcomeMessage(config.welcomeMessage, {
-      mention: `<@${member.id}>`,
-      guildName: member.guild.name,
-    });
-
-    // Renvoi vers le reglement (sas d'acces) si configure.
-    const next = config.channelReglement
-      ? `\n\n👉 Rends-toi dans <#${config.channelReglement}> pour valider le règlement et débloquer le menu, les tarifs et les commandes.`
-      : '';
-
-    const embed = new EmbedBuilder()
-      .setColor(0xff7a00)
-      .setTitle('👋 Un nouveau client arrive !')
-      .setDescription(text + next)
-      .setThumbnail(member.displayAvatarURL({ size: 256 }))
-      .setFooter({ text: `${member.guild.memberCount} membres` })
-      .setTimestamp(new Date());
-
+    // Tout le corps est protege : un throw ici (DB transitoire, API Discord)
+    // remonterait sinon en unhandledRejection. On homogeneise avec les autres events.
     try {
+      const config = await prisma.guildConfig.findUnique({
+        where: { guildId: member.guild.id },
+        select: { channelWelcome: true, welcomeMessage: true, channelReglement: true },
+      });
+      if (!config?.channelWelcome) return;
+
+      const channel = await member.guild.channels.fetch(config.channelWelcome).catch(() => null);
+      if (!channel || !channel.isTextBased() || !('send' in channel)) {
+        logger.warn(
+          { channelId: config.channelWelcome },
+          'Salon d’accueil introuvable ou non textuel',
+        );
+        return;
+      }
+
+      const text = renderWelcomeMessage(config.welcomeMessage, {
+        mention: `<@${member.id}>`,
+        guildName: member.guild.name,
+      });
+
+      // Renvoi vers le reglement (sas d'acces) si configure.
+      const next = config.channelReglement
+        ? `\n\n👉 Rends-toi dans <#${config.channelReglement}> pour valider le règlement et débloquer le menu, les tarifs et les commandes.`
+        : '';
+
+      const embed = new EmbedBuilder()
+        .setColor(0xff7a00)
+        .setTitle('👋 Un nouveau client arrive !')
+        .setDescription(text + next)
+        .setThumbnail(member.displayAvatarURL({ size: 256 }))
+        .setFooter({ text: `${member.guild.memberCount} membres` })
+        .setTimestamp(new Date());
+
       // La mention dans `content` ping reellement le nouvel arrivant.
       await channel.send({ content: `<@${member.id}>`, embeds: [embed] });
     } catch (err) {
-      logger.warn({ err, channelId: config.channelWelcome }, 'Envoi du message d’accueil KO');
+      logger.warn({ err, guildId: member.guild.id }, 'Accueil du nouvel arrivant KO');
     }
   });
 }

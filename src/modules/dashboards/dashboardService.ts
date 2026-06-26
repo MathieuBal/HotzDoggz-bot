@@ -1,4 +1,5 @@
 import { ChannelType, EmbedBuilder, type Client, type MessageCreateOptions } from 'discord.js';
+import { GARAGE_STOCK_ENABLED } from '../../config/constants.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
@@ -139,14 +140,18 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   await publishPlanningBoard(client, guildConfigId).catch((err) =>
     logger.warn({ err, guildConfigId }, 'Mise a jour de l agenda planning KO'),
   );
-  // Tableau de stock (saucisses + lots perissables).
-  await publishStockBoard(client, guildConfigId).catch((err) =>
-    logger.warn({ err, guildConfigId }, 'Mise a jour du tableau stock KO'),
-  );
-  // Catalogue garage (vehicules + attribution).
-  await publishGarageBoard(client, guildConfigId).catch((err) =>
-    logger.warn({ err, guildConfigId }, 'Mise a jour du catalogue garage KO'),
-  );
+  // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : on ne publie
+  // ni le tableau de stock ni le catalogue garage tant qu'il est desactive.
+  if (GARAGE_STOCK_ENABLED) {
+    // Tableau de stock (saucisses + lots perissables).
+    await publishStockBoard(client, guildConfigId).catch((err) =>
+      logger.warn({ err, guildConfigId }, 'Mise a jour du tableau stock KO'),
+    );
+    // Catalogue garage (vehicules + attribution).
+    await publishGarageBoard(client, guildConfigId).catch((err) =>
+      logger.warn({ err, guildConfigId }, 'Mise a jour du catalogue garage KO'),
+    );
+  }
 }
 
 /**

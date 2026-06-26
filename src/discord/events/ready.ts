@@ -1,8 +1,10 @@
 import { Events, type Client } from 'discord.js';
 import { loadEnv } from '../../config/env.js';
 import { logger } from '../../infrastructure/logging/logger.js';
+import { startHeartbeat } from '../../infrastructure/health/heartbeat.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { startProactiveNotifications } from '../../modules/notifications/scheduler.js';
+import { startStoragePurge } from '../../modules/storage/scheduler.js';
 import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { publishDirectionGuide } from '../guides/directionGuide.js';
 import { publishVerification } from '../verification/verificationBoard.js';
@@ -40,8 +42,13 @@ export function registerReady(client: Client): void {
     }
 
     // Verifie/recree les tableaux permanents pour chaque serveur configure (§7.4).
+    // Chaque serveur est isole : un echec (config illisible, DB transitoire) ne
+    // doit empecher ni les autres serveurs ni le demarrage des schedulers ci-dessous.
     for (const guild of c.guilds.cache.values()) {
-      const config = await getGuildConfigByGuildId(guild.id);
+      const config = await getGuildConfigByGuildId(guild.id).catch((err) => {
+        logger.warn({ err, guildId: guild.id }, 'Lecture config au demarrage KO');
+        return null;
+      });
       if (config) {
         await updateDashboardsNow(c, config.id).catch((err) =>
           logger.warn({ err, guildId: guild.id }, 'Publication des tableaux au demarrage KO'),
@@ -66,5 +73,9 @@ export function registerReady(client: Client): void {
 
     // Notifications proactives (relances, rappel de cloture) — CDC §5.6.
     startProactiveNotifications(c);
+    // Purge periodique des preuves images (anti-saturation disque) — §10.4.
+    startStoragePurge();
+    // Battement de coeur pour le healthcheck du conteneur (detection zombie).
+    startHeartbeat(c);
   });
 }

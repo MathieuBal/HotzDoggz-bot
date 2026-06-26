@@ -2,10 +2,14 @@ import { MessageFlags, type StringSelectMenuInteraction } from 'discord.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { PanelEditValue, PanelSelectId } from '../components/ids.js';
 import {
+  buildPanelFraudeModal,
   buildPanelMenuModal,
   buildPanelOrderCreateModal,
   buildPanelPartnerCreateModal,
+  buildPanelPeremptionModal,
   buildPanelPnjPriceModal,
+  buildPanelRappelModal,
+  buildPanelRepartitionModal,
 } from '../modals/panelModals.js';
 import {
   buildGradePicker,
@@ -83,6 +87,18 @@ export async function handlePanelSelect(
       return true;
     case PanelEditValue.COMMANDE_CREER:
       await interaction.showModal(buildPanelOrderCreateModal());
+      return true;
+    case PanelEditValue.REPARTITION:
+      await interaction.showModal(buildPanelRepartitionModal(config));
+      return true;
+    case PanelEditValue.PEREMPTION:
+      await interaction.showModal(buildPanelPeremptionModal(config));
+      return true;
+    case PanelEditValue.FRAUDE:
+      await interaction.showModal(buildPanelFraudeModal(config));
+      return true;
+    case PanelEditValue.RAPPEL:
+      await interaction.showModal(buildPanelRappelModal(config));
       return true;
     default:
       await interaction.reply({ content: 'Option inconnue.', flags: ephemeral });

@@ -22,15 +22,20 @@ function s(
   };
 }
 
-describe('computeBonusShares (degressive + bracelet)', () => {
-  it('le dernier touche 0 et le premier la plus grosse part', () => {
+describe('computeBonusShares (proportionnel + bracelet)', () => {
+  it('repartit proportionnellement a la prod : tout producteur touche une part', () => {
     const report = computeWeekReport([s('A', 'Alice', 2000), s('B', 'Bob', 1000)], [DIR]);
     const shares = computeBonusShares(report);
-    expect(shares.get('A')).toBe(report.bonus);
-    expect(shares.has('B')).toBe(false); // dernier = 0
+    const a = shares.get('A') ?? 0;
+    const b = shares.get('B') ?? 0;
+    expect(a).toBeGreaterThan(b); // degressif : Alice a produit 2x plus
+    expect(b).toBeGreaterThan(0); // mais Bob a produit -> il touche
+    expect(a + b).toBe(report.bonus); // somme exacte
+    // ~ 2/3 pour Alice, ~ 1/3 pour Bob
+    expect(Math.abs(a - Math.round((report.bonus * 2) / 3))).toBeLessThanOrEqual(1);
   });
 
-  it('repartit de facon strictement degressive entre 3', () => {
+  it('degressif entre 3, et le dernier (qui a produit) touche quand meme', () => {
     const report = computeWeekReport(
       [s('A', 'Alice', 3000), s('B', 'Bob', 2000), s('C', 'Cara', 1000)],
       [DIR],
@@ -41,11 +46,18 @@ describe('computeBonusShares (degressive + bracelet)', () => {
     const c = shares.get('C') ?? 0;
     expect(a).toBeGreaterThan(b);
     expect(b).toBeGreaterThan(c);
-    expect(c).toBe(0); // dernier
-    expect(a + b + c).toBe(report.bonus); // somme exacte
+    expect(c).toBeGreaterThan(0); // a produit -> touche du passif
+    expect(a + b + c).toBe(report.bonus);
   });
 
-  it('partage a egalite (ex aequo) et reste = somme exacte', () => {
+  it('exclut ceux qui n’ont rien produit (0 part)', () => {
+    // Cara n'a aucune vente validee -> pas dans le rapport -> 0.
+    const report = computeWeekReport([s('A', 'Alice', 2000), s('B', 'Bob', 1000)], [DIR]);
+    const shares = computeBonusShares(report);
+    expect(shares.has('Z')).toBe(false);
+  });
+
+  it('partage a egalite (ex aequo) et somme exacte', () => {
     const report = computeWeekReport([s('A', 'Alice', 1500), s('B', 'Bob', 1500)], [DIR]);
     const shares = computeBonusShares(report);
     const total = (shares.get('A') ?? 0) + (shares.get('B') ?? 0);
@@ -53,16 +65,16 @@ describe('computeBonusShares (degressive + bracelet)', () => {
     expect(Math.abs((shares.get('A') ?? 0) - (shares.get('B') ?? 0))).toBeLessThanOrEqual(1);
   });
 
-  it('neutralise le bracelet : un x3 qui vend 2x plus passe DERRIERE un sans-bracelet', () => {
-    // Bracelet x3 vend 1800 (ajuste 600) ; sans bracelet vend 1000 (ajuste 1000).
+  it('neutralise le bracelet : le sans-bracelet (plus d’effort) touche la plus grosse part', () => {
+    // x3 vend 1800 (ajuste 600) ; sans bracelet vend 1000 (ajuste 1000).
     const report = computeWeekReport(
       [s('A', 'Avec', 1800, { multiplier: 3 }), s('B', 'Sans', 1000)],
       [DIR],
     );
     expect(report.bestEmployee?.nomRP).toBe('Sans');
     const shares = computeBonusShares(report);
-    expect(shares.get('B')).toBe(report.bonus); // le sans-bracelet rafle la part
-    expect(shares.has('A')).toBe(false);
+    expect((shares.get('B') ?? 0)).toBeGreaterThan(shares.get('A') ?? 0);
+    expect((shares.get('A') ?? 0)).toBeGreaterThan(0); // il a quand meme produit
   });
 
   it('un seul eligible touche toute la prime', () => {

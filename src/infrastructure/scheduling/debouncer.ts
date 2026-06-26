@@ -45,11 +45,20 @@ export class KeyedSerialQueue implements SerialQueue {
   enqueue<T>(key: string, task: () => Promise<T>): Promise<T> {
     const previous = this.chains.get(key) ?? Promise.resolve();
     const next = previous.then(task, task);
-    // On garde la chaine vivante meme si une tache echoue.
-    this.chains.set(
-      key,
-      next.catch(() => undefined),
+    // Chaine "amortie" : ne rejette jamais, pour garder la file vivante meme si
+    // une tache echoue.
+    const settled = next.then(
+      () => undefined,
+      () => undefined,
     );
+    this.chains.set(key, settled);
+    // Purge la cle une fois la chaine videe — SAUF si une nouvelle tache s'est
+    // enfilee entre-temps (la cle pointe alors vers une autre chaine). Sans ce
+    // nettoyage, une cle ephemere (ex. thread.id d'une vente) resterait a vie :
+    // une entree de fuite par vente sur un process 24/7.
+    void settled.then(() => {
+      if (this.chains.get(key) === settled) this.chains.delete(key);
+    });
     return next;
   }
 }

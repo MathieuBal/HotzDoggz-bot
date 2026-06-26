@@ -22,9 +22,13 @@ const PENDING_STATUSES = [SaleStatus.SOUMISE, SaleStatus.EN_VERIFICATION, SaleSt
 const DELIVERED_UNPAID_AGE_HOURS = 24;
 
 // Etat anti-spam en memoire (reset au redemarrage : au pire un rappel de plus).
+// Toutes ces structures sont indexees par guildConfigId => bornees par le nombre
+// de serveurs (ne croissent pas avec le temps). On retient la DERNIERE semaine
+// rappelee par serveur (et non l'ensemble cumulatif des semaines), pour eviter
+// une fuite d'une entree par semaine sur un process 24/7.
 const lastPendingReminderAt = new Map<string, number>();
 const lastOrdersReminderAt = new Map<string, number>();
-const closureReminderSentForWeek = new Set<string>();
+const lastClosureReminderWeekByGuild = new Map<string, string>();
 
 const nf = new Intl.NumberFormat('fr-FR');
 const money = (n: number): string => `${nf.format(n)} $`;
@@ -57,20 +61,27 @@ async function checkClosureReminder(client: Client, guildConfigId: string): Prom
   if (!config?.channelLogs) return;
 
   const { weekday, hour } = localWeekdayHour(new Date(), config.timezone);
-  if (!isClosureReminderWindow(weekday, hour)) return;
+  if (
+    !isClosureReminderWindow(weekday, hour, {
+      weekday: config.closureReminderWeekday,
+      hourStart: config.closureReminderHourStart,
+      hourEnd: config.closureReminderHourEnd,
+    })
+  )
+    return;
 
   const week = await prisma.accountingWeek.findFirst({
     where: { guildConfigId, status: 'OPEN' },
     select: { id: true },
   });
-  if (!week || closureReminderSentForWeek.has(week.id)) return;
+  if (!week || lastClosureReminderWeekByGuild.get(guildConfigId) === week.id) return;
 
   const guild = await client.guilds.fetch(config.guildId).catch(() => null);
   if (!guild) return;
   await postToLogs(guild, config, {
     content: `${mentionDirection(config)} 📅 Fin de semaine : pensez a **cloturer la semaine comptable** (\`/semaine cloturer\`) une fois les dernieres ventes validees.`,
   });
-  closureReminderSentForWeek.add(week.id);
+  lastClosureReminderWeekByGuild.set(guildConfigId, week.id);
 }
 
 /**

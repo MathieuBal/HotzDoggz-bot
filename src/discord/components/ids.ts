@@ -110,6 +110,24 @@ export const PlanningSelectId = {
 export const GarageId = {
   PICK: 'garage:pick', // select d'un vehicule disponible a attribuer
   ASSIGN_TO: 'garage:assignto', // user-select, suffixe :<vehicleId>
+  OPEN: 'garage:open', // select : ouvrir la carte d'un vehicule
+  VEH_RAMASSER: 'garage:veh:ramasser', // bouton sur la carte, suffixe :<vehicleId>
+  VEH_TRANSFORMER: 'garage:veh:transformer', // bouton sur la carte, suffixe :<vehicleId>
+} as const;
+
+/** Tableau stock : menus de selection de vehicule + modals de quantite. */
+export const StockSelectId = {
+  RAMASSER: 'stock:pick:ramasser',
+  TRANSFORMER: 'stock:pick:transformer',
+} as const;
+
+export const StockModalId = {
+  RAMASSER: 'stock:ramasser:modal', // suffixe :<vehicleId>
+  TRANSFORMER: 'stock:transformer:modal', // suffixe :<vehicleId>
+} as const;
+
+export const StockFieldId = {
+  QTE: 'qte',
 } as const;
 
 /** Selecteurs de second niveau : choisir l'entite (grade/partenaire/produit). */
@@ -133,6 +151,10 @@ export const PanelEditValue = {
   PARTENAIRE_CREER: 'partenaire_creer',
   COMMANDE_CREER: 'commande_creer',
   PNJ_PRIX: 'pnj_prix',
+  REPARTITION: 'repartition',
+  PEREMPTION: 'peremption',
+  FRAUDE: 'fraude',
+  RAPPEL: 'rappel',
 } as const;
 
 export const PanelModalId = {
@@ -143,6 +165,10 @@ export const PanelModalId = {
   PARTENAIRE: 'panel:partenaire:modal',
   ORDER_CREATE: 'panel:ordercreate:modal',
   PNJ_PRICE: 'panel:pnjprice:modal',
+  REPARTITION: 'panel:repartition:modal',
+  PEREMPTION: 'panel:peremption:modal',
+  FRAUDE: 'panel:fraude:modal',
+  RAPPEL: 'panel:rappel:modal',
 } as const;
 
 export const PanelFieldId = {
@@ -155,4 +181,20 @@ export const PanelFieldId = {
   VOLUME: 'volume',
   PARTENAIRE: 'partenaire',
   ECHEANCE: 'echeance',
+  // Repartition des benefices
+  RESERVE: 'reserve',
+  PRIME: 'prime',
+  DIRECTEUR: 'directeur',
+  // Peremption
+  JOURS: 'jours',
+  HEURES: 'heures',
+  // Anti-fraude
+  SEUIL_VOLUME: 'seuil_volume',
+  RAFALE_NB: 'rafale_nb',
+  FENETRE_MIN: 'fenetre_min',
+  // Rappel cloture + fuseau
+  JOUR: 'jour',
+  HEURE_DEBUT: 'heure_debut',
+  HEURE_FIN: 'heure_fin',
+  FUSEAU: 'fuseau',
 } as const;

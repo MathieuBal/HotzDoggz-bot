@@ -20,6 +20,9 @@ const envSchema = z.object({
 
   // Stockage objet des preuves (§5.3). Repli fichier local par defaut.
   STORAGE_DIR: z.string().min(1).default('./storage'),
+  // Retention des preuves images (jours) : au-dela, purge auto pour ne pas
+  // saturer le disque. Les photos durables (menu, vehicules) sont preservees.
+  STORAGE_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().optional(),
   S3_BUCKET: z.string().optional(),

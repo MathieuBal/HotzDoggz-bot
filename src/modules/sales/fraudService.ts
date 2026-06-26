@@ -1,5 +1,24 @@
 import { prisma } from '../../infrastructure/database/client.js';
-import { classifyRisk, FRAUD, type RiskVerdict } from './fraud.js';
+import {
+  classifyRisk,
+  DEFAULT_FRAUD_THRESHOLDS,
+  fraudThresholdsFromConfig,
+  type FraudThresholds,
+  type RiskVerdict,
+} from './fraud.js';
+
+/** Charge les seuils anti-fraude du serveur (defauts si config absente). */
+async function loadFraudThresholds(guildConfigId: string): Promise<FraudThresholds> {
+  const cfg = await prisma.guildConfig.findUnique({
+    where: { id: guildConfigId },
+    select: {
+      fraudQuantityThreshold: true,
+      fraudBurstCount: true,
+      fraudBurstWindowMinutes: true,
+    },
+  });
+  return cfg ? fraudThresholdsFromConfig(cfg) : DEFAULT_FRAUD_THRESHOLDS;
+}
 
 /**
  * Cherche les references (ventes ET commandes) reutilisant l'un des hash fournis,
@@ -53,14 +72,17 @@ export interface EvaluateFraudParams {
  */
 export async function evaluateFraud(params: EvaluateFraudParams): Promise<RiskVerdict> {
   const { guildConfigId, employeeId, quantity, hashes } = params;
-  const duplicateRefs = await findDuplicateRefs(guildConfigId, hashes);
+  const [duplicateRefs, thresholds] = await Promise.all([
+    findDuplicateRefs(guildConfigId, hashes),
+    loadFraudThresholds(guildConfigId),
+  ]);
 
-  const since = new Date(Date.now() - FRAUD.BURST_WINDOW_MINUTES * 60_000);
+  const since = new Date(Date.now() - thresholds.burstWindowMinutes * 60_000);
   const recentCount = await prisma.sale.count({
     where: { guildConfigId, employeeId, createdAt: { gte: since } },
   });
 
-  return classifyRisk({ duplicateRefs, recentCount, quantity });
+  return classifyRisk({ duplicateRefs, recentCount, quantity }, thresholds);
 }
 
 /**
@@ -72,8 +94,11 @@ export async function evaluateOrderContributionFraud(params: {
   quantity: number;
   hashes: readonly string[];
 }): Promise<RiskVerdict> {
-  const duplicateRefs = await findDuplicateRefs(params.guildConfigId, params.hashes);
-  return classifyRisk({ duplicateRefs, recentCount: 0, quantity: params.quantity });
+  const [duplicateRefs, thresholds] = await Promise.all([
+    findDuplicateRefs(params.guildConfigId, params.hashes),
+    loadFraudThresholds(params.guildConfigId),
+  ]);
+  return classifyRisk({ duplicateRefs, recentCount: 0, quantity: params.quantity }, thresholds);
 }
 
 /** Evalue le risque d'une vente main en main (facture recyclee, volume). */
@@ -82,6 +107,9 @@ export async function evaluateDirectSaleFraud(params: {
   quantity: number;
   hashes: readonly string[];
 }): Promise<RiskVerdict> {
-  const duplicateRefs = await findDuplicateRefs(params.guildConfigId, params.hashes);
-  return classifyRisk({ duplicateRefs, recentCount: 0, quantity: params.quantity });
+  const [duplicateRefs, thresholds] = await Promise.all([
+    findDuplicateRefs(params.guildConfigId, params.hashes),
+    loadFraudThresholds(params.guildConfigId),
+  ]);
+  return classifyRisk({ duplicateRefs, recentCount: 0, quantity: params.quantity }, thresholds);
 }

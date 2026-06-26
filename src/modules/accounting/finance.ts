@@ -27,10 +27,43 @@ function assertNonNegativeInt(value: number, name: string): void {
   }
 }
 
-/** Reserve de securite = floor(CA * 5 / 100). */
-export function computeReserve(totalRevenue: number): number {
+/**
+ * Taux de repartition (en %) pilotables depuis le panel (sinon valeurs §1.4).
+ * La part Co-directeur n'est jamais un taux : c'est le reste exact du benefice,
+ * elle absorbe le residu d'arrondi.
+ */
+export interface DistributionRates {
+  reservePercent: number; // reserve de securite sur le CA
+  bonusPercent: number; // prime du meilleur employe
+  directorPercent: number; // part Directeur
+}
+
+export const DEFAULT_DISTRIBUTION_RATES: DistributionRates = {
+  reservePercent: RESERVE_RATE_PERCENT,
+  bonusPercent: BONUS_RATE_PERCENT,
+  directorPercent: DIRECTOR_RATE_PERCENT,
+};
+
+/** Construit les taux a partir d'un GuildConfig (champs pilotables du panel). */
+export function ratesFromConfig(config: {
+  reserveRatePercent: number;
+  bonusRatePercent: number;
+  directorRatePercent: number;
+}): DistributionRates {
+  return {
+    reservePercent: config.reserveRatePercent,
+    bonusPercent: config.bonusRatePercent,
+    directorPercent: config.directorRatePercent,
+  };
+}
+
+/** Reserve de securite = floor(CA * taux / 100). */
+export function computeReserve(
+  totalRevenue: number,
+  reservePercent: number = RESERVE_RATE_PERCENT,
+): number {
   assertNonNegativeInt(totalRevenue, 'totalRevenue');
-  return Math.floor((totalRevenue * RESERVE_RATE_PERCENT) / 100);
+  return Math.floor((totalRevenue * reservePercent) / 100);
 }
 
 /** Benefice distribuable = CA - salaires - reserve. Peut etre <= 0. */
@@ -59,8 +92,12 @@ export interface ProfitDistribution {
  * Repartition complete d'une semaine a partir du CA et des salaires valides.
  * Si le benefice distribuable est <= 0, toutes les parts valent 0.
  */
-export function distributeWeek(totalRevenue: number, totalSalaries: number): ProfitDistribution {
-  const reserve = computeReserve(totalRevenue);
+export function distributeWeek(
+  totalRevenue: number,
+  totalSalaries: number,
+  rates: DistributionRates = DEFAULT_DISTRIBUTION_RATES,
+): ProfitDistribution {
+  const reserve = computeReserve(totalRevenue, rates.reservePercent);
   const distributable = computeDistributable(totalRevenue, totalSalaries, reserve);
 
   if (distributable <= 0) {
@@ -75,8 +112,8 @@ export function distributeWeek(totalRevenue: number, totalSalaries: number): Pro
     };
   }
 
-  const bonus = Math.floor((distributable * BONUS_RATE_PERCENT) / 100);
-  const directorShare = Math.floor((distributable * DIRECTOR_RATE_PERCENT) / 100);
+  const bonus = Math.floor((distributable * rates.bonusPercent) / 100);
+  const directorShare = Math.floor((distributable * rates.directorPercent) / 100);
   // Le Co-directeur recoit le reste exact (≈ 25 %), residu d'arrondi inclus.
   const coDirectorShare = distributable - bonus - directorShare;
 
