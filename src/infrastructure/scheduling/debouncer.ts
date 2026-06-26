@@ -61,4 +61,14 @@ export class KeyedSerialQueue implements SerialQueue {
     });
     return next;
   }
+
+  /**
+   * Attend la fin de toutes les chaines en cours. A l'arret, on draine ainsi les
+   * editions de tableaux deja enfilees (le debouncer ne couvre que celles encore
+   * en attente, pas celles deja parties dans la file).
+   */
+  async idle(): Promise<void> {
+    // Les chaines sont "amorties" (ne rejettent jamais) : Promise.all est sur.
+    await Promise.all([...this.chains.values()]);
+  }
 }

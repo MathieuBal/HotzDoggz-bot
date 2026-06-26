@@ -1,4 +1,5 @@
 import { MessageFlags, type ModalSubmitInteraction } from 'discord.js';
+import { isAmountInRange } from '../../config/constants.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../../modules/audit/auditService.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
@@ -52,8 +53,8 @@ export async function handlePanelModal(interaction: ModalSubmitInteraction): Pro
 
   if (base === PanelModalId.SALAIRE) {
     const montant = Number(interaction.fields.getTextInputValue(PanelFieldId.MONTANT).trim());
-    if (!Number.isInteger(montant) || montant < 1) {
-      await interaction.editReply('Tarif invalide (entier positif attendu, ex. 165).');
+    if (!isAmountInRange(montant)) {
+      await interaction.editReply('Tarif invalide (entier positif raisonnable attendu, ex. 165).');
       return true;
     }
     const grade = await prisma.gradeRate.findFirst({
@@ -72,8 +73,8 @@ export async function handlePanelModal(interaction: ModalSubmitInteraction): Pro
 
   if (base === PanelModalId.PARTENAIRE) {
     const objectif = Number(interaction.fields.getTextInputValue(PanelFieldId.OBJECTIF).trim());
-    if (!Number.isInteger(objectif) || objectif < 1) {
-      await interaction.editReply('Objectif invalide (entier positif attendu).');
+    if (!isAmountInRange(objectif)) {
+      await interaction.editReply('Objectif invalide (entier positif raisonnable attendu).');
       return true;
     }
     const partner = await prisma.partner.findFirst({
@@ -101,8 +102,8 @@ export async function handlePanelModal(interaction: ModalSubmitInteraction): Pro
       await interaction.editReply('Le nom du produit est obligatoire.');
       return true;
     }
-    if (!Number.isInteger(prix) || prix < 1) {
-      await interaction.editReply('Prix invalide (entier positif attendu).');
+    if (!isAmountInRange(prix)) {
+      await interaction.editReply('Prix invalide (entier positif raisonnable attendu).');
       return true;
     }
     const existing = await prisma.product.findFirst({
@@ -127,8 +128,8 @@ export async function handlePanelModal(interaction: ModalSubmitInteraction): Pro
 
   if (base === PanelModalId.PNJ_PRICE) {
     const prix = Number(interaction.fields.getTextInputValue(PanelFieldId.PRIX).trim());
-    if (!Number.isInteger(prix) || prix < 1) {
-      await interaction.editReply('Prix invalide (entier positif attendu).');
+    if (!isAmountInRange(prix)) {
+      await interaction.editReply('Prix invalide (entier positif raisonnable attendu).');
       return true;
     }
     const oldPrice = config.pnjUnitPrice;
@@ -319,8 +320,8 @@ export async function handlePanelModal(interaction: ModalSubmitInteraction): Pro
     await interaction.editReply('Le client est obligatoire.');
     return true;
   }
-  if (!Number.isInteger(volume) || volume < 1 || !Number.isInteger(prix) || prix < 1) {
-    await interaction.editReply('Volume et prix doivent être des entiers positifs.');
+  if (!isAmountInRange(volume) || !isAmountInRange(prix)) {
+    await interaction.editReply('Volume et prix doivent être des entiers positifs raisonnables.');
     return true;
   }
   const partner = partnerName ? await findActivePartnerByName(config.id, partnerName) : null;

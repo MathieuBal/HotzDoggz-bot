@@ -27,7 +27,8 @@ export function updateDashboardsNow(client: Client, guildConfigId: string): Prom
   return queue.enqueue(key(guildConfigId), () => updateDashboards(client, guildConfigId));
 }
 
-/** Vide les rafraichissements en attente (arret gracieux). */
-export function flushDashboards(): Promise<void> {
-  return debouncer.flush();
+/** Vide les rafraichissements en attente PUIS draine la file (arret gracieux). */
+export async function flushDashboards(): Promise<void> {
+  await debouncer.flush();
+  await queue.idle();
 }

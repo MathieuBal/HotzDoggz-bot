@@ -11,6 +11,18 @@
 export const PNJ_UNIT_PRICE = 210;
 
 /**
+ * Plafond des montants/quantites saisis dans les modales (prix, salaires,
+ * objectifs, volumes). Genereux pour l'economie GTA RP, mais borne les saisies
+ * aberrantes (fautes de frappe a 10^12) qui pollueraient calculs et affichage.
+ */
+export const MAX_AMOUNT = 1_000_000_000;
+
+/** Vrai si `n` est un entier dans [min, MAX_AMOUNT]. Defensif contre NaN. */
+export function isAmountInRange(n: number, min = 1): boolean {
+  return Number.isInteger(n) && n >= min && n <= MAX_AMOUNT;
+}
+
+/**
  * Interrupteur du module garage / gestion des stocks (vehicules, saucisses,
  * lots de hot dogs). Mis de cote pour le moment (peu utile au lancement) :
  * a `false`, les commandes `/stock` et `/vehicule` ne sont pas enregistrees et

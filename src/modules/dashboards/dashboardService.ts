@@ -1,5 +1,6 @@
 import { ChannelType, EmbedBuilder, type Client, type MessageCreateOptions } from 'discord.js';
 import { GARAGE_STOCK_ENABLED } from '../../config/constants.js';
+import { withRetry } from '../../infrastructure/async/retry.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
@@ -51,14 +52,16 @@ async function ensureMessage(
   if (messageId) {
     try {
       const msg = await channel.messages.fetch(messageId);
-      await msg.edit({ embeds: [embed] });
+      // Retry sur 5xx transitoire ; un message supprime (404) n'est PAS re-essaye
+      // et tombe dans le catch -> recreation.
+      await withRetry(async () => msg.edit({ embeds: [embed] }));
       return { messageId, changed: false };
     } catch {
       // message supprime -> on le recree (CDC §11 : dashboard supprime)
       logger.warn({ channelId, messageId }, 'Message permanent absent — recreation');
     }
   }
-  const created = await channel.send(payload);
+  const created = await withRetry(async () => channel.send(payload));
   return { messageId: created.id, changed: true };
 }
 

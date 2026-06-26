@@ -319,11 +319,13 @@ export async function correctSale(
 
     const oldQuantity = sale.validatedQuantity;
     const pnj = sale.pnjUnitPriceSnapshot ?? 0;
-    // Ajustement SIGNE : negatif si la quantite validee baisse. Le journal est un
-    // journal signe (cf. cancelLastAdvance qui contre-passe en -amount) ; sommer
-    // les montants doit redonner le CA reel. Un Math.abs ajouterait du CA sur une
-    // correction a la baisse au lieu d'en retrancher.
+    const salaryRate = sale.salaryRateSnapshot ?? 0;
+    // Ajustements SIGNES : negatifs si la quantite validee baisse. Le journal est
+    // un journal signe (cf. cancelLastAdvance qui contre-passe en -amount) ;
+    // sommer par type doit redonner CA et salaires reels. Un Math.abs ajouterait
+    // du CA/salaire sur une baisse au lieu d'en retrancher.
     const revenueDelta = computeRevenueAdjustment(oldQuantity, input.newQuantity, pnj);
+    const salaryDelta = computeRevenueAdjustment(oldQuantity, input.newQuantity, salaryRate);
     const deltaLabel = revenueDelta >= 0 ? `+${revenueDelta}` : `${revenueDelta}`;
 
     await tx.sale.update({
@@ -341,6 +343,22 @@ export async function correctSale(
         correlationId: input.correlationId,
       },
     });
+    // Contre-passation salariale tracable : maintient la somme SALARY_LIABILITY
+    // alignee sur la quantite corrigee (la paie reste derivee de validatedQuantity,
+    // mais le journal doit rester juste). On n'ecrit rien si le salaire ne bouge pas.
+    if (salaryDelta !== 0) {
+      await tx.ledgerEntry.create({
+        data: {
+          guildConfigId: sale.guildConfigId,
+          type: LedgerEntryType.SALARY_LIABILITY,
+          amount: salaryDelta,
+          weekId: sale.weekId,
+          saleId: sale.id,
+          description: `Correction salaire ${sale.reference} : ${oldQuantity} -> ${input.newQuantity}`,
+          correlationId: input.correlationId,
+        },
+      });
+    }
     await tx.saleStatusHistory.create({
       data: {
         saleId: sale.id,
