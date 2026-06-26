@@ -8,6 +8,7 @@ import { listActiveOrders } from '../orders/orderService.js';
 import { getPartnershipBoardData } from '../partners/partnerService.js';
 import { getCompanyBoardData } from './companyBoard.js';
 import { publishPlanningBoard } from '../../discord/planning/planningBoard.js';
+import { publishPayrollBoard } from '../../discord/payroll/payrollBoard.js';
 import { publishStockBoard } from '../../discord/stock/stockBoard.js';
 import { publishGarageBoard } from '../../discord/garage/garageBoard.js';
 import {
@@ -139,6 +140,10 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   // Agenda planning (embed + menu de positionnement) : gere son propre message.
   await publishPlanningBoard(client, guildConfigId).catch((err) =>
     logger.warn({ err, guildConfigId }, 'Mise a jour de l agenda planning KO'),
+  );
+  // Tableau de paie (liste des nets a verser + menu « marquer payee ») : idem.
+  await publishPayrollBoard(client, guildConfigId).catch((err) =>
+    logger.warn({ err, guildConfigId }, 'Mise a jour du tableau paie KO'),
   );
   // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : on ne publie
   // ni le tableau de stock ni le catalogue garage tant qu'il est desactive.
