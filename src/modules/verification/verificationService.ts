@@ -1,6 +1,7 @@
 import { LedgerEntryType, type Prisma, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
+import { computeRevenueAdjustment } from '../accounting/finance.js';
 import { canTransition } from '../sales/stateMachine.js';
 
 /**
@@ -318,8 +319,12 @@ export async function correctSale(
 
     const oldQuantity = sale.validatedQuantity;
     const pnj = sale.pnjUnitPriceSnapshot ?? 0;
-    const revenueDelta = Math.abs((input.newQuantity - oldQuantity) * pnj);
-    const sign = input.newQuantity >= oldQuantity ? '+' : '-';
+    // Ajustement SIGNE : negatif si la quantite validee baisse. Le journal est un
+    // journal signe (cf. cancelLastAdvance qui contre-passe en -amount) ; sommer
+    // les montants doit redonner le CA reel. Un Math.abs ajouterait du CA sur une
+    // correction a la baisse au lieu d'en retrancher.
+    const revenueDelta = computeRevenueAdjustment(oldQuantity, input.newQuantity, pnj);
+    const deltaLabel = revenueDelta >= 0 ? `+${revenueDelta}` : `${revenueDelta}`;
 
     await tx.sale.update({
       where: { id: input.saleId },
@@ -332,7 +337,7 @@ export async function correctSale(
         amount: revenueDelta,
         weekId: sale.weekId,
         saleId: sale.id,
-        description: `Correction CA ${sale.reference} : ${oldQuantity} -> ${input.newQuantity} (${sign}${revenueDelta} $)`,
+        description: `Correction CA ${sale.reference} : ${oldQuantity} -> ${input.newQuantity} (${deltaLabel} $)`,
         correlationId: input.correlationId,
       },
     });

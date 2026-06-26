@@ -2,10 +2,31 @@ import { describe, expect, it } from 'vitest';
 import {
   computeDistributable,
   computeReserve,
+  computeRevenueAdjustment,
   computeSaleRevenue,
   computeSaleSalary,
   distributeWeek,
 } from '../src/modules/accounting/finance.js';
+
+describe('computeRevenueAdjustment (journal signe)', () => {
+  it('est positif quand la quantite validee augmente', () => {
+    expect(computeRevenueAdjustment(10, 14, 210)).toBe(4 * 210);
+  });
+
+  it('est NEGATIF quand la quantite validee baisse (contre-passation)', () => {
+    // Le bug corrige : un Math.abs aurait rendu +420 et gonfle le CA.
+    expect(computeRevenueAdjustment(12, 10, 210)).toBe(-2 * 210);
+  });
+
+  it('vaut 0 quand la quantite ne change pas', () => {
+    expect(computeRevenueAdjustment(7, 7, 210)).toBe(0);
+  });
+
+  it('rejette les entrees negatives ou non entieres', () => {
+    expect(() => computeRevenueAdjustment(-1, 5, 210)).toThrow();
+    expect(() => computeRevenueAdjustment(5, 5, 1.5)).toThrow();
+  });
+});
 
 describe('computeReserve', () => {
   it('vaut floor(CA * 5 / 100)', () => {

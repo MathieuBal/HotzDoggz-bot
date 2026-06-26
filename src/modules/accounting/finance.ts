@@ -135,6 +135,22 @@ export function computeSaleRevenue(validatedQuantity: number, pnjUnitPrice: numb
   return validatedQuantity * pnjUnitPrice;
 }
 
+/**
+ * Ajustement SIGNE de CA lors d'une correction de quantite validee : positif si
+ * la quantite augmente, NEGATIF si elle baisse. Destine au journal (LedgerEntry
+ * signe) pour que la somme des montants redonne toujours le CA reel.
+ */
+export function computeRevenueAdjustment(
+  oldQuantity: number,
+  newQuantity: number,
+  pnjUnitPrice: number,
+): number {
+  assertNonNegativeInt(oldQuantity, 'oldQuantity');
+  assertNonNegativeInt(newQuantity, 'newQuantity');
+  assertNonNegativeInt(pnjUnitPrice, 'pnjUnitPrice');
+  return (newQuantity - oldQuantity) * pnjUnitPrice;
+}
+
 /** Salaire de production d'une vente = quantite validee * tarif snapshote. */
 export function computeSaleSalary(validatedQuantity: number, salaryRate: number): number {
   assertNonNegativeInt(validatedQuantity, 'validatedQuantity');

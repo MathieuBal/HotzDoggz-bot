@@ -835,7 +835,7 @@ model LedgerEntry {
   guildConfig   GuildConfig     @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
   guildConfigId String
   type          LedgerEntryType
-  amount        Int // entier, jamais negatif sur le montant ; signe porte par le type
+  amount        Int // entier SIGNE : negatif = contre-passation/retrait (ADJUSTMENT d'annulation), sommer redonne le solde reel
   week          AccountingWeek? @relation(fields: [weekId], references: [id])
   weekId        String?
   sale          Sale?           @relation(fields: [saleId], references: [id])
