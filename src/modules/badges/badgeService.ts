@@ -3,6 +3,7 @@ import { prisma } from '../../infrastructure/database/client.js';
 import {
   badgeByKey,
   contributionBadgesReached,
+  revenueBadgesReached,
   unitBadgesReached,
   type BadgeDef,
 } from './registry.js';
@@ -15,13 +16,20 @@ import {
 
 const COUNTED = [SaleStatus.VALIDEE, SaleStatus.INTEGREE_A_LA_PAIE, SaleStatus.PAYEE];
 
-/** Production cumulee (unites validees, ventes PNJ) d'un employe. */
-async function cumulativeUnits(employeeId: string): Promise<number> {
-  const agg = await prisma.sale.aggregate({
+/** Stats cumulees (unites validees + CA genere, ventes PNJ) d'un employe. */
+async function cumulativeStats(employeeId: string): Promise<{ units: number; revenue: number }> {
+  const sales = await prisma.sale.findMany({
     where: { employeeId, status: { in: COUNTED } },
-    _sum: { validatedQuantity: true },
+    select: { validatedQuantity: true, pnjUnitPriceSnapshot: true },
   });
-  return agg._sum.validatedQuantity ?? 0;
+  let units = 0;
+  let revenue = 0;
+  for (const s of sales) {
+    const q = s.validatedQuantity ?? 0;
+    units += q;
+    revenue += q * (s.pnjUnitPriceSnapshot ?? 0);
+  }
+  return { units, revenue };
 }
 
 /**
@@ -49,13 +57,16 @@ async function awardBadges(
   return fresh;
 }
 
-/** Paliers de PRODUCTION (ventes PNJ) franchis -> badges nouvellement debloques. */
+/** Paliers de PRODUCTION (unites) ET de CA franchis -> badges debloques. */
 export async function checkAndAwardBadges(
   guildConfigId: string,
   employeeId: string,
 ): Promise<BadgeDef[]> {
-  const units = await cumulativeUnits(employeeId);
-  return awardBadges(guildConfigId, employeeId, unitBadgesReached(units));
+  const { units, revenue } = await cumulativeStats(employeeId);
+  return awardBadges(guildConfigId, employeeId, [
+    ...unitBadgesReached(units),
+    ...revenueBadgesReached(revenue),
+  ]);
 }
 
 /** Paliers de CONTRIBUTION (commandes clients) franchis -> badges debloques. */

@@ -7,6 +7,7 @@ import {
 import { listEmployeeBadges } from '../../modules/badges/badgeService.js';
 import {
   CONTRIBUTION_BADGES,
+  REVENUE_BADGES,
   SPECIAL_BADGES,
   UNIT_BADGES,
   type BadgeDef,
@@ -17,11 +18,13 @@ import {
 } from '../../modules/employees/employeeService.js';
 import type { SlashCommand } from './types.js';
 
+const nf = new Intl.NumberFormat('fr-FR');
+
 function section(defs: readonly BadgeDef[], earned: Set<string>, unit: string): string {
   return defs
     .map((b) => {
       const mark = earned.has(b.key) ? '✅' : '⬜';
-      const goal = b.threshold > 0 ? ` _(${b.threshold} ${unit})_` : '';
+      const goal = b.threshold > 0 ? ` _(${nf.format(b.threshold)} ${unit})_` : '';
       return `${mark} ${b.emoji} **${b.label}**${goal}`;
     })
     .join('\n');
@@ -55,7 +58,11 @@ export const badgesCommand: SlashCommand = {
 
     await interaction.deferReply({ flags: ephemeral });
     const earned = new Set((await listEmployeeBadges(employee.id)).map((b) => b.key));
-    const total = UNIT_BADGES.length + CONTRIBUTION_BADGES.length + SPECIAL_BADGES.length;
+    const total =
+      UNIT_BADGES.length +
+      REVENUE_BADGES.length +
+      CONTRIBUTION_BADGES.length +
+      SPECIAL_BADGES.length;
 
     const embed = new EmbedBuilder()
       .setTitle(`🏅 Tes badges — ${employee.nomRP}`)
@@ -63,6 +70,7 @@ export const badgesCommand: SlashCommand = {
       .setDescription(`Débloqués : **${earned.size}/${total}**`)
       .addFields(
         { name: '🌭 Production (ventes PNJ)', value: section(UNIT_BADGES, earned, 'u') },
+        { name: '💰 Chiffre d’affaires généré', value: section(REVENUE_BADGES, earned, '$') },
         { name: '🤝 Contributions commandes', value: section(CONTRIBUTION_BADGES, earned, 'contrib.') },
         { name: '⭐ Spéciaux', value: section(SPECIAL_BADGES, earned, '') },
       )
