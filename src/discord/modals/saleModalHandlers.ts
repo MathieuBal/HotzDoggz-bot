@@ -17,6 +17,7 @@ import {
 import { SaleFieldId, SaleModalId } from '../components/ids.js';
 import { isDirectionMember } from '../permissions.js';
 import { applyCasierEffects, archiveFiche, refreshFiche } from '../verification/ficheHelpers.js';
+import { sendEmployeeDM } from '../notify.js';
 
 const KNOWN = new Set<string>(Object.values(SaleModalId));
 
@@ -136,6 +137,11 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.REFUSEE,
         message: `❌ Vente **${res.data.reference}** refusee.\nMotif : ${reason}`,
       });
+      await sendEmployeeDM(
+        client,
+        res.data.employeeDiscordId,
+        `❌ Ta vente **${res.data.reference}** a été refusée par la direction.\nMotif : ${reason}\nTu peux la corriger et la resoumettre depuis ton casier.`,
+      );
       await interaction.editReply(`Vente ${res.data.reference} refusee.`);
       return true;
     }
@@ -158,6 +164,11 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.INCOMPLETE,
         message: `⚠️ Complement demande — statut : A completer.\n${reason}`,
       });
+      await sendEmployeeDM(
+        client,
+        res.data.employeeDiscordId,
+        `⚠️ La direction demande un complément sur ta vente **${res.data.reference}**.\n${reason}\nComplète depuis ton casier : elle repassera en vérification.`,
+      );
       await interaction.editReply(`Complement demande pour ${res.data.reference}.`);
       return true;
     }

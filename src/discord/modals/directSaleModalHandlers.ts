@@ -14,6 +14,7 @@ import { SaleStatus } from '@prisma/client';
 import { DirectSaleFieldId, DirectSaleModalId } from '../components/ids.js';
 import { refreshDirectFiche } from '../directSales/fiche.js';
 import { applyCasierEffects, archiveFiche } from '../verification/ficheHelpers.js';
+import { sendEmployeeDM } from '../notify.js';
 import { isDirectionMember } from '../permissions.js';
 
 const KNOWN = new Set<string>(Object.values(DirectSaleModalId));
@@ -71,6 +72,11 @@ export async function handleDirectSaleModal(interaction: ModalSubmitInteraction)
         message: `❌ Vente **${res.data.reference}** refusée.\nMotif : ${reason}`,
       }).catch(() => undefined);
     }
+    await sendEmployeeDM(
+      interaction.client,
+      sale.employee.discordUserId,
+      `❌ Ta vente main-en-main **${res.data.reference}** a été refusée par la direction.\nMotif : ${reason}`,
+    );
     await interaction.editReply(`Vente ${res.data.reference} refusée.`);
     return true;
   }
