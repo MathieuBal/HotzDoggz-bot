@@ -19,7 +19,8 @@ import { isDirectionMember } from '../permissions.js';
 import { applyCasierEffects, archiveFiche, refreshFiche } from '../verification/ficheHelpers.js';
 import { sendEmployeeDM } from '../notify.js';
 import { buildBadgeCelebration, postCelebration } from '../celebrations.js';
-import { checkAndAwardBadges } from '../../modules/badges/badgeService.js';
+import { checkAndAwardBadges, awardSpecialBadge } from '../../modules/badges/badgeService.js';
+import { BIG_SALE_THRESHOLD } from '../../modules/badges/registry.js';
 
 const KNOWN = new Set<string>(Object.values(SaleModalId));
 
@@ -115,8 +116,12 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
       // Vente close : on range la fiche hors du forum actif (reversible).
       await archiveFiche(thread, sale.id);
       scheduleDashboardUpdate(client, config.id);
-      // Badges : la production cumulee peut franchir un palier -> annonce + DM.
+      // Badges : la production/CA cumule peut franchir un palier -> annonce + DM.
       const fresh = await checkAndAwardBadges(config.id, sale.employeeId);
+      // Badge « grosse prise » : une seule vente massive.
+      if (res.data.validatedQuantity >= BIG_SALE_THRESHOLD) {
+        fresh.push(...(await awardSpecialBadge(config.id, sale.employeeId, 'big_sale')));
+      }
       if (fresh.length > 0) {
         await postCelebration(client, config.id, buildBadgeCelebration(sale.employee.nomRP, fresh));
         await sendEmployeeDM(

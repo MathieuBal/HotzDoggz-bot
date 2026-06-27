@@ -16,11 +16,19 @@ export interface RankEntry {
 // Ventes "comptees" (validee et au-dela) — meme convention que la fiche profil.
 const COUNTED = [SaleStatus.VALIDEE, SaleStatus.INTEGREE_A_LA_PAIE, SaleStatus.PAYEE];
 
-/** Top vendeurs par unites validees cumulees (ventes PNJ). */
-export async function getTopSellers(guildConfigId: string, limit = 10): Promise<RankEntry[]> {
+/**
+ * Top vendeurs par unites validees cumulees (ventes PNJ). Sans `weekId` :
+ * classement all-time ; avec `weekId` : classement de la semaine donnee.
+ */
+export async function getTopSellers(
+  guildConfigId: string,
+  limit = 10,
+  weekId?: string,
+): Promise<RankEntry[]> {
+  const where = { guildConfigId, status: { in: COUNTED }, ...(weekId ? { weekId } : {}) };
   const grouped = await prisma.sale.groupBy({
     by: ['employeeId'],
-    where: { guildConfigId, status: { in: COUNTED } },
+    where,
     _sum: { validatedQuantity: true },
     orderBy: { _sum: { validatedQuantity: 'desc' } },
     take: Math.min(Math.max(1, limit), 25),
@@ -37,11 +45,7 @@ export async function getTopSellers(guildConfigId: string, limit = 10): Promise<
   // CA par employe : on somme quantite x prix snapshote (l'aggregate ne sait pas
   // multiplier deux colonnes). Volume borne par le top N, donc peu de lignes.
   const sales = await prisma.sale.findMany({
-    where: {
-      guildConfigId,
-      status: { in: COUNTED },
-      employeeId: { in: grouped.map((g) => g.employeeId) },
-    },
+    where: { ...where, employeeId: { in: grouped.map((g) => g.employeeId) } },
     select: { employeeId: true, validatedQuantity: true, pnjUnitPriceSnapshot: true },
   });
   const revenueById = new Map<string, number>();

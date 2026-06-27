@@ -46,9 +46,13 @@ export const CONTRIBUTION_BADGES: readonly BadgeDef[] = [
   { key: 'contrib_250', label: 'Légende de l’atelier', emoji: '🏛️', threshold: 250 },
 ];
 
-/** Badges speciaux (evenementiels, threshold non significatif). */
+/** Seuil d'une vente unique pour le badge « grosse prise ». */
+export const BIG_SALE_THRESHOLD = 250;
+
+/** Badges speciaux (evenementiels, threshold non significatif pour l'echelle). */
 export const SPECIAL_BADGES: readonly BadgeDef[] = [
   { key: 'five_star', label: 'Service 5 étoiles', emoji: '⭐', threshold: 0 },
+  { key: 'big_sale', label: `Grosse prise (${BIG_SALE_THRESHOLD}+ d’un coup)`, emoji: '🐋', threshold: 0 },
 ];
 
 /** Toutes les familles de badges (pour la resolution par cle et l'affichage). */
