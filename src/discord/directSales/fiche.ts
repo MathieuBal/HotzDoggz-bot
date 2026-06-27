@@ -62,11 +62,21 @@ function buildEmbed(sale: FicheSale): EmbedBuilder {
 const ENABLED: Record<SaleStatus, Set<string>> = {
   [SaleStatus.SOUMISE]: new Set([
     DirectSaleButtonId.TAKE,
+    DirectSaleButtonId.COMPLEMENT,
     DirectSaleButtonId.VALIDATE,
     DirectSaleButtonId.REFUSE,
   ]),
-  [SaleStatus.EN_VERIFICATION]: new Set([DirectSaleButtonId.VALIDATE, DirectSaleButtonId.REFUSE]),
-  [SaleStatus.INCOMPLETE]: new Set([DirectSaleButtonId.VALIDATE, DirectSaleButtonId.REFUSE]),
+  [SaleStatus.EN_VERIFICATION]: new Set([
+    DirectSaleButtonId.COMPLEMENT,
+    DirectSaleButtonId.VALIDATE,
+    DirectSaleButtonId.REFUSE,
+  ]),
+  [SaleStatus.INCOMPLETE]: new Set([
+    DirectSaleButtonId.TAKE,
+    DirectSaleButtonId.COMPLEMENT,
+    DirectSaleButtonId.VALIDATE,
+    DirectSaleButtonId.REFUSE,
+  ]),
   [SaleStatus.VALIDEE]: new Set(),
   [SaleStatus.INTEGREE_A_LA_PAIE]: new Set(),
   [SaleStatus.PAYEE]: new Set(),
@@ -85,6 +95,7 @@ function buildComponents(status: SaleStatus): ActionRowBuilder<ButtonBuilder>[] 
   return [
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       btn(DirectSaleButtonId.TAKE, 'Prendre en charge', ButtonStyle.Primary),
+      btn(DirectSaleButtonId.COMPLEMENT, 'Demander complément', ButtonStyle.Secondary),
       btn(DirectSaleButtonId.VALIDATE, 'Valider', ButtonStyle.Success),
       btn(DirectSaleButtonId.REFUSE, 'Refuser', ButtonStyle.Danger),
     ),

@@ -53,3 +53,19 @@ export function buildDirectRefuseModal(reference: string): ModalBuilder {
       ),
     );
 }
+
+/** Modal de demande de complement : elements demandes obligatoires. */
+export function buildDirectComplementModal(reference: string): ModalBuilder {
+  return new ModalBuilder()
+    .setCustomId(DirectSaleModalId.COMPLEMENT)
+    .setTitle(`Complément ${reference}`.slice(0, 45))
+    .addComponents(
+      row(
+        new TextInputBuilder()
+          .setCustomId(DirectSaleFieldId.REASON)
+          .setLabel('Éléments à compléter')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true),
+      ),
+    );
+}

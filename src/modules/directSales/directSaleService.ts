@@ -255,6 +255,37 @@ export async function validateDirectSale(
 }
 
 /** Refus : -> REFUSEE, motif obligatoire, aucun effet financier. */
+/** Demande de complement : -> INCOMPLETE, motif obligatoire, aucun effet financier. */
+export async function requestComplementDirectSale(
+  saleId: string,
+  actorId: string,
+  reason: string,
+  correlationId: string,
+): Promise<ActionResult<DirectRef>> {
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.directSale.findUnique({ where: { id: saleId } });
+    if (!sale) return fail('Vente introuvable.');
+    if (!canTransition(sale.status, SaleStatus.INCOMPLETE)) {
+      return fail(`Action impossible depuis le statut ${sale.status}.`);
+    }
+    const upd = await tx.directSale.updateMany({
+      where: { id: saleId, status: sale.status },
+      data: { status: SaleStatus.INCOMPLETE },
+    });
+    if (upd.count !== 1) return fail('Conflit : le dossier a change de statut.');
+    await writeAudit(tx, {
+      guildConfigId: sale.guildConfigId,
+      action: 'DIRECT_SALE_COMPLEMENT_REQUESTED',
+      authorDiscordId: actorId,
+      entityType: 'DirectSale',
+      entityId: saleId,
+      reason,
+      correlationId,
+    });
+    return done(await refOf(tx, saleId));
+  });
+}
+
 export async function refuseDirectSale(
   saleId: string,
   actorId: string,

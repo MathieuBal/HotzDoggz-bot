@@ -19,6 +19,7 @@ const ACTION_LABELS: Record<string, string> = {
   SALE_RISK_FLAGGED: '🚩 Vente signalée (risque)',
   DIRECT_SALE_CREATED: '📥 Vente directe créée',
   DIRECT_SALE_TAKEN_CHARGE: '👁️ Prise en charge (directe)',
+  DIRECT_SALE_COMPLEMENT_REQUESTED: '✏️ Complément demandé (directe)',
   DIRECT_SALE_REFUSED: '❌ Vente directe refusée',
   DIRECT_SALE_VALIDATED: '✅ Vente directe validée',
   DIRECT_SALE_CANCELLED_ADMIN: '🗑️ Vente directe annulée',

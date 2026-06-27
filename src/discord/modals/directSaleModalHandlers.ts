@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../../infrastructure/database/client.js';
 import {
   refuseDirectSale,
+  requestComplementDirectSale,
   validateDirectSale,
 } from '../../modules/directSales/directSaleService.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
@@ -78,6 +79,35 @@ export async function handleDirectSaleModal(interaction: ModalSubmitInteraction)
       `❌ Ta vente main-en-main **${res.data.reference}** a été refusée par la direction.\nMotif : ${reason}`,
     );
     await interaction.editReply(`Vente ${res.data.reference} refusée.`);
+    return true;
+  }
+
+  if (interaction.customId === DirectSaleModalId.COMPLEMENT) {
+    const reason = interaction.fields.getTextInputValue(DirectSaleFieldId.REASON).trim();
+    if (!reason) {
+      await interaction.editReply('Indique les éléments demandés.');
+      return true;
+    }
+    const res = await requestComplementDirectSale(sale.id, actorId, reason, correlationId);
+    if (!res.ok) {
+      await interaction.editReply(res.reason);
+      return true;
+    }
+    await refreshDirectFiche(thread, sale.id);
+    if (sale.threadId) {
+      await applyCasierEffects(interaction.client, {
+        threadId: sale.threadId,
+        casierForumId: sale.employee.casierForumId,
+        status: SaleStatus.INCOMPLETE,
+        message: `⚠️ Complément demandé sur **${res.data.reference}**.\n${reason}`,
+      }).catch(() => undefined);
+    }
+    await sendEmployeeDM(
+      interaction.client,
+      sale.employee.discordUserId,
+      `⚠️ La direction demande un complément sur ta vente main-en-main **${res.data.reference}**.\n${reason}`,
+    );
+    await interaction.editReply(`Complément demandé pour ${res.data.reference}.`);
     return true;
   }
 
