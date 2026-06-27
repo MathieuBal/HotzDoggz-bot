@@ -116,7 +116,13 @@ export function distributeWeek(
   totalSalaries: number,
   rates: DistributionRates = DEFAULT_DISTRIBUTION_RATES,
 ): ProfitDistribution {
-  const reserve = computeReserve(totalRevenue, rates.reservePercent);
+  // Solvabilite : on ne met JAMAIS de cote plus que la marge reellement
+  // disponible apres salaires. Si la semaine ne couvre pas ses salaires, la
+  // reserve tombe a 0 — sinon on prelevait 5 % du CA sur une semaine deficitaire,
+  // creusant la tresorerie (faiblesse pointee a l'audit conceptuel).
+  const targetReserve = computeReserve(totalRevenue, rates.reservePercent);
+  const affordable = Math.max(0, totalRevenue - totalSalaries);
+  const reserve = Math.min(targetReserve, affordable);
   const distributable = computeDistributable(totalRevenue, totalSalaries, reserve);
 
   const ratePercents = percentsOf(rates);
