@@ -6,6 +6,7 @@ import { DirectSaleButtonId } from '../components/ids.js';
 import { refreshDirectFiche } from '../directSales/fiche.js';
 import {
   buildDirectComplementModal,
+  buildDirectCorrectModal,
   buildDirectRefuseModal,
   buildDirectValidateModal,
 } from '../modals/directSaleModals.js';
@@ -50,6 +51,9 @@ export async function handleDirectSaleButton(interaction: ButtonInteraction): Pr
       return true;
     case DirectSaleButtonId.COMPLEMENT:
       await interaction.showModal(buildDirectComplementModal(sale.reference));
+      return true;
+    case DirectSaleButtonId.CORRECT:
+      await interaction.showModal(buildDirectCorrectModal(sale.reference, sale.lines));
       return true;
     case DirectSaleButtonId.TAKE: {
       await interaction.deferReply({ flags: ephemeral });

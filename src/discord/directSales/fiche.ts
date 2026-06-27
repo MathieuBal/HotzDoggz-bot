@@ -77,7 +77,7 @@ const ENABLED: Record<SaleStatus, Set<string>> = {
     DirectSaleButtonId.VALIDATE,
     DirectSaleButtonId.REFUSE,
   ]),
-  [SaleStatus.VALIDEE]: new Set(),
+  [SaleStatus.VALIDEE]: new Set([DirectSaleButtonId.CORRECT]),
   [SaleStatus.INTEGREE_A_LA_PAIE]: new Set(),
   [SaleStatus.PAYEE]: new Set(),
   [SaleStatus.REFUSEE]: new Set(),
@@ -98,6 +98,9 @@ function buildComponents(status: SaleStatus): ActionRowBuilder<ButtonBuilder>[] 
       btn(DirectSaleButtonId.COMPLEMENT, 'Demander complément', ButtonStyle.Secondary),
       btn(DirectSaleButtonId.VALIDATE, 'Valider', ButtonStyle.Success),
       btn(DirectSaleButtonId.REFUSE, 'Refuser', ButtonStyle.Danger),
+    ),
+    new ActionRowBuilder<ButtonBuilder>().addComponents(
+      btn(DirectSaleButtonId.CORRECT, 'Corriger', ButtonStyle.Secondary),
     ),
   ];
 }

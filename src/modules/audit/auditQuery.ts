@@ -22,6 +22,7 @@ const ACTION_LABELS: Record<string, string> = {
   DIRECT_SALE_COMPLEMENT_REQUESTED: '✏️ Complément demandé (directe)',
   DIRECT_SALE_REFUSED: '❌ Vente directe refusée',
   DIRECT_SALE_VALIDATED: '✅ Vente directe validée',
+  DIRECT_SALE_CORRECTED: '🔧 Vente directe corrigée',
   DIRECT_SALE_CANCELLED_ADMIN: '🗑️ Vente directe annulée',
   PAYROLL_PAID: '💵 Paie réglée',
   SALARY_ADVANCE_PAID: '💸 Acompte versé',

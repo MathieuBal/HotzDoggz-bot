@@ -81,12 +81,14 @@ export const DirectSaleButtonId = {
   VALIDATE: 'direct:validate',
   REFUSE: 'direct:refuse',
   COMPLEMENT: 'direct:complement',
+  CORRECT: 'direct:correct',
 } as const;
 
 export const DirectSaleModalId = {
   VALIDATE: 'direct:validate:modal',
   REFUSE: 'direct:refuse:modal',
   COMPLEMENT: 'direct:complement:modal',
+  CORRECT: 'direct:correct:modal',
 } as const;
 
 export const DirectSaleFieldId = {

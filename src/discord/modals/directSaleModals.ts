@@ -54,6 +54,38 @@ export function buildDirectRefuseModal(reference: string): ModalBuilder {
     );
 }
 
+/** Modal de correction (vente validee) : quantites par ligne (pre-remplies du valide) + motif. */
+export function buildDirectCorrectModal(
+  reference: string,
+  lines: readonly DirectSaleLine[],
+): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(DirectSaleModalId.CORRECT)
+    .setTitle(`Corriger ${reference}`.slice(0, 45));
+  for (const l of lines) {
+    modal.addComponents(
+      row(
+        new TextInputBuilder()
+          .setCustomId(l.id)
+          .setLabel(`${l.productName} (qté)`.slice(0, 45))
+          .setStyle(TextInputStyle.Short)
+          .setValue(String(l.validatedQuantity ?? l.declaredQuantity))
+          .setRequired(true),
+      ),
+    );
+  }
+  modal.addComponents(
+    row(
+      new TextInputBuilder()
+        .setCustomId(DirectSaleFieldId.REASON)
+        .setLabel('Motif de la correction')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true),
+    ),
+  );
+  return modal;
+}
+
 /** Modal de demande de complement : elements demandes obligatoires. */
 export function buildDirectComplementModal(reference: string): ModalBuilder {
   return new ModalBuilder()

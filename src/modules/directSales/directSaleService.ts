@@ -255,6 +255,111 @@ export async function validateDirectSale(
 }
 
 /** Refus : -> REFUSEE, motif obligatoire, aucun effet financier. */
+export interface CorrectDirectSaleInput {
+  saleId: string;
+  actorId: string;
+  lineQuantities: { lineId: string; newQuantity: number }[];
+  reason: string;
+  correlationId: string;
+}
+
+export interface CorrectedDirectSale extends DirectRef {
+  oldQuantity: number;
+  newQuantity: number;
+  revenueDelta: number;
+}
+
+/**
+ * Correction avant cloture d'une vente directe VALIDEE (parite avec correctSale
+ * PNJ) : reajuste les quantites par ligne et ecrit au journal des ajustements
+ * SIGNES (CA + salaire), negatifs si baisse — sommer redonne le reel.
+ */
+export async function correctDirectSale(
+  input: CorrectDirectSaleInput,
+): Promise<ActionResult<CorrectedDirectSale>> {
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.directSale.findUnique({
+      where: { id: input.saleId },
+      include: { lines: true, week: true },
+    });
+    if (!sale) return fail('Vente introuvable.');
+    if (sale.status !== SaleStatus.VALIDEE) {
+      return fail('Seule une vente validee peut etre corrigee.');
+    }
+    if (!sale.week || sale.week.status !== 'OPEN') {
+      return fail('Semaine cloturee : correction impossible.');
+    }
+    if (sale.salaryRateSnapshot === null) {
+      return fail('Vente sans tarif fige : correction impossible.');
+    }
+
+    const qtyOf = (l: { id: string; validatedQuantity: number | null; declaredQuantity: number }): number =>
+      l.validatedQuantity ?? l.declaredQuantity;
+    const overrides = new Map(input.lineQuantities.map((q) => [q.lineId, q.newQuantity]));
+    const oldLines = sale.lines.map((l) => ({ unitPrice: l.unitPrice, quantity: qtyOf(l) }));
+    const newLines = sale.lines.map((l) => ({
+      id: l.id,
+      unitPrice: l.unitPrice,
+      quantity: overrides.get(l.id) ?? qtyOf(l),
+    }));
+
+    const oldTotals = computeDirectSaleTotals(oldLines);
+    const newTotals = computeDirectSaleTotals(newLines);
+    const revenueDelta = newTotals.revenue - oldTotals.revenue;
+    const salaryDelta = (newTotals.totalQuantity - oldTotals.totalQuantity) * sale.salaryRateSnapshot;
+
+    for (const l of newLines) {
+      await tx.directSaleLine.update({
+        where: { id: l.id },
+        data: { validatedQuantity: l.quantity },
+      });
+    }
+    if (revenueDelta !== 0) {
+      await tx.ledgerEntry.create({
+        data: {
+          guildConfigId: sale.guildConfigId,
+          type: LedgerEntryType.ADJUSTMENT,
+          amount: revenueDelta,
+          weekId: sale.weekId,
+          description: `Correction CA vente directe ${sale.reference} : ${oldTotals.totalQuantity} -> ${newTotals.totalQuantity}`,
+          correlationId: input.correlationId,
+        },
+      });
+    }
+    if (salaryDelta !== 0) {
+      await tx.ledgerEntry.create({
+        data: {
+          guildConfigId: sale.guildConfigId,
+          type: LedgerEntryType.SALARY_LIABILITY,
+          amount: salaryDelta,
+          weekId: sale.weekId,
+          employeeId: sale.employeeId,
+          description: `Correction salaire vente directe ${sale.reference}`,
+          correlationId: input.correlationId,
+        },
+      });
+    }
+    await writeAudit(tx, {
+      guildConfigId: sale.guildConfigId,
+      action: 'DIRECT_SALE_CORRECTED',
+      authorDiscordId: input.actorId,
+      entityType: 'DirectSale',
+      entityId: input.saleId,
+      before: { totalQuantity: oldTotals.totalQuantity, revenue: oldTotals.revenue },
+      after: { totalQuantity: newTotals.totalQuantity, revenue: newTotals.revenue },
+      reason: input.reason,
+      correlationId: input.correlationId,
+    });
+
+    return done({
+      ...(await refOf(tx, input.saleId)),
+      oldQuantity: oldTotals.totalQuantity,
+      newQuantity: newTotals.totalQuantity,
+      revenueDelta,
+    });
+  });
+}
+
 /** Demande de complement : -> INCOMPLETE, motif obligatoire, aucun effet financier. */
 export async function requestComplementDirectSale(
   saleId: string,

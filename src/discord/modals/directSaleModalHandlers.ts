@@ -2,6 +2,7 @@ import { MessageFlags, type ModalSubmitInteraction, type ThreadChannel } from 'd
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../../infrastructure/database/client.js';
 import {
+  correctDirectSale,
   refuseDirectSale,
   requestComplementDirectSale,
   validateDirectSale,
@@ -108,6 +109,50 @@ export async function handleDirectSaleModal(interaction: ModalSubmitInteraction)
       `⚠️ La direction demande un complément sur ta vente main-en-main **${res.data.reference}**.\n${reason}`,
     );
     await interaction.editReply(`Complément demandé pour ${res.data.reference}.`);
+    return true;
+  }
+
+  if (interaction.customId === DirectSaleModalId.CORRECT) {
+    const reason = interaction.fields.getTextInputValue(DirectSaleFieldId.REASON).trim();
+    if (!reason) {
+      await interaction.editReply('Motif de correction obligatoire.');
+      return true;
+    }
+    const lineQuantities: { lineId: string; newQuantity: number }[] = [];
+    for (const l of sale.lines) {
+      const q = Number(interaction.fields.getTextInputValue(l.id).trim());
+      if (!Number.isInteger(q) || q < 0) {
+        await interaction.editReply(`Quantité invalide pour « ${l.productName} ».`);
+        return true;
+      }
+      lineQuantities.push({ lineId: l.id, newQuantity: q });
+    }
+    const res = await correctDirectSale({
+      saleId: sale.id,
+      actorId,
+      lineQuantities,
+      reason,
+      correlationId,
+    });
+    if (!res.ok) {
+      await interaction.editReply(res.reason);
+      return true;
+    }
+    await refreshDirectFiche(thread, sale.id);
+    if (sale.threadId) {
+      await applyCasierEffects(interaction.client, {
+        threadId: sale.threadId,
+        casierForumId: sale.employee.casierForumId,
+        status: SaleStatus.VALIDEE,
+        message: `✏️ Quantité validée corrigée sur **${res.data.reference}** : ${res.data.oldQuantity} → ${res.data.newQuantity}.`,
+      }).catch(() => undefined);
+    }
+    // La correction a rouvert le thread : on le range a nouveau.
+    await archiveFiche(thread, sale.id);
+    scheduleDashboardUpdate(interaction.client, config.id);
+    await interaction.editReply(
+      `Correction enregistrée (${res.data.oldQuantity} → ${res.data.newQuantity}).`,
+    );
     return true;
   }
 
