@@ -20,6 +20,7 @@ import { partenaireCommand } from './partenaire.js';
 import { semaineCommand } from './semaine.js';
 import { stockCommand } from './stock.js';
 import { tableauCommand } from './tableau.js';
+import { tresorerieCommand } from './tresorerie.js';
 import { vehiculeCommand } from './vehicule.js';
 import { vendreCommand } from './vendre.js';
 import { vitrineCommand } from './vitrine.js';
@@ -45,6 +46,7 @@ const all: SlashCommand[] = [
   partenaireCommand,
   semaineCommand,
   tableauCommand,
+  tresorerieCommand,
   vendreCommand,
   vitrineCommand,
   // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : commandes
