@@ -52,6 +52,14 @@ export const journalCommand: SlashCommand = {
           o.setName('reference').setDescription('Ex. HD-2026-0042 ou VD-2026-0007').setRequired(true),
         ),
     )
+    .addSubcommand((s) =>
+      s
+        .setName('transaction')
+        .setDescription('Toutes les écritures d’une même transaction (correlationId)')
+        .addStringOption((o) =>
+          o.setName('id').setDescription('Identifiant de corrélation').setRequired(true),
+        ),
+    )
     .toJSON(),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -88,6 +96,16 @@ export const journalCommand: SlashCommand = {
       const rows = await queryAudit(config.id, { authorDiscordId: member.id, limit });
       await interaction.editReply({
         embeds: [render(`🗂️ Journal — actions de ${member.username}`, rows.map(formatAuditLine))],
+      });
+      return;
+    }
+
+    if (sub === 'transaction') {
+      const id = interaction.options.getString('id', true).trim();
+      const rows = await queryAudit(config.id, { correlationId: id, limit: 25 });
+      const lines = [...rows].reverse().map(formatAuditLine); // chronologique
+      await interaction.editReply({
+        embeds: [render(`🗂️ Transaction ${id.slice(0, 8)}…`, lines)],
       });
       return;
     }
