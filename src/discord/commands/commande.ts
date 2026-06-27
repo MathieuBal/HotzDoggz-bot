@@ -8,6 +8,7 @@ import {
   type ChatInputCommandInteraction,
 } from 'discord.js';
 import { getOpenWeek } from '../../modules/accounting/accountingService.js';
+import { buildOrderDeliveredCelebration, postCelebration } from '../celebrations.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import {
   getEmployeeByDiscordId,
@@ -345,7 +346,15 @@ export const commandeCommand: SlashCommand = {
         return;
       }
       const res = await deliverOrder(order.id, interaction.user.id);
-      if (res.ok) scheduleDashboardUpdate(interaction.client, config.id);
+      if (res.ok) {
+        scheduleDashboardUpdate(interaction.client, config.id);
+        // Celebration : remercie publiquement les producteurs (boucle de feedback).
+        await postCelebration(
+          interaction.client,
+          config.id,
+          buildOrderDeliveredCelebration(order.reference, order.clientName, order.contributors),
+        );
+      }
       await interaction.editReply(
         res.ok
           ? `📦 Commande **${res.data.reference}** marquée livrée. En attente de paiement.`
