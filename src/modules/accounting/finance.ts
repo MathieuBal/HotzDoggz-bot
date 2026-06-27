@@ -78,14 +78,33 @@ export function computeDistributable(
   return totalRevenue - totalSalaries - reserve;
 }
 
+/** Taux effectivement appliques (pour un affichage qui ne ment pas si on les change). */
+export interface DistributionPercents {
+  reservePercent: number;
+  bonusPercent: number;
+  directorPercent: number;
+  coDirectorPercent: number; // reste du distribuable (100 - bonus - directeur)
+}
+
 export interface ProfitDistribution {
   totalRevenue: number;
   totalSalaries: number;
   reserve: number;
   distributable: number;
-  bonus: number; // 35 % - prime du meilleur employe
-  directorShare: number; // 40 % - Directeur
-  coDirectorShare: number; // reste (≈ 25 %), absorbe le residu d'arrondi
+  bonus: number; // prime du meilleur employe (bonusPercent du distribuable)
+  directorShare: number; // part Directeur (directorPercent du distribuable)
+  coDirectorShare: number; // reste, absorbe le residu d'arrondi
+  rates: DistributionPercents; // taux reellement utilises ci-dessus
+}
+
+/** Taux d'affichage derives des taux d'entree (coDir = reste du distribuable). */
+function percentsOf(rates: DistributionRates): DistributionPercents {
+  return {
+    reservePercent: rates.reservePercent,
+    bonusPercent: rates.bonusPercent,
+    directorPercent: rates.directorPercent,
+    coDirectorPercent: Math.max(0, 100 - rates.bonusPercent - rates.directorPercent),
+  };
 }
 
 /**
@@ -100,6 +119,8 @@ export function distributeWeek(
   const reserve = computeReserve(totalRevenue, rates.reservePercent);
   const distributable = computeDistributable(totalRevenue, totalSalaries, reserve);
 
+  const ratePercents = percentsOf(rates);
+
   if (distributable <= 0) {
     return {
       totalRevenue,
@@ -109,6 +130,7 @@ export function distributeWeek(
       bonus: 0,
       directorShare: 0,
       coDirectorShare: 0,
+      rates: ratePercents,
     };
   }
 
@@ -125,6 +147,7 @@ export function distributeWeek(
     bonus,
     directorShare,
     coDirectorShare,
+    rates: ratePercents,
   };
 }
 
@@ -133,6 +156,22 @@ export function computeSaleRevenue(validatedQuantity: number, pnjUnitPrice: numb
   assertNonNegativeInt(validatedQuantity, 'validatedQuantity');
   assertNonNegativeInt(pnjUnitPrice, 'pnjUnitPrice');
   return validatedQuantity * pnjUnitPrice;
+}
+
+/**
+ * Ajustement SIGNE de CA lors d'une correction de quantite validee : positif si
+ * la quantite augmente, NEGATIF si elle baisse. Destine au journal (LedgerEntry
+ * signe) pour que la somme des montants redonne toujours le CA reel.
+ */
+export function computeRevenueAdjustment(
+  oldQuantity: number,
+  newQuantity: number,
+  pnjUnitPrice: number,
+): number {
+  assertNonNegativeInt(oldQuantity, 'oldQuantity');
+  assertNonNegativeInt(newQuantity, 'newQuantity');
+  assertNonNegativeInt(pnjUnitPrice, 'pnjUnitPrice');
+  return (newQuantity - oldQuantity) * pnjUnitPrice;
 }
 
 /** Salaire de production d'une vente = quantite validee * tarif snapshote. */

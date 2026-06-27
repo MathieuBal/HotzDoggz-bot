@@ -1,5 +1,6 @@
 import { ClientOrderStatus, SaleStatus } from '@prisma/client';
 import { type Client, EmbedBuilder } from 'discord.js';
+import { sleep } from '../../infrastructure/async/retry.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { mentionDirection, postToLogs } from '../../discord/notify.js';
@@ -166,5 +167,8 @@ export async function sendPayslips(client: Client, guildConfigId: string): Promi
     } catch {
       logger.info({ employee: p.employee.nomRP }, 'Fiche de paie en DM non remise (DM fermes ?)');
     }
+    // Throttle leger entre deux DM : sur un gros effectif, evite de frotter aux
+    // rate limits globaux (hors hot path, la cloture n'est pas sensible a 200ms).
+    await sleep(250);
   }
 }

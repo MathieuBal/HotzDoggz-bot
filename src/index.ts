@@ -28,6 +28,14 @@ async function main(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.info({ signal }, 'Arret en cours...');
+    // Garde-fou : si l'arret propre se bloque (flush ou destroy qui pend), on
+    // force la sortie pour ne jamais laisser le conteneur suspendu — sinon on
+    // depend du SIGKILL tardif de Docker. unref() pour ne pas retenir le process.
+    const watchdog = setTimeout(() => {
+      logger.error('Arret gracieux trop long (>8s) — sortie forcee');
+      process.exit(1);
+    }, 8000);
+    watchdog.unref?.();
     try {
       stopProactiveNotifications();
       stopStoragePurge();
@@ -38,6 +46,7 @@ async function main(): Promise<void> {
     } catch (err) {
       logger.error({ err }, 'Erreur durant l’arret');
     } finally {
+      clearTimeout(watchdog);
       process.exit(0);
     }
   };

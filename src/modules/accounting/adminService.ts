@@ -109,13 +109,16 @@ export async function adminCancelOrder(
       where: { id: order.id },
       data: { status: ClientOrderStatus.ANNULEE },
     });
-    // Ajustement de tracabilite si la commande etait deja comptee.
+    // Contre-passation si la commande etait deja comptee : son CA a ete inscrit
+    // en SALE_REVENUE (+negotiatedPrice) a la livraison, l'annuler doit donc
+    // retrancher ce montant. Journal signe → ajustement NEGATIF (cf. correctSale
+    // et cancelLastAdvance).
     if (wasPaid && order.weekId) {
       await tx.ledgerEntry.create({
         data: {
           guildConfigId,
           type: LedgerEntryType.ADJUSTMENT,
-          amount: order.negotiatedPrice,
+          amount: -order.negotiatedPrice,
           weekId: order.weekId,
           description: `Annulation commande ${order.reference} (${reason})`,
           correlationId,

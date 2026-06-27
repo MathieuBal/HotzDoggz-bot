@@ -53,6 +53,24 @@ export async function refreshFiche(
   }
 }
 
+/**
+ * Range la fiche d'une vente close (validee) hors de la vue active du forum de
+ * controle, pour eviter l'accumulation de threads a faire defiler. On *archive*
+ * plutot que de supprimer : aucune donnee perdue, et un clic sur « Corriger »
+ * fait reapparaitre le thread automatiquement (Discord le desarchive a
+ * l'interaction). L'archivage est best-effort : il ne doit jamais faire echouer
+ * l'action de direction deja committee en base.
+ *
+ * Important : toujours appeler APRES refreshFiche — editer le message starter
+ * desarchiverait le thread juste apres l'avoir range.
+ */
+export async function archiveFiche(controlThread: ThreadChannel, saleId: string): Promise<void> {
+  if (controlThread.archived) return;
+  await controlThread
+    .setArchived(true, 'Vente validee — fiche rangee automatiquement')
+    .catch((err) => logger.warn({ err, saleId }, 'Archivage de la fiche KO'));
+}
+
 /** Applique le tag de statut au casier et y publie un message a l'employe. */
 export async function applyCasierEffects(
   client: Client,

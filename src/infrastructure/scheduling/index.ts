@@ -20,4 +20,6 @@ export interface Debouncer {
 export interface SerialQueue {
   /** Execute les taches d'une meme `key` strictement en serie. */
   enqueue<T>(key: string, task: () => Promise<T>): Promise<T>;
+  /** Attend que toutes les chaines en cours soient videes (arret gracieux). */
+  idle(): Promise<void>;
 }

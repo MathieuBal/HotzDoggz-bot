@@ -1,4 +1,5 @@
 import { LedgerEntryType, SalaryAdvanceStatus } from '@prisma/client';
+import { isAmountInRange } from '../../config/constants.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
 import { getOpenWeekSnapshot } from '../accounting/accountingService.js';
@@ -59,8 +60,8 @@ export async function recordAdvance(params: {
   note?: string | null;
 }): Promise<ActionResult<RecordedAdvance>> {
   const { guildConfigId, employeeId, amount, byDiscordId } = params;
-  if (!Number.isInteger(amount) || amount < 1) {
-    return { ok: false, reason: 'Le montant doit être un entier positif.' };
+  if (!isAmountInRange(amount)) {
+    return { ok: false, reason: 'Le montant doit être un entier positif raisonnable.' };
   }
   const cap = await getAdvanceCapacity(guildConfigId, employeeId);
   if (!cap) return { ok: false, reason: 'Aucune semaine ouverte.' };

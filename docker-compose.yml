@@ -6,8 +6,9 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: hotzdogz
-      # Mot de passe injecte par .env en prod (defaut dev = hotzdogz).
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hotzdogz}
+      # Mot de passe OBLIGATOIRE : compose refuse de demarrer s'il est absent
+      # (plus de defaut faible). Defini dans .env (cf. .env.example).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit etre defini dans .env}
       POSTGRES_DB: hotzdogz
     # Lie au loopback uniquement : le bot accede a Postgres par le reseau Docker
     # interne, l'exposition publique n'est jamais necessaire en prod.
@@ -36,7 +37,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://hotzdogz:${POSTGRES_PASSWORD:-hotzdogz}@postgres:5432/hotzdogz?schema=public
+      DATABASE_URL: postgresql://hotzdogz:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit etre defini dans .env}@postgres:5432/hotzdogz?schema=public
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}

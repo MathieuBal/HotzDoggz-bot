@@ -115,6 +115,11 @@ export const GarageId = {
   VEH_TRANSFORMER: 'garage:veh:transformer', // bouton sur la carte, suffixe :<vehicleId>
 } as const;
 
+/** Tableau de paie : menu « marquer une paie reglee en jeu » (valeur = employeeId). */
+export const PayrollSelectId = {
+  PAY: 'payroll:pay',
+} as const;
+
 /** Tableau stock : menus de selection de vehicule + modals de quantite. */
 export const StockSelectId = {
   RAMASSER: 'stock:pick:ramasser',

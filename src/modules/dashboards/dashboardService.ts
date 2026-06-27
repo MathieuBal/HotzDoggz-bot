@@ -1,5 +1,6 @@
 import { ChannelType, EmbedBuilder, type Client, type MessageCreateOptions } from 'discord.js';
 import { GARAGE_STOCK_ENABLED } from '../../config/constants.js';
+import { withRetry } from '../../infrastructure/async/retry.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import type { ClosureSummary } from '../accounting/closureService.js';
@@ -8,6 +9,7 @@ import { listActiveOrders } from '../orders/orderService.js';
 import { getPartnershipBoardData } from '../partners/partnerService.js';
 import { getCompanyBoardData } from './companyBoard.js';
 import { publishPlanningBoard } from '../../discord/planning/planningBoard.js';
+import { publishPayrollBoard } from '../../discord/payroll/payrollBoard.js';
 import { publishStockBoard } from '../../discord/stock/stockBoard.js';
 import { publishGarageBoard } from '../../discord/garage/garageBoard.js';
 import {
@@ -50,14 +52,16 @@ async function ensureMessage(
   if (messageId) {
     try {
       const msg = await channel.messages.fetch(messageId);
-      await msg.edit({ embeds: [embed] });
+      // Retry sur 5xx transitoire ; un message supprime (404) n'est PAS re-essaye
+      // et tombe dans le catch -> recreation.
+      await withRetry(async () => msg.edit({ embeds: [embed] }));
       return { messageId, changed: false };
     } catch {
       // message supprime -> on le recree (CDC §11 : dashboard supprime)
       logger.warn({ channelId, messageId }, 'Message permanent absent — recreation');
     }
   }
-  const created = await channel.send(payload);
+  const created = await withRetry(async () => channel.send(payload));
   return { messageId: created.id, changed: true };
 }
 
@@ -139,6 +143,10 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   // Agenda planning (embed + menu de positionnement) : gere son propre message.
   await publishPlanningBoard(client, guildConfigId).catch((err) =>
     logger.warn({ err, guildConfigId }, 'Mise a jour de l agenda planning KO'),
+  );
+  // Tableau de paie (liste des nets a verser + menu « marquer payee ») : idem.
+  await publishPayrollBoard(client, guildConfigId).catch((err) =>
+    logger.warn({ err, guildConfigId }, 'Mise a jour du tableau paie KO'),
   );
   // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : on ne publie
   // ni le tableau de stock ni le catalogue garage tant qu'il est desactive.

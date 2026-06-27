@@ -16,7 +16,7 @@ import {
 } from '../../modules/verification/verificationService.js';
 import { SaleFieldId, SaleModalId } from '../components/ids.js';
 import { isDirectionMember } from '../permissions.js';
-import { applyCasierEffects, refreshFiche } from '../verification/ficheHelpers.js';
+import { applyCasierEffects, archiveFiche, refreshFiche } from '../verification/ficheHelpers.js';
 
 const KNOWN = new Set<string>(Object.values(SaleModalId));
 
@@ -109,6 +109,8 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.VALIDEE,
         message: `✅ Vente **${res.data.reference}** validee. Quantite validee : ${res.data.validatedQuantity}. Salaire : ${res.data.salaryAmount} $.`,
       });
+      // Vente close : on range la fiche hors du forum actif (reversible).
+      await archiveFiche(thread, sale.id);
       scheduleDashboardUpdate(client, config.id);
       await interaction.editReply(
         `Vente ${res.data.reference} validee (salaire ${res.data.salaryAmount} $).`,
@@ -189,6 +191,8 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.VALIDEE,
         message: `✏️ Quantite validee corrigee : ${res.data.oldQuantity} → ${res.data.newQuantity}.`,
       });
+      // La correction a rouvert le thread : on le range a nouveau.
+      await archiveFiche(thread, sale.id);
       scheduleDashboardUpdate(client, config.id);
       await interaction.editReply(
         `Correction enregistree (${res.data.oldQuantity} → ${res.data.newQuantity}).`,

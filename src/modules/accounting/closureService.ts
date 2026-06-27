@@ -2,7 +2,7 @@ import { LedgerEntryType, PayrollStatus, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
 import { writeAudit } from '../audit/auditService.js';
 import { collectWeekReportInputs } from './weekInputs.js';
-import { ratesFromConfig } from './finance.js';
+import { ratesFromConfig, type DistributionPercents } from './finance.js';
 import { computeBonusShares, computeWeekReport } from './weekReport.js';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; reason: string };
@@ -18,6 +18,7 @@ export interface ClosureSummary {
   bonus: number;
   directorShare: number;
   coDirectorShare: number;
+  rates: DistributionPercents;
   bestEmployeeName: string | null;
   bestTie: boolean;
   payrollCount: number;
@@ -220,6 +221,7 @@ export async function closeWeek(
         bonus: report.bonus,
         directorShare: report.directorShare,
         coDirectorShare: report.coDirectorShare,
+        rates: report.rates,
         bestEmployeeName: report.bestEmployee?.nomRP ?? null,
         bestTie: report.bestTie,
         payrollCount: report.employees.length,

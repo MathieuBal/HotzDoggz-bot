@@ -11,14 +11,17 @@ import { exportCommand } from './export.js';
 import { factureCommand } from './facture.js';
 import { gestionCommand } from './gestion.js';
 import { guideCommand } from './guide.js';
+import { journalCommand } from './journal.js';
 import { macomptaCommand } from './macompta.js';
 import { menuCommand } from './menu.js';
 import { paieCommand } from './paie.js';
 import { panelCommand } from './panel.js';
 import { partenaireCommand } from './partenaire.js';
+import { profilCommand } from './profil.js';
 import { semaineCommand } from './semaine.js';
 import { stockCommand } from './stock.js';
 import { tableauCommand } from './tableau.js';
+import { tresorerieCommand } from './tresorerie.js';
 import { vehiculeCommand } from './vehicule.js';
 import { vendreCommand } from './vendre.js';
 import { vitrineCommand } from './vitrine.js';
@@ -36,13 +39,16 @@ const all: SlashCommand[] = [
   factureCommand,
   gestionCommand,
   guideCommand,
+  journalCommand,
   macomptaCommand,
   menuCommand,
   paieCommand,
   panelCommand,
   partenaireCommand,
+  profilCommand,
   semaineCommand,
   tableauCommand,
+  tresorerieCommand,
   vendreCommand,
   vitrineCommand,
   // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : commandes

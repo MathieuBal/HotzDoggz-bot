@@ -11,6 +11,7 @@ import {
   getGuildConfigByGuildId,
 } from '../../modules/employees/employeeService.js';
 import { getLatestClosedPayrolls, markPayrollPaid } from '../../modules/payroll/payrollService.js';
+import { publishPayrollBoard } from '../payroll/payrollBoard.js';
 import { isDirection } from '../permissions.js';
 import type { SlashCommand } from './types.js';
 
@@ -81,6 +82,8 @@ export const paieCommand: SlashCommand = {
         await interaction.editReply(result.reason);
         return;
       }
+      // Garde le tableau de paie permanent synchronise avec la commande.
+      await publishPayrollBoard(interaction.client, config.id).catch(() => undefined);
       await interaction.editReply(
         `Paie de **${result.data.nomRP}** marquee payee : ${nf.format(result.data.totalAmount)} $.`,
       );

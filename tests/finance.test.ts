@@ -2,10 +2,57 @@ import { describe, expect, it } from 'vitest';
 import {
   computeDistributable,
   computeReserve,
+  computeRevenueAdjustment,
   computeSaleRevenue,
   computeSaleSalary,
   distributeWeek,
 } from '../src/modules/accounting/finance.js';
+
+describe('distributeWeek — taux d’affichage (rates)', () => {
+  it('expose les taux utilisés, coDir = reste du distribuable', () => {
+    const d = distributeWeek(100_000, 40_000, {
+      reservePercent: 5,
+      bonusPercent: 35,
+      directorPercent: 40,
+    });
+    expect(d.rates).toEqual({
+      reservePercent: 5,
+      bonusPercent: 35,
+      directorPercent: 40,
+      coDirectorPercent: 25, // 100 - 35 - 40
+    });
+  });
+
+  it('reflète des taux personnalisés (l’affichage ne ment pas)', () => {
+    const d = distributeWeek(100_000, 10_000, {
+      reservePercent: 10,
+      bonusPercent: 50,
+      directorPercent: 30,
+    });
+    expect(d.rates.reservePercent).toBe(10);
+    expect(d.rates.coDirectorPercent).toBe(20); // 100 - 50 - 30
+  });
+});
+
+describe('computeRevenueAdjustment (journal signe)', () => {
+  it('est positif quand la quantite validee augmente', () => {
+    expect(computeRevenueAdjustment(10, 14, 210)).toBe(4 * 210);
+  });
+
+  it('est NEGATIF quand la quantite validee baisse (contre-passation)', () => {
+    // Le bug corrige : un Math.abs aurait rendu +420 et gonfle le CA.
+    expect(computeRevenueAdjustment(12, 10, 210)).toBe(-2 * 210);
+  });
+
+  it('vaut 0 quand la quantite ne change pas', () => {
+    expect(computeRevenueAdjustment(7, 7, 210)).toBe(0);
+  });
+
+  it('rejette les entrees negatives ou non entieres', () => {
+    expect(() => computeRevenueAdjustment(-1, 5, 210)).toThrow();
+    expect(() => computeRevenueAdjustment(5, 5, 1.5)).toThrow();
+  });
+});
 
 describe('computeReserve', () => {
   it('vaut floor(CA * 5 / 100)', () => {

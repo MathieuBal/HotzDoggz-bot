@@ -22,6 +22,7 @@ import {
 import { handleStockModal, handleStockSelect } from '../stock/stockHandlers.js';
 import { handlePanelPick } from '../panel/pickers.js';
 import { handlePlanningSelect } from '../planning/planningSelect.js';
+import { handlePayrollSelect } from '../payroll/payrollSelect.js';
 import { handlePanelSelect } from '../selects/panelSelect.js';
 import {
   handleVerificationButton,
@@ -84,6 +85,7 @@ export function registerInteractionCreate(client: Client): void {
       }
       if (interaction.isStringSelectMenu()) {
         if (await handlePlanningSelect(interaction)) return;
+        if (await handlePayrollSelect(interaction)) return;
         if (await handleStockSelect(interaction)) return;
         if (await handleGarageOpen(interaction)) return;
         if (await handleGaragePick(interaction)) return;

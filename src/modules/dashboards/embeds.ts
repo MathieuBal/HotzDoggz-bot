@@ -68,11 +68,11 @@ export function buildAccountingBoard(
     .addFields(
       { name: "Chiffre d'affaires", value: money(report.totalRevenue), inline: true },
       { name: 'Salaires valides', value: money(report.totalSalaries), inline: true },
-      { name: 'Reserve (5 %)', value: money(report.reserve), inline: true },
+      { name: `Reserve (${report.rates.reservePercent} %)`, value: money(report.reserve), inline: true },
       { name: 'Benefice distribuable', value: money(report.distributable), inline: true },
-      { name: 'Prime (35 %)', value: money(report.bonus), inline: true },
-      { name: 'Directeur (40 %)', value: money(report.directorShare), inline: true },
-      { name: 'Co-directeur (25 %)', value: money(report.coDirectorShare), inline: true },
+      { name: `Prime (${report.rates.bonusPercent} %)`, value: money(report.bonus), inline: true },
+      { name: `Directeur (${report.rates.directorPercent} %)`, value: money(report.directorShare), inline: true },
+      { name: `Co-directeur (${report.rates.coDirectorPercent} %)`, value: money(report.coDirectorShare), inline: true },
       { name: 'Dossiers en attente', value: String(pendingCount), inline: true },
     )
     .setFooter({ text: 'Provisoire — paies finalisees a la cloture (Phase 5)' })
@@ -340,12 +340,12 @@ export function buildClosureSummary(summary: ClosureSummary, weekLabel: string):
     .addFields(
       { name: "Chiffre d'affaires", value: money(summary.totalRevenue), inline: true },
       { name: 'Salaires', value: money(summary.totalSalaries), inline: true },
-      { name: 'Reserve (5 %)', value: money(summary.reserve), inline: true },
+      { name: `Reserve (${summary.rates.reservePercent} %)`, value: money(summary.reserve), inline: true },
       { name: 'Benefice distribuable', value: money(summary.distributable), inline: true },
-      { name: 'Prime (35 %)', value: money(summary.bonus), inline: true },
+      { name: `Prime (${summary.rates.bonusPercent} %)`, value: money(summary.bonus), inline: true },
       { name: 'Meilleur employe', value: best, inline: true },
-      { name: 'Directeur (40 %)', value: money(summary.directorShare), inline: true },
-      { name: 'Co-directeur (25 %)', value: money(summary.coDirectorShare), inline: true },
+      { name: `Directeur (${summary.rates.directorPercent} %)`, value: money(summary.directorShare), inline: true },
+      { name: `Co-directeur (${summary.rates.coDirectorPercent} %)`, value: money(summary.coDirectorShare), inline: true },
       { name: 'Fiches de paie', value: String(summary.payrollCount), inline: true },
     )
     .setFooter({ text: 'Semaine clôturée par la direction. Rangez les pinces et comptez vos sous.' })

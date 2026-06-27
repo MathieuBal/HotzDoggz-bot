@@ -80,7 +80,15 @@ export async function markPayrollPaid(
       },
     });
 
+    // Solde les deux types de ventes integrees a cette paie (PNJ + main en main) :
+    // la cloture les a toutes deux passees a INTEGREE_A_LA_PAIE, le paiement doit
+    // donc faire passer les unes ET les autres a PAYEE (sinon les ventes directes
+    // resteraient affichees « a payer » alors que le salaire est regle).
     await tx.sale.updateMany({
+      where: { weekId: payroll.weekId, employeeId, status: SaleStatus.INTEGREE_A_LA_PAIE },
+      data: { status: SaleStatus.PAYEE },
+    });
+    await tx.directSale.updateMany({
       where: { weekId: payroll.weekId, employeeId, status: SaleStatus.INTEGREE_A_LA_PAIE },
       data: { status: SaleStatus.PAYEE },
     });
