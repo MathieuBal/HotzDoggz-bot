@@ -18,6 +18,8 @@ import { SaleFieldId, SaleModalId } from '../components/ids.js';
 import { isDirectionMember } from '../permissions.js';
 import { applyCasierEffects, archiveFiche, refreshFiche } from '../verification/ficheHelpers.js';
 import { sendEmployeeDM } from '../notify.js';
+import { buildBadgeCelebration, postCelebration } from '../celebrations.js';
+import { checkAndAwardBadges } from '../../modules/badges/badgeService.js';
 
 const KNOWN = new Set<string>(Object.values(SaleModalId));
 
@@ -42,7 +44,7 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
 
   const sale = await prisma.sale.findUnique({
     where: { controlThreadId: interaction.channelId },
-    include: { employee: { select: { discordUserId: true } } },
+    include: { employee: { select: { discordUserId: true, nomRP: true } } },
   });
   if (!sale) {
     await interaction.reply({ content: 'Fiche de controle non reconnue.', flags: ephemeral });
@@ -113,6 +115,16 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
       // Vente close : on range la fiche hors du forum actif (reversible).
       await archiveFiche(thread, sale.id);
       scheduleDashboardUpdate(client, config.id);
+      // Badges : la production cumulee peut franchir un palier -> annonce + DM.
+      const fresh = await checkAndAwardBadges(config.id, sale.employeeId);
+      if (fresh.length > 0) {
+        await postCelebration(client, config.id, buildBadgeCelebration(sale.employee.nomRP, fresh));
+        await sendEmployeeDM(
+          client,
+          sale.employee.discordUserId,
+          `🏅 Bravo ${sale.employee.nomRP} ! Tu débloques : ${fresh.map((b) => `${b.emoji} ${b.label}`).join(', ')}.`,
+        );
+      }
       await interaction.editReply(
         `Vente ${res.data.reference} validee (salaire ${res.data.salaryAmount} $).`,
       );

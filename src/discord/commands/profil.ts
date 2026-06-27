@@ -68,6 +68,7 @@ export const profilCommand: SlashCommand = {
         },
         { name: '🤝 Ventes main-en-main validées', value: String(p.directSalesCount), inline: true },
         { name: '💵 Salaires versés (cumul)', value: money(p.paidTotal), inline: true },
+        { name: '🏅 Badges', value: p.badges.length ? p.badges.join(' · ') : '_Aucun pour l’instant_' },
       )
       .setFooter({ text: 'Fiche employé — données cumulées depuis l’embauche.' })
       .setTimestamp(new Date());

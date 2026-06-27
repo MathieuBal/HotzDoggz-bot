@@ -61,6 +61,20 @@ export function buildPartnerObjectiveCelebration(
     .setTimestamp(new Date());
 }
 
+/** Embed festif de badge(s) debloque(s) par un employe (pur, testable). */
+export function buildBadgeCelebration(
+  nomRP: string,
+  badges: readonly { emoji: string; label: string }[],
+): EmbedBuilder {
+  const list = badges.map((b) => `${b.emoji} **${b.label}**`).join('\n');
+  return new EmbedBuilder()
+    .setTitle('🏅 Nouveau badge débloqué !')
+    .setColor(0x9b59b6)
+    .setDescription(`**${nomRP}** vient de débloquer :\n${list}`)
+    .setFooter({ text: 'Chaque hot-dog compte. Continue de grimper ! 🌭' })
+    .setTimestamp(new Date());
+}
+
 /**
  * Publie une celebration dans le salon employe (croissance), avec repli sur le
  * tableau hebdo. Silencieux si aucun salon employe n'est configure.
