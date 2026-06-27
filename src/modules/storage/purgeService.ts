@@ -1,6 +1,7 @@
 import { getObjectStorage } from '../../infrastructure/object-storage/factory.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
+import { writeAudit } from '../audit/auditService.js';
 import { planPurge } from './purgePlan.js';
 
 export interface PurgeResult {
@@ -67,6 +68,14 @@ export async function purgeExpiredProofs(retentionDays: number): Promise<PurgeRe
       { ...result, retentionDays, mb: Math.round((plan.bytes / 1_048_576) * 10) / 10 },
       'Purge du stockage des preuves effectuee',
     );
+    // Trace la suppression de preuves : action sensible pour la conformite, elle
+    // ne doit pas etre silencieuse. Purge globale (multi-serveurs) => sans guild.
+    await writeAudit(prisma, {
+      action: 'STORAGE_PURGED',
+      entityType: 'Storage',
+      reason: `${deleted} preuve(s) supprimée(s) (rétention ${retentionDays} j)`,
+      after: { deleted, bytes: plan.bytes, scanned: objects.length },
+    }).catch((err) => logger.warn({ err }, 'Audit de purge en echec'));
   }
   return result;
 }

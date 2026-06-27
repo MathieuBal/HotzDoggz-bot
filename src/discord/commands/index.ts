@@ -11,6 +11,7 @@ import { exportCommand } from './export.js';
 import { factureCommand } from './facture.js';
 import { gestionCommand } from './gestion.js';
 import { guideCommand } from './guide.js';
+import { journalCommand } from './journal.js';
 import { macomptaCommand } from './macompta.js';
 import { menuCommand } from './menu.js';
 import { paieCommand } from './paie.js';
@@ -36,6 +37,7 @@ const all: SlashCommand[] = [
   factureCommand,
   gestionCommand,
   guideCommand,
+  journalCommand,
   macomptaCommand,
   menuCommand,
   paieCommand,

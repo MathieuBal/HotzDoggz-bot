@@ -7,6 +7,7 @@ import {
 } from 'discord.js';
 import { buildLatestWeekExport } from '../../modules/accounting/exportService.js';
 import { writeAudit } from '../../modules/audit/auditService.js';
+import { buildAuditCsv, queryAuditForExport } from '../../modules/audit/auditQuery.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { isDirection } from '../permissions.js';
@@ -21,6 +22,9 @@ export const exportCommand: SlashCommand = {
       s
         .setName('semaine')
         .setDescription('Exporte la derniere semaine cloturee (CSV ventes + paies)'),
+    )
+    .addSubcommand((s) =>
+      s.setName('audit').setDescription('Exporte le journal d’audit du serveur (CSV)'),
     )
     .toJSON(),
 
@@ -43,6 +47,28 @@ export const exportCommand: SlashCommand = {
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    if (interaction.options.getSubcommand() === 'audit') {
+      const rows = await queryAuditForExport(config.id);
+      if (rows.length === 0) {
+        await interaction.editReply('Journal d’audit vide.');
+        return;
+      }
+      const csv = buildAuditCsv(rows);
+      await writeAudit(prisma, {
+        guildConfigId: config.id,
+        action: 'AUDIT_EXPORTED',
+        authorDiscordId: interaction.user.id,
+        entityType: 'AuditLog',
+        reason: `${rows.length} entrées`,
+      });
+      await interaction.editReply({
+        content: `Journal d’audit — ${rows.length} dernières entrées :`,
+        files: [new AttachmentBuilder(Buffer.from(csv, 'utf8'), { name: 'audit.csv' })],
+      });
+      return;
+    }
+
     const result = await buildLatestWeekExport(config.id);
     if (!result) {
       await interaction.editReply('Aucune semaine cloturee a exporter.');

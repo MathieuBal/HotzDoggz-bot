@@ -868,4 +868,8 @@ model AuditLog {
 
   @@index([correlationId])
   @@index([entityType, entityId])
+  // Lecture du journal (/journal, /export audit) : par serveur, du plus recent
+  // au plus ancien, et filtrage par auteur.
+  @@index([guildConfigId, createdAt])
+  @@index([guildConfigId, authorDiscordId, createdAt])
 }
