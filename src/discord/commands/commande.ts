@@ -8,7 +8,11 @@ import {
   type ChatInputCommandInteraction,
 } from 'discord.js';
 import { getOpenWeek } from '../../modules/accounting/accountingService.js';
-import { buildOrderDeliveredCelebration, postCelebration } from '../celebrations.js';
+import {
+  buildOrderDeliveredCelebration,
+  buildPartnerObjectiveCelebration,
+  postCelebration,
+} from '../celebrations.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import {
   getEmployeeByDiscordId,
@@ -18,6 +22,7 @@ import {
 import {
   findActivePartnerByName,
   listActivePartners,
+  partnerObjectiveJustReached,
 } from '../../modules/partners/partnerService.js';
 import { mentionDirection, postToLogs } from '../notify.js';
 import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
@@ -404,6 +409,15 @@ export const commandeCommand: SlashCommand = {
         return;
       }
       scheduleDashboardUpdate(interaction.client, config.id);
+      // Celebration si cette commande payee fait atteindre l'objectif du partenaire.
+      const reached = await partnerObjectiveJustReached(order.id, order.producedQuantity);
+      if (reached) {
+        await postCelebration(
+          interaction.client,
+          config.id,
+          buildPartnerObjectiveCelebration(reached.name, reached.target),
+        );
+      }
       await interaction.editReply(
         `✅ Commande **${res.data.reference}** encaissée — ${money(res.data.total)} intégrés au CA de la semaine.`,
       );

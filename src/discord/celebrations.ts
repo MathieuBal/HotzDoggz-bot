@@ -45,6 +45,22 @@ export function buildOrderDeliveredCelebration(
     .setTimestamp(new Date());
 }
 
+/** Embed festif d'objectif partenaire atteint (pur, testable). */
+export function buildPartnerObjectiveCelebration(
+  partnerName: string,
+  target: number,
+): EmbedBuilder {
+  return new EmbedBuilder()
+    .setTitle('🎯 Objectif partenaire atteint ! 🎉')
+    .setColor(0x2ecc71)
+    .setDescription(
+      `L’objectif hebdomadaire de **${partnerName}** (${nf.format(target)} u) est **atteint**. ` +
+        'Beau boulot l’équipe — le contrat est honoré ! 🤝',
+    )
+    .setFooter({ text: 'Un partenaire satisfait, c’est du business qui dure.' })
+    .setTimestamp(new Date());
+}
+
 /**
  * Publie une celebration dans le salon employe (croissance), avec repli sur le
  * tableau hebdo. Silencieux si aucun salon employe n'est configure.

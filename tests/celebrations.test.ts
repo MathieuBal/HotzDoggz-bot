@@ -1,8 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildOrderDeliveredCelebration,
+  buildPartnerObjectiveCelebration,
   formatContributors,
 } from '../src/discord/celebrations.js';
+import { justReached } from '../src/modules/partners/partnerService.js';
+
+describe('justReached (franchissement d’objectif)', () => {
+  it('vrai uniquement quand l’ajout fait passer la cible', () => {
+    expect(justReached(80, 30, 100)).toBe(true); // 80 -> 110, franchit 100
+    expect(justReached(100, 10, 100)).toBe(false); // deja atteint avant
+    expect(justReached(50, 20, 100)).toBe(false); // pas encore atteint
+  });
+  it('faux si pas d’objectif', () => {
+    expect(justReached(0, 999, null)).toBe(false);
+  });
+});
+
+describe('buildPartnerObjectiveCelebration', () => {
+  it('mentionne le partenaire et la cible', () => {
+    const e = buildPartnerObjectiveCelebration('Bahama Mamas', 500).toJSON();
+    expect(e.title).toContain('Objectif');
+    expect(e.description).toContain('Bahama Mamas');
+    expect(e.description).toContain('500');
+  });
+});
 
 describe('formatContributors', () => {
   it('trie par volume décroissant avec médailles', () => {

@@ -102,6 +102,45 @@ export interface PartnerProgress {
   reached: boolean;
 }
 
+/** Vrai si l'ajout de `added` fait passer le cumul de sous la cible a cible atteinte. */
+export function justReached(
+  deliveredBefore: number,
+  added: number,
+  target: number | null,
+): boolean {
+  if (target === null) return false;
+  return deliveredBefore < target && deliveredBefore + added >= target;
+}
+
+/**
+ * Apres paiement d'une commande, indique si SON partenaire vient (a cet instant)
+ * d'atteindre son objectif hebdomadaire. `addedQuantity` = production de la
+ * commande qui vient d'etre comptee. Retourne le partenaire si franchissement,
+ * sinon null (objectif deja atteint avant, non atteint, ou pas de partenaire).
+ */
+export async function partnerObjectiveJustReached(
+  orderId: string,
+  addedQuantity: number,
+): Promise<{ name: string; target: number } | null> {
+  const order = await prisma.clientOrder.findUnique({
+    where: { id: orderId },
+    select: {
+      partnerId: true,
+      weekId: true,
+      partner: { select: { name: true, objectiveTarget: true } },
+    },
+  });
+  if (!order?.partnerId || !order.weekId || !order.partner?.objectiveTarget) return null;
+
+  const target = order.partner.objectiveTarget;
+  const deliveredAfter =
+    (await deliveredByPartnerInWeek(order.weekId, [order.partnerId])).get(order.partnerId) ?? 0;
+  const deliveredBefore = deliveredAfter - addedQuantity;
+  return justReached(deliveredBefore, addedQuantity, target)
+    ? { name: order.partner.name, target }
+    : null;
+}
+
 /**
  * Donnees du tableau d'objectifs : progression HEBDOMADAIRE de chaque partenaire
  * actif (contrat recurrent qui se reinitialise chaque semaine). Si aucune semaine
