@@ -46,10 +46,10 @@ export function buildEmployeeBoard(report: WeekReport, startAt: Date, endAt: Dat
     : '—';
 
   return new EmbedBuilder()
-    .setTitle('Tableau hebdomadaire — Employes')
+    .setTitle('Tableau hebdomadaire — Employés')
     .setDescription(`${dateRange(startAt, endAt)}\n\n${lines}`)
     .setColor(EMBED_COLORS.production)
-    .addFields({ name: 'Meilleur employe (provisoire)', value: best })
+    .addFields({ name: 'Meilleur employé (provisoire)', value: best })
     .setFooter({ text: 'Provisoire — definitif a la cloture' })
     .setTimestamp(new Date());
 }
@@ -67,9 +67,9 @@ export function buildAccountingBoard(
     .setColor(EMBED_COLORS.direction)
     .addFields(
       { name: "Chiffre d'affaires", value: money(report.totalRevenue), inline: true },
-      { name: 'Salaires valides', value: money(report.totalSalaries), inline: true },
-      { name: `Reserve (${report.rates.reservePercent} %)`, value: money(report.reserve), inline: true },
-      { name: 'Benefice distribuable', value: money(report.distributable), inline: true },
+      { name: 'Salaires validés', value: money(report.totalSalaries), inline: true },
+      { name: `Réserve (${report.rates.reservePercent} %)`, value: money(report.reserve), inline: true },
+      { name: 'Bénéfice distribuable', value: money(report.distributable), inline: true },
       { name: `Prime (${report.rates.bonusPercent} %)`, value: money(report.bonus), inline: true },
       { name: `Directeur (${report.rates.directorPercent} %)`, value: money(report.directorShare), inline: true },
       { name: `Co-directeur (${report.rates.coDirectorPercent} %)`, value: money(report.coDirectorShare), inline: true },
@@ -116,7 +116,7 @@ export function buildPersonalBoard(
     .setDescription(dateRange(startAt, endAt))
     .setColor(view.isLeader ? EMBED_COLORS.prime : EMBED_COLORS.production)
     .addFields(
-      { name: 'Production validee', value: prod, inline: true },
+      { name: 'Production validée', value: prod, inline: true },
       { name: 'Salaire provisoire', value: money(view.salary), inline: true },
       { name: 'Rang (course a la prime)', value: rank, inline: true },
       { name: 'Meilleur (effort ajuste)', value: best, inline: true },
@@ -335,15 +335,15 @@ export function buildClosureSummary(summary: ClosureSummary, weekLabel: string):
       : summary.bestEmployeeName
     : '—';
   return new EmbedBuilder()
-    .setTitle(`Cloture de la semaine du ${weekLabel}${summary.forced ? ' (forcee)' : ''}`)
+    .setTitle(`Clôture de la semaine du ${weekLabel}${summary.forced ? ' (forcée)' : ''}`)
     .setColor(summary.forced ? EMBED_COLORS.alerte : EMBED_COLORS.direction)
     .addFields(
       { name: "Chiffre d'affaires", value: money(summary.totalRevenue), inline: true },
       { name: 'Salaires', value: money(summary.totalSalaries), inline: true },
-      { name: `Reserve (${summary.rates.reservePercent} %)`, value: money(summary.reserve), inline: true },
-      { name: 'Benefice distribuable', value: money(summary.distributable), inline: true },
+      { name: `Réserve (${summary.rates.reservePercent} %)`, value: money(summary.reserve), inline: true },
+      { name: 'Bénéfice distribuable', value: money(summary.distributable), inline: true },
       { name: `Prime (${summary.rates.bonusPercent} %)`, value: money(summary.bonus), inline: true },
-      { name: 'Meilleur employe', value: best, inline: true },
+      { name: 'Meilleur employé', value: best, inline: true },
       { name: `Directeur (${summary.rates.directorPercent} %)`, value: money(summary.directorShare), inline: true },
       { name: `Co-directeur (${summary.rates.coDirectorPercent} %)`, value: money(summary.coDirectorShare), inline: true },
       { name: 'Fiches de paie', value: String(summary.payrollCount), inline: true },
