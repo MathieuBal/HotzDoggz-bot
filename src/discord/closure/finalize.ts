@@ -1,9 +1,10 @@
-import type { Client, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, type Client } from 'discord.js';
 import type { ClosureSummary } from '../../modules/accounting/closureService.js';
 import { prisma } from '../../infrastructure/database/client.js';
 import { logger } from '../../infrastructure/logging/logger.js';
 import { openWeek } from '../../modules/accounting/accountingService.js';
 import { buildWeekCelebration } from '../../modules/dashboards/embeds.js';
+import { formatLeaderboard, getTopSellers } from '../../modules/accounting/leaderboardService.js';
 import { postClosureReport } from '../../modules/dashboards/dashboardService.js';
 import { updateDashboardsNow } from '../../modules/dashboards/scheduler.js';
 import { sendPayslips } from '../../modules/notifications/proactive.js';
@@ -60,6 +61,18 @@ export async function finalizeClosure(
   // Celebration cote employes.
   if (config) {
     await postCelebration(client, config, buildWeekCelebration(summary, label));
+
+    // Podium « vendeurs de la semaine » : reconnaissance hebdo automatique.
+    const podium = await getTopSellers(guildConfigId, 3, summary.weekId);
+    if (podium.length > 0) {
+      const embed = new EmbedBuilder()
+        .setTitle(`🏆 Vendeurs de la semaine du ${label}`)
+        .setColor(0xf1c40f)
+        .setDescription(formatLeaderboard(podium))
+        .setFooter({ text: 'Bravo à eux ! Nouvelle semaine, à toi de jouer. 🌭' })
+        .setTimestamp(new Date());
+      await postCelebration(client, config, embed);
+    }
   }
 
   return label;
