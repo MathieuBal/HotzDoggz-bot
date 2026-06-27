@@ -8,6 +8,32 @@ import {
   distributeWeek,
 } from '../src/modules/accounting/finance.js';
 
+describe('distributeWeek — taux d’affichage (rates)', () => {
+  it('expose les taux utilisés, coDir = reste du distribuable', () => {
+    const d = distributeWeek(100_000, 40_000, {
+      reservePercent: 5,
+      bonusPercent: 35,
+      directorPercent: 40,
+    });
+    expect(d.rates).toEqual({
+      reservePercent: 5,
+      bonusPercent: 35,
+      directorPercent: 40,
+      coDirectorPercent: 25, // 100 - 35 - 40
+    });
+  });
+
+  it('reflète des taux personnalisés (l’affichage ne ment pas)', () => {
+    const d = distributeWeek(100_000, 10_000, {
+      reservePercent: 10,
+      bonusPercent: 50,
+      directorPercent: 30,
+    });
+    expect(d.rates.reservePercent).toBe(10);
+    expect(d.rates.coDirectorPercent).toBe(20); // 100 - 50 - 30
+  });
+});
+
 describe('computeRevenueAdjustment (journal signe)', () => {
   it('est positif quand la quantite validee augmente', () => {
     expect(computeRevenueAdjustment(10, 14, 210)).toBe(4 * 210);
