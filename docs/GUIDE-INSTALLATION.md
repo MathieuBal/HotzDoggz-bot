@@ -363,22 +363,35 @@ curl -fsSL https://get.docker.com | sh
 ### 10.2 Déployer
 
 ```bash
-# 1) Récupérer le code
+# 1) Récupérer le code (branche main)
 git clone <url-de-ton-repo> hotzdogz-bot
 cd hotzdogz-bot
-git checkout claude/relaxed-lovelace-t14z5i
 
 # 2) Renseigner les secrets (Docker Compose lit ce fichier .env tout seul)
 cp .env.example .env
-nano .env        # remplis DISCORD_TOKEN, DISCORD_CLIENT_ID, DISCORD_GUILD_ID
+nano .env        # remplis les variables ci-dessous
+```
 
+Variables **obligatoires** dans `.env` :
+
+```ini
+DISCORD_TOKEN=...       # token du bot (Developer Portal)
+DISCORD_CLIENT_ID=...   # Application ID
+DISCORD_GUILD_ID=...    # ID de ton serveur
+POSTGRES_PASSWORD=...   # mot de passe FORT — ex: openssl rand -base64 24
+```
+
+> ⚠️ `POSTGRES_PASSWORD` est **obligatoire** : Docker Compose refuse de démarrer
+> s'il est vide (sécurité — plus de mot de passe par défaut).
+
+```bash
 # 3) Construire et lancer en arrière-plan
 docker compose up -d --build
 ```
 
 C'est tout. Le conteneur applique les **migrations** puis démarre le bot, qui
-**enregistre ses commandes** sur ton serveur. `DATABASE_URL` est géré
-automatiquement par Compose (inutile d'y toucher dans `.env`).
+**enregistre ses commandes** sur ton serveur. `DATABASE_URL` est construite
+automatiquement par Compose à partir de `POSTGRES_PASSWORD` (inutile d'y toucher).
 
 > ℹ️ Le bot redémarre tout seul si le VPS reboote (`restart: unless-stopped`).
 
