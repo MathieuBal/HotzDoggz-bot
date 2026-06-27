@@ -9,10 +9,13 @@ import {
 } from 'discord.js';
 import { getOpenWeek } from '../../modules/accounting/accountingService.js';
 import {
+  buildBadgeCelebration,
   buildOrderDeliveredCelebration,
   buildPartnerObjectiveCelebration,
   postCelebration,
 } from '../celebrations.js';
+import { checkAndAwardContributionBadges } from '../../modules/badges/badgeService.js';
+import { sendEmployeeDM } from '../notify.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import {
   getEmployeeByDiscordId,
@@ -340,6 +343,20 @@ export const commandeCommand: SlashCommand = {
         `✅ ${nf.format(quantity)} u de **${employee.nomRP}** enregistrées sur **${order.reference}** — production ${nf.format(produced)}/${nf.format(order.targetQuantity)}.${warn}`,
       );
       scheduleDashboardUpdate(interaction.client, config.id);
+      // Badges de contribution : le cumul de contributions peut franchir un palier.
+      const freshBadges = await checkAndAwardContributionBadges(config.id, employee.id);
+      if (freshBadges.length > 0) {
+        await postCelebration(
+          interaction.client,
+          config.id,
+          buildBadgeCelebration(employee.nomRP, freshBadges),
+        );
+        await sendEmployeeDM(
+          interaction.client,
+          interaction.user.id,
+          `🏅 Bravo ${employee.nomRP} ! Tu débloques : ${freshBadges.map((b) => `${b.emoji} ${b.label}`).join(', ')}.`,
+        );
+      }
       return;
     }
 

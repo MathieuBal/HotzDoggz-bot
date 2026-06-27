@@ -25,12 +25,12 @@ export async function getReviewStats(guildConfigId: string): Promise<ReviewStats
 export async function matchEmployeeByName(
   guildConfigId: string,
   name: string,
-): Promise<{ id: string; nomRP: string } | null> {
+): Promise<{ id: string; nomRP: string; discordUserId: string } | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;
   const emp = await prisma.employee.findFirst({
     where: { guildConfigId, status: 'ACTIVE', nomRP: { equals: trimmed, mode: 'insensitive' } },
-    select: { id: true, nomRP: true },
+    select: { id: true, nomRP: true, discordUserId: true },
   });
   return emp;
 }

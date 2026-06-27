@@ -1,6 +1,11 @@
-import { SaleStatus } from '@prisma/client';
+import { OrderContributionStatus, SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
-import { badgeByKey, unitBadgesReached, type BadgeDef } from './registry.js';
+import {
+  badgeByKey,
+  contributionBadgesReached,
+  unitBadgesReached,
+  type BadgeDef,
+} from './registry.js';
 
 /**
  * Attribution et lecture des badges. L'attribution est idempotente (contrainte
@@ -20,23 +25,21 @@ async function cumulativeUnits(employeeId: string): Promise<number> {
 }
 
 /**
- * Verifie les paliers de production de l'employe et attribue les badges encore
- * manquants. Retourne uniquement les badges NOUVELLEMENT debloques (pour annonce).
+ * Attribue les badges `defs` encore manquants a l'employe. Idempotent (contrainte
+ * unique + skipDuplicates). Retourne uniquement les badges NOUVELLEMENT debloques.
  */
-export async function checkAndAwardBadges(
+async function awardBadges(
   guildConfigId: string,
   employeeId: string,
+  defs: readonly BadgeDef[],
 ): Promise<BadgeDef[]> {
-  const units = await cumulativeUnits(employeeId);
-  const reached = unitBadgesReached(units);
-  if (reached.length === 0) return [];
-
+  if (defs.length === 0) return [];
   const existing = await prisma.employeeBadge.findMany({
     where: { employeeId },
     select: { badgeKey: true },
   });
   const have = new Set(existing.map((e) => e.badgeKey));
-  const fresh = reached.filter((b) => !have.has(b.key));
+  const fresh = defs.filter((b) => !have.has(b.key));
   if (fresh.length === 0) return [];
 
   await prisma.employeeBadge.createMany({
@@ -44,6 +47,36 @@ export async function checkAndAwardBadges(
     skipDuplicates: true,
   });
   return fresh;
+}
+
+/** Paliers de PRODUCTION (ventes PNJ) franchis -> badges nouvellement debloques. */
+export async function checkAndAwardBadges(
+  guildConfigId: string,
+  employeeId: string,
+): Promise<BadgeDef[]> {
+  const units = await cumulativeUnits(employeeId);
+  return awardBadges(guildConfigId, employeeId, unitBadgesReached(units));
+}
+
+/** Paliers de CONTRIBUTION (commandes clients) franchis -> badges debloques. */
+export async function checkAndAwardContributionBadges(
+  guildConfigId: string,
+  employeeId: string,
+): Promise<BadgeDef[]> {
+  const count = await prisma.orderContribution.count({
+    where: { employeeId, status: OrderContributionStatus.ACTIVE },
+  });
+  return awardBadges(guildConfigId, employeeId, contributionBadgesReached(count));
+}
+
+/** Attribue un badge special (evenementiel) par sa cle, si pas deja obtenu. */
+export async function awardSpecialBadge(
+  guildConfigId: string,
+  employeeId: string,
+  badgeKey: string,
+): Promise<BadgeDef[]> {
+  const def = badgeByKey(badgeKey);
+  return def ? awardBadges(guildConfigId, employeeId, [def]) : [];
 }
 
 /** Badges obtenus par un employe, dans l'ordre d'obtention. */
