@@ -9,6 +9,9 @@ import {
 } from '../../modules/reviews/reviewService.js';
 import { updateReviewBoard } from '../../modules/reviews/reviewBoardService.js';
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
+import { awardSpecialBadge } from '../../modules/badges/badgeService.js';
+import { buildBadgeCelebration, postCelebration } from '../celebrations.js';
+import { sendEmployeeDM } from '../notify.js';
 import { ReviewFieldId, ReviewModalId } from '../components/ids.js';
 
 /** @returns true si l'interaction a ete prise en charge ici. */
@@ -81,6 +84,23 @@ export async function handleReviewModal(interaction: ModalSubmitInteraction): Pr
   }
   // Collant : on repose le bandeau sous la nouvelle carte d'avis.
   await updateReviewBoard(interaction.client, config.id, { sticky: true }).catch(() => undefined);
+
+  // Badge « Service 5 étoiles » : un avis 5★ nominatif récompense l'employé servi.
+  if (rating === 5 && matched) {
+    const fresh = await awardSpecialBadge(config.id, matched.id, 'five_star');
+    if (fresh.length > 0) {
+      await postCelebration(
+        interaction.client,
+        config.id,
+        buildBadgeCelebration(matched.nomRP, fresh),
+      );
+      await sendEmployeeDM(
+        interaction.client,
+        matched.discordUserId,
+        `⭐ Un client t'a mis 5 étoiles ! Tu débloques : ${fresh.map((b) => `${b.emoji} ${b.label}`).join(', ')}.`,
+      );
+    }
+  }
 
   await interaction.editReply('Merci pour ton avis ! 🌭');
   return true;

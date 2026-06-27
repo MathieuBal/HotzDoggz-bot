@@ -8,6 +8,30 @@ import {
   distributeWeek,
 } from '../src/modules/accounting/finance.js';
 
+describe('distributeWeek — solvabilité de la réserve', () => {
+  it('plafonne la réserve à la marge disponible (semaine déficitaire)', () => {
+    // CA 100, salaires 98 -> marge 2 ; reserve cible = 5 -> plafonnee a 2.
+    const d = distributeWeek(100, 98, { reservePercent: 5, bonusPercent: 35, directorPercent: 40 });
+    expect(d.reserve).toBe(2);
+    expect(d.distributable).toBe(0);
+    expect(d.totalRevenue - d.totalSalaries - d.reserve).toBeGreaterThanOrEqual(0);
+  });
+
+  it('réserve = 0 si les salaires dépassent le CA', () => {
+    const d = distributeWeek(100, 120, { reservePercent: 5, bonusPercent: 35, directorPercent: 40 });
+    expect(d.reserve).toBe(0);
+  });
+
+  it('semaine saine : réserve = taux plein', () => {
+    const d = distributeWeek(100_000, 40_000, {
+      reservePercent: 5,
+      bonusPercent: 35,
+      directorPercent: 40,
+    });
+    expect(d.reserve).toBe(5_000); // marge largement suffisante
+  });
+});
+
 describe('distributeWeek — taux d’affichage (rates)', () => {
   it('expose les taux utilisés, coDir = reste du distribuable', () => {
     const d = distributeWeek(100_000, 40_000, {

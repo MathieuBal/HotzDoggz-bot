@@ -13,6 +13,7 @@ const entry = (over: Partial<AuditEntry> = {}): AuditEntry => ({
   entityType: 'Sale',
   entityId: 'sale-1',
   reason: 'RAS',
+  correlationId: 'corr-1',
   ...over,
 });
 

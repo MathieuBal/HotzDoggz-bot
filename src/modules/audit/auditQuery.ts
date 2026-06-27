@@ -19,8 +19,10 @@ const ACTION_LABELS: Record<string, string> = {
   SALE_RISK_FLAGGED: '🚩 Vente signalée (risque)',
   DIRECT_SALE_CREATED: '📥 Vente directe créée',
   DIRECT_SALE_TAKEN_CHARGE: '👁️ Prise en charge (directe)',
+  DIRECT_SALE_COMPLEMENT_REQUESTED: '✏️ Complément demandé (directe)',
   DIRECT_SALE_REFUSED: '❌ Vente directe refusée',
   DIRECT_SALE_VALIDATED: '✅ Vente directe validée',
+  DIRECT_SALE_CORRECTED: '🔧 Vente directe corrigée',
   DIRECT_SALE_CANCELLED_ADMIN: '🗑️ Vente directe annulée',
   PAYROLL_PAID: '💵 Paie réglée',
   SALARY_ADVANCE_PAID: '💸 Acompte versé',
@@ -69,14 +71,26 @@ export interface AuditEntry {
   entityType: string | null;
   entityId: string | null;
   reason: string | null;
+  correlationId: string | null;
 }
 
 export interface AuditFilter {
   authorDiscordId?: string;
   entityType?: string;
   entityId?: string;
+  correlationId?: string;
   limit?: number;
 }
+
+const SELECT = {
+  createdAt: true,
+  action: true,
+  authorDiscordId: true,
+  entityType: true,
+  entityId: true,
+  reason: true,
+  correlationId: true,
+} as const;
 
 const MAX_LIMIT = 25;
 
@@ -91,17 +105,11 @@ export async function queryAudit(
       ...(filter.authorDiscordId ? { authorDiscordId: filter.authorDiscordId } : {}),
       ...(filter.entityType ? { entityType: filter.entityType } : {}),
       ...(filter.entityId ? { entityId: filter.entityId } : {}),
+      ...(filter.correlationId ? { correlationId: filter.correlationId } : {}),
     },
     orderBy: { createdAt: 'desc' },
     take: Math.min(Math.max(1, filter.limit ?? 15), MAX_LIMIT),
-    select: {
-      createdAt: true,
-      action: true,
-      authorDiscordId: true,
-      entityType: true,
-      entityId: true,
-      reason: true,
-    },
+    select: SELECT,
   });
 }
 
@@ -120,7 +128,15 @@ function csvCell(value: string): string {
 
 /** Construit un CSV exhaustif du journal (export direction). */
 export function buildAuditCsv(rows: readonly AuditEntry[]): string {
-  const header = ['date_iso', 'action', 'auteur_discord_id', 'type_entite', 'id_entite', 'motif'];
+  const header = [
+    'date_iso',
+    'action',
+    'auteur_discord_id',
+    'type_entite',
+    'id_entite',
+    'motif',
+    'correlation_id',
+  ];
   const lines = rows.map((r) =>
     [
       r.createdAt.toISOString(),
@@ -129,6 +145,7 @@ export function buildAuditCsv(rows: readonly AuditEntry[]): string {
       r.entityType ?? '',
       r.entityId ?? '',
       r.reason ?? '',
+      r.correlationId ?? '',
     ]
       .map((c) => csvCell(String(c)))
       .join(','),
@@ -145,13 +162,6 @@ export async function queryAuditForExport(
     where: { guildConfigId },
     orderBy: { createdAt: 'desc' },
     take: max,
-    select: {
-      createdAt: true,
-      action: true,
-      authorDiscordId: true,
-      entityType: true,
-      entityId: true,
-      reason: true,
-    },
+    select: SELECT,
   });
 }

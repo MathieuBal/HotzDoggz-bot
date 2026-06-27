@@ -8,6 +8,14 @@ import {
   type ChatInputCommandInteraction,
 } from 'discord.js';
 import { getOpenWeek } from '../../modules/accounting/accountingService.js';
+import {
+  buildBadgeCelebration,
+  buildOrderDeliveredCelebration,
+  buildPartnerObjectiveCelebration,
+  postCelebration,
+} from '../celebrations.js';
+import { checkAndAwardContributionBadges } from '../../modules/badges/badgeService.js';
+import { sendEmployeeDM } from '../notify.js';
 import { scheduleDashboardUpdate } from '../../modules/dashboards/scheduler.js';
 import {
   getEmployeeByDiscordId,
@@ -17,6 +25,7 @@ import {
 import {
   findActivePartnerByName,
   listActivePartners,
+  partnerObjectiveJustReached,
 } from '../../modules/partners/partnerService.js';
 import { mentionDirection, postToLogs } from '../notify.js';
 import { downloadAndStore, isImageAttachment } from '../../modules/sales/attachments.js';
@@ -334,6 +343,20 @@ export const commandeCommand: SlashCommand = {
         `✅ ${nf.format(quantity)} u de **${employee.nomRP}** enregistrées sur **${order.reference}** — production ${nf.format(produced)}/${nf.format(order.targetQuantity)}.${warn}`,
       );
       scheduleDashboardUpdate(interaction.client, config.id);
+      // Badges de contribution : le cumul de contributions peut franchir un palier.
+      const freshBadges = await checkAndAwardContributionBadges(config.id, employee.id);
+      if (freshBadges.length > 0) {
+        await postCelebration(
+          interaction.client,
+          config.id,
+          buildBadgeCelebration(employee.nomRP, freshBadges),
+        );
+        await sendEmployeeDM(
+          interaction.client,
+          interaction.user.id,
+          `🏅 Bravo ${employee.nomRP} ! Tu débloques : ${freshBadges.map((b) => `${b.emoji} ${b.label}`).join(', ')}.`,
+        );
+      }
       return;
     }
 
@@ -345,7 +368,15 @@ export const commandeCommand: SlashCommand = {
         return;
       }
       const res = await deliverOrder(order.id, interaction.user.id);
-      if (res.ok) scheduleDashboardUpdate(interaction.client, config.id);
+      if (res.ok) {
+        scheduleDashboardUpdate(interaction.client, config.id);
+        // Celebration : remercie publiquement les producteurs (boucle de feedback).
+        await postCelebration(
+          interaction.client,
+          config.id,
+          buildOrderDeliveredCelebration(order.reference, order.clientName, order.contributors),
+        );
+      }
       await interaction.editReply(
         res.ok
           ? `📦 Commande **${res.data.reference}** marquée livrée. En attente de paiement.`
@@ -395,6 +426,15 @@ export const commandeCommand: SlashCommand = {
         return;
       }
       scheduleDashboardUpdate(interaction.client, config.id);
+      // Celebration si cette commande payee fait atteindre l'objectif du partenaire.
+      const reached = await partnerObjectiveJustReached(order.id, order.producedQuantity);
+      if (reached) {
+        await postCelebration(
+          interaction.client,
+          config.id,
+          buildPartnerObjectiveCelebration(reached.name, reached.target),
+        );
+      }
       await interaction.editReply(
         `✅ Commande **${res.data.reference}** encaissée — ${money(res.data.total)} intégrés au CA de la semaine.`,
       );

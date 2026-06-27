@@ -2,6 +2,8 @@ import { Collection } from 'discord.js';
 import { GARAGE_STOCK_ENABLED } from '../../config/constants.js';
 import { accesCommand } from './acces.js';
 import { avanceCommand } from './avance.js';
+import { badgesCommand } from './badges.js';
+import { classementCommand } from './classement.js';
 import { commandeCommand } from './commande.js';
 import { configCommand } from './config.js';
 import { diagnosticCommand } from './diagnostic.js';
@@ -30,6 +32,8 @@ import type { SlashCommand } from './types.js';
 const all: SlashCommand[] = [
   accesCommand,
   avanceCommand,
+  badgesCommand,
+  classementCommand,
   commandeCommand,
   configCommand,
   diagnosticCommand,

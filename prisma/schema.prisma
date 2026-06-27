@@ -211,6 +211,7 @@ model GuildConfig {
   events       Event[]
   vehicles     Vehicle[]
   hotdogBatches HotdogBatch[]
+  employeeBadges EmployeeBadge[]
 }
 
 /// Partenaire B2B (autre org/business). Porte un objectif unique cumulatif de
@@ -397,6 +398,7 @@ model Employee {
   orderSignups       OrderSignup[]
   eventSignups       EventSignup[]
   ownedVehicles      Vehicle[]     @relation("OwnedVehicles")
+  badges             EmployeeBadge[]
 
   // Recherche d'employes d'un serveur par statut (match par nom RP, embauches
   // de la semaine). Volume faible, mais cadre les lectures par serveur.
@@ -872,4 +874,20 @@ model AuditLog {
   // au plus ancien, et filtrage par auteur.
   @@index([guildConfigId, createdAt])
   @@index([guildConfigId, authorDiscordId, createdAt])
+}
+
+/// Badge / accomplissement gagne par un employe (gamification). Les definitions
+/// (cle -> libelle, seuil) vivent dans le code (badges registry) ; cette table
+/// ne stocke que les badges effectivement obtenus, une fois chacun.
+model EmployeeBadge {
+  id            String      @id @default(cuid())
+  guildConfig   GuildConfig @relation(fields: [guildConfigId], references: [id], onDelete: Cascade)
+  guildConfigId String
+  employee      Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId    String
+  badgeKey      String // cle de la definition (cf. src/modules/badges/registry)
+  awardedAt     DateTime    @default(now())
+
+  @@unique([employeeId, badgeKey]) // un badge gagne une seule fois
+  @@index([guildConfigId, employeeId])
 }

@@ -1,5 +1,7 @@
 import { SaleStatus } from '@prisma/client';
 import { prisma } from '../../infrastructure/database/client.js';
+import { listEmployeeBadges } from '../badges/badgeService.js';
+import { formatBadge } from '../badges/registry.js';
 
 /**
  * Fiche employe 360 : agrege l'activite d'un employe (ventes, CA, salaires
@@ -20,6 +22,7 @@ export interface EmployeeProfile {
   paidTotal: number; // salaires cumules reellement verses
   promotions: number;
   lastPromotion: string | null;
+  badges: string[]; // badges debloques, deja formates (emoji + libelle)
 }
 
 // Statuts d'une vente "comptee" (validee et au-dela).
@@ -61,6 +64,8 @@ export async function getEmployeeProfile(
     pnjRevenue += q * (s.pnjUnitPriceSnapshot ?? 0);
   }
 
+  const badges = (await listEmployeeBadges(employee.id)).map(formatBadge);
+
   return {
     nomRP: employee.nomRP,
     gradeLabel: employee.lastGradeLabel,
@@ -74,5 +79,6 @@ export async function getEmployeeProfile(
     paidTotal: paid._sum.totalAmount ?? 0,
     promotions,
     lastPromotion: lastPromo?.toLabel ?? null,
+    badges,
   };
 }

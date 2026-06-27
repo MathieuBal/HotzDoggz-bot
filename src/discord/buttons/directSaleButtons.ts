@@ -4,7 +4,12 @@ import { takeChargeDirectSale } from '../../modules/directSales/directSaleServic
 import { getGuildConfigByGuildId } from '../../modules/employees/employeeService.js';
 import { DirectSaleButtonId } from '../components/ids.js';
 import { refreshDirectFiche } from '../directSales/fiche.js';
-import { buildDirectRefuseModal, buildDirectValidateModal } from '../modals/directSaleModals.js';
+import {
+  buildDirectComplementModal,
+  buildDirectCorrectModal,
+  buildDirectRefuseModal,
+  buildDirectValidateModal,
+} from '../modals/directSaleModals.js';
 import { isDirectionMember } from '../permissions.js';
 
 const KNOWN = new Set<string>(Object.values(DirectSaleButtonId));
@@ -43,6 +48,12 @@ export async function handleDirectSaleButton(interaction: ButtonInteraction): Pr
       return true;
     case DirectSaleButtonId.REFUSE:
       await interaction.showModal(buildDirectRefuseModal(sale.reference));
+      return true;
+    case DirectSaleButtonId.COMPLEMENT:
+      await interaction.showModal(buildDirectComplementModal(sale.reference));
+      return true;
+    case DirectSaleButtonId.CORRECT:
+      await interaction.showModal(buildDirectCorrectModal(sale.reference, sale.lines));
       return true;
     case DirectSaleButtonId.TAKE: {
       await interaction.deferReply({ flags: ephemeral });

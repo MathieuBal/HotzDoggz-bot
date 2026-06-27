@@ -17,6 +17,10 @@ import {
 import { SaleFieldId, SaleModalId } from '../components/ids.js';
 import { isDirectionMember } from '../permissions.js';
 import { applyCasierEffects, archiveFiche, refreshFiche } from '../verification/ficheHelpers.js';
+import { sendEmployeeDM } from '../notify.js';
+import { buildBadgeCelebration, postCelebration } from '../celebrations.js';
+import { checkAndAwardBadges, awardSpecialBadge } from '../../modules/badges/badgeService.js';
+import { BIG_SALE_THRESHOLD } from '../../modules/badges/registry.js';
 
 const KNOWN = new Set<string>(Object.values(SaleModalId));
 
@@ -41,7 +45,7 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
 
   const sale = await prisma.sale.findUnique({
     where: { controlThreadId: interaction.channelId },
-    include: { employee: { select: { discordUserId: true } } },
+    include: { employee: { select: { discordUserId: true, nomRP: true } } },
   });
   if (!sale) {
     await interaction.reply({ content: 'Fiche de controle non reconnue.', flags: ephemeral });
@@ -112,6 +116,20 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
       // Vente close : on range la fiche hors du forum actif (reversible).
       await archiveFiche(thread, sale.id);
       scheduleDashboardUpdate(client, config.id);
+      // Badges : la production/CA cumule peut franchir un palier -> annonce + DM.
+      const fresh = await checkAndAwardBadges(config.id, sale.employeeId);
+      // Badge « grosse prise » : une seule vente massive.
+      if (res.data.validatedQuantity >= BIG_SALE_THRESHOLD) {
+        fresh.push(...(await awardSpecialBadge(config.id, sale.employeeId, 'big_sale')));
+      }
+      if (fresh.length > 0) {
+        await postCelebration(client, config.id, buildBadgeCelebration(sale.employee.nomRP, fresh));
+        await sendEmployeeDM(
+          client,
+          sale.employee.discordUserId,
+          `🏅 Bravo ${sale.employee.nomRP} ! Tu débloques : ${fresh.map((b) => `${b.emoji} ${b.label}`).join(', ')}.`,
+        );
+      }
       await interaction.editReply(
         `Vente ${res.data.reference} validee (salaire ${res.data.salaryAmount} $).`,
       );
@@ -136,6 +154,11 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.REFUSEE,
         message: `❌ Vente **${res.data.reference}** refusee.\nMotif : ${reason}`,
       });
+      await sendEmployeeDM(
+        client,
+        res.data.employeeDiscordId,
+        `❌ Ta vente **${res.data.reference}** a été refusée par la direction.\nMotif : ${reason}\nTu peux la corriger et la resoumettre depuis ton casier.`,
+      );
       await interaction.editReply(`Vente ${res.data.reference} refusee.`);
       return true;
     }
@@ -158,6 +181,11 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
         status: SaleStatus.INCOMPLETE,
         message: `⚠️ Complement demande — statut : A completer.\n${reason}`,
       });
+      await sendEmployeeDM(
+        client,
+        res.data.employeeDiscordId,
+        `⚠️ La direction demande un complément sur ta vente **${res.data.reference}**.\n${reason}\nComplète depuis ton casier : elle repassera en vérification.`,
+      );
       await interaction.editReply(`Complement demande pour ${res.data.reference}.`);
       return true;
     }

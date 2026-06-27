@@ -1,4 +1,4 @@
-import { type BaseMessageOptions, ChannelType, type Guild } from 'discord.js';
+import { type BaseMessageOptions, ChannelType, type Client, type Guild } from 'discord.js';
 import { logger } from '../infrastructure/logging/logger.js';
 
 /** Sous-ensemble de GuildConfig utile aux notifications. */
@@ -33,5 +33,22 @@ export async function postToLogs(
     }
   } catch (err) {
     logger.warn({ err, channelId: config.channelLogs }, 'Echec de publication dans les logs');
+  }
+}
+
+/**
+ * Envoie un message prive a un employe (best-effort). Silencieux si l'employe a
+ * ferme ses DM : une notification ratee ne casse jamais le flux metier.
+ */
+export async function sendEmployeeDM(
+  client: Client,
+  discordUserId: string,
+  content: string,
+): Promise<void> {
+  try {
+    const user = await client.users.fetch(discordUserId);
+    await user.send(content);
+  } catch (err) {
+    logger.info({ err, discordUserId }, 'DM employe non remis (DM fermes ?)');
   }
 }
