@@ -47,17 +47,25 @@ export async function syncPrestigeRole(
   try {
     const guild = member.guild;
     const targetName = roleName(top);
+    const idx = UNIT_BADGES.findIndex((b) => b.key === top.key);
+    const wantColor = TIER_COLORS[idx] ?? 0x95a5a6;
+
     let targetRole = guild.roles.cache.find((r) => r.name === targetName);
     if (!targetRole) {
-      const idx = UNIT_BADGES.findIndex((b) => b.key === top.key);
       targetRole = await guild.roles.create({
         name: targetName,
         // Nouvelle API discord.js : `colors` remplace `color` (deprecie).
-        colors: { primaryColor: TIER_COLORS[idx] ?? 0x95a5a6 },
+        colors: { primaryColor: wantColor },
         hoist: false, // pas de groupe separe dans la sidebar (anti-clutter)
         mentionable: false,
         reason: 'Rôle de prestige HotzDoggz (badge de production)',
       });
+    } else if ((targetRole.colors?.primaryColor ?? targetRole.color) !== wantColor) {
+      // Le bot gere la palette : on corrige la couleur si elle a derive (ex. role
+      // cree avant cette palette). N'edite que si differente (zero appel inutile).
+      await targetRole
+        .edit({ colors: { primaryColor: wantColor } })
+        .catch(() => undefined);
     }
 
     // Retire les autres roles de prestige (paliers inferieurs deja attribues).
