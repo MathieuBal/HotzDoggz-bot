@@ -75,8 +75,20 @@ export function buildAccountingBoard(
       { name: `Co-directeur (${report.rates.coDirectorPercent} %)`, value: money(report.coDirectorShare), inline: true },
       { name: 'Dossiers en attente', value: String(pendingCount), inline: true },
     )
+    .addFields({ name: 'Salaires par employé', value: salaryBreakdown(report) })
     .setFooter({ text: 'Provisoire — paies finalisees a la cloture (Phase 5)' })
     .setTimestamp(new Date());
+}
+
+/** Detail des salaires par employe (deplace ici depuis l'ancien tableau hebdo). */
+function salaryBreakdown(report: WeekReport): string {
+  if (report.employees.length === 0) return '_Aucune vente validée cette semaine._';
+  const lines = report.employees.map((e) => {
+    const brace = e.multiplier > 1 ? ` ×${e.multiplier}` : '';
+    return `• **${e.nomRP}** — ${qty(e.quantity)} u${brace} — ${money(e.salary)} (${e.gradeLabel ?? '—'})`;
+  });
+  const text = lines.join('\n');
+  return text.length <= 1024 ? text : `${text.slice(0, 1000)}\n… (liste tronquée)`;
 }
 
 /** Message motivant selon la position de l'employe vis-a-vis du meilleur. */
@@ -174,21 +186,11 @@ export function buildCompanyBoard(data: CompanyBoardData): EmbedBuilder {
     embed.addFields({ name: 'Du nouveau cette semaine', value: news.join('\n') });
   }
 
-  if (data.topSellers.length > 0) {
-    const top = data.topSellers
-      .map((e, i) => {
-        const medal = MEDALS[i] ?? `**${i + 1}.**`;
-        // Classement par effort ajuste ; on montre le bracelet pour la transparence.
-        return e.multiplier > 1
-          ? `${medal} **${e.nomRP}** — ${qty(Math.round(e.adjustedQuantity))} pts _(${qty(e.quantity)} u ×${e.multiplier})_`
-          : `${medal} **${e.nomRP}** — ${qty(e.quantity)} u`;
-      })
-      .join('\n');
-    embed.addFields({ name: '🏆 Top (effort ajusté)', value: top });
-  }
+  // NB : le classement détaillé (avec parts de prime) vit dans le tableau
+  // « Prime de la semaine » — on ne le duplique plus ici (cf. mutualisation).
 
   return embed
-    .setFooter({ text: 'Mis a jour en direct — comparaison avec la semaine precedente' })
+    .setFooter({ text: 'Mis a jour en direct — classement détaillé dans le salon prime' })
     .setTimestamp(new Date());
 }
 

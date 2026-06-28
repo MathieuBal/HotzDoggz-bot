@@ -15,13 +15,7 @@ import type { SlashCommand } from './types.js';
 export const classementCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('classement')
-    .setDescription('Classement des meilleurs vendeurs (ventes PNJ)')
-    .addSubcommand((s) =>
-      s.setName('global').setDescription('Classement all-time (depuis toujours)'),
-    )
-    .addSubcommand((s) =>
-      s.setName('semaine').setDescription('Classement de la semaine en cours'),
-    )
+    .setDescription('Classement des vendeurs de la semaine en cours')
     .toJSON(),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -36,27 +30,19 @@ export const classementCommand: SlashCommand = {
     }
 
     await interaction.deferReply();
-    const weekly = interaction.options.getSubcommand() === 'semaine';
-
-    let weekId: string | undefined;
-    if (weekly) {
-      const week = await getOpenWeek(config.id);
-      if (!week) {
-        await interaction.editReply('Aucune semaine ouverte pour le moment.');
-        return;
-      }
-      weekId = week.id;
+    const week = await getOpenWeek(config.id);
+    if (!week) {
+      await interaction.editReply('Aucune semaine ouverte pour le moment.');
+      return;
     }
 
-    const top = await getTopSellers(config.id, 10, weekId);
+    const top = await getTopSellers(config.id, 10, week.id);
     const embed = new EmbedBuilder()
-      .setTitle(weekly ? '🏆 Classement de la semaine' : '🏆 Classement all-time — HotzDoggz')
+      .setTitle('🏆 Classement de la semaine')
       .setColor(0xf1c40f)
       .setDescription(formatLeaderboard(top))
       .setFooter({
-        text: weekly
-          ? 'Ventes PNJ validées cette semaine. Nouvelle semaine, nouvelle chance ! 🌭'
-          : 'Ventes PNJ validées depuis toujours. À toi de grimper ! 🌭',
+        text: 'Ventes PNJ validées cette semaine. Le classement all-time est dans le salon palmarès. 🌭',
       })
       .setTimestamp(new Date());
     await interaction.editReply({ embeds: [embed] });

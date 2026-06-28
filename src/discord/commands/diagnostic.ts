@@ -197,7 +197,6 @@ export const diagnosticCommand: SlashCommand = {
 
     // Messages permanents
     const messages: Line[] = await Promise.all([
-      messageLine(guild, 'Tableau employes', config.channelWeeklyBoard, config.msgWeeklyEmployees),
       messageLine(guild, 'Tableau comptable', config.channelAccounting, config.msgAccounting),
       messageLine(guild, 'Tableau paies', config.channelPayroll, config.msgPayroll),
       messageLine(guild, 'Grille salariale', config.channelWeeklyBoard, config.msgSalaryGrid),
