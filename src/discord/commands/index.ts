@@ -17,6 +17,7 @@ import { journalCommand } from './journal.js';
 import { macomptaCommand } from './macompta.js';
 import { menuCommand } from './menu.js';
 import { paieCommand } from './paie.js';
+import { palmaresCommand } from './palmares.js';
 import { panelCommand } from './panel.js';
 import { partenaireCommand } from './partenaire.js';
 import { profilCommand } from './profil.js';
@@ -47,6 +48,7 @@ const all: SlashCommand[] = [
   macomptaCommand,
   menuCommand,
   paieCommand,
+  palmaresCommand,
   panelCommand,
   partenaireCommand,
   profilCommand,
