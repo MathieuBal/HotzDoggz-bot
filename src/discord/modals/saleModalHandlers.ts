@@ -19,8 +19,13 @@ import { isDirectionMember } from '../permissions.js';
 import { applyCasierEffects, archiveFiche, refreshFiche } from '../verification/ficheHelpers.js';
 import { sendEmployeeDM } from '../notify.js';
 import { buildBadgeCelebration, postCelebration } from '../celebrations.js';
-import { checkAndAwardBadges, awardSpecialBadge } from '../../modules/badges/badgeService.js';
+import {
+  checkAndAwardBadges,
+  awardSpecialBadge,
+  listEmployeeBadges,
+} from '../../modules/badges/badgeService.js';
 import { BIG_SALE_THRESHOLD } from '../../modules/badges/registry.js';
+import { isProductionBadgeKey, syncPrestigeRole } from '../prestige.js';
 
 const KNOWN = new Set<string>(Object.values(SaleModalId));
 
@@ -129,6 +134,17 @@ export async function handleSaleModal(interaction: ModalSubmitInteraction): Prom
           sale.employee.discordUserId,
           `🏅 Bravo ${sale.employee.nomRP} ! Tu débloques : ${fresh.map((b) => `${b.emoji} ${b.label}`).join(', ')}.`,
         );
+        // Rôle de prestige : si un palier de PRODUCTION est tombé, on aligne le
+        // rôle Discord visible de l'employé sur son plus haut palier.
+        if (fresh.some((b) => isProductionBadgeKey(b.key))) {
+          const member = await interaction.guild.members
+            .fetch(sale.employee.discordUserId)
+            .catch(() => null);
+          if (member) {
+            const owned = new Set((await listEmployeeBadges(sale.employeeId)).map((b) => b.key));
+            await syncPrestigeRole(member, owned);
+          }
+        }
       }
       await interaction.editReply(
         `Vente ${res.data.reference} validee (salaire ${res.data.salaryAmount} $).`,
