@@ -52,7 +52,8 @@ export async function syncPrestigeRole(
       const idx = UNIT_BADGES.findIndex((b) => b.key === top.key);
       targetRole = await guild.roles.create({
         name: targetName,
-        color: TIER_COLORS[idx] ?? 0x95a5a6,
+        // Nouvelle API discord.js : `colors` remplace `color` (deprecie).
+        colors: { primaryColor: TIER_COLORS[idx] ?? 0x95a5a6 },
         hoist: false, // pas de groupe separe dans la sidebar (anti-clutter)
         mentionable: false,
         reason: 'Rôle de prestige HotzDoggz (badge de production)',
