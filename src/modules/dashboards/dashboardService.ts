@@ -10,6 +10,7 @@ import { getPartnershipBoardData } from '../partners/partnerService.js';
 import { getCompanyBoardData } from './companyBoard.js';
 import { publishPlanningBoard } from '../../discord/planning/planningBoard.js';
 import { publishPayrollBoard } from '../../discord/payroll/payrollBoard.js';
+import { publishPalmaresBoard } from '../../discord/palmares/palmaresBoard.js';
 import { publishStockBoard } from '../../discord/stock/stockBoard.js';
 import { publishGarageBoard } from '../../discord/garage/garageBoard.js';
 import {
@@ -17,7 +18,6 @@ import {
   buildBonusBoard,
   buildClosureSummary,
   buildCompanyBoard,
-  buildEmployeeBoard,
   buildOrdersBoard,
   buildPartnershipBoard,
   buildSalaryGrid,
@@ -80,9 +80,10 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
 
   const snapshot = await getOpenWeekSnapshot(guildConfigId);
 
-  const employeeEmbed = snapshot
-    ? buildEmployeeBoard(snapshot.report, snapshot.week.startAt, snapshot.week.endAt)
-    : placeholder('Tableau hebdomadaire — Employes');
+  // Le tableau "Hebdo Employes" permanent est mutualise : le detail des salaires
+  // vit desormais dans le tableau comptable (direction), l'activite/classement
+  // cote employes dans Developpement + Prime. (buildEmployeeBoard reste pour
+  // /semaine voir, vue direction a la demande.)
   const accountingEmbed = snapshot
     ? buildAccountingBoard(
         snapshot.report,
@@ -118,8 +119,7 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
     ? buildBonusBoard(snapshot.report, snapshot.week.startAt, snapshot.week.endAt)
     : placeholder('💸 Prime de la semaine — répartition en direct');
 
-  const [emp, acc, grid, company, ord, part, bonus] = await Promise.all([
-    ensureMessage(client, config.channelWeeklyBoard, config.msgWeeklyEmployees, employeeEmbed),
+  const [acc, grid, company, ord, part, bonus] = await Promise.all([
     ensureMessage(client, config.channelAccounting, config.msgAccounting, accountingEmbed),
     ensureMessage(client, config.channelWeeklyBoard, config.msgSalaryGrid, gridEmbed),
     ensureMessage(client, companyChannel, config.msgCompanyBoard, companyEmbed),
@@ -129,7 +129,6 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   ]);
 
   const data: Record<string, string> = {};
-  if (emp.changed && emp.messageId) data.msgWeeklyEmployees = emp.messageId;
   if (acc.changed && acc.messageId) data.msgAccounting = acc.messageId;
   if (grid.changed && grid.messageId) data.msgSalaryGrid = grid.messageId;
   if (company.changed && company.messageId) data.msgCompanyBoard = company.messageId;
@@ -147,6 +146,10 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   // Tableau de paie (liste des nets a verser + menu « marquer payee ») : idem.
   await publishPayrollBoard(client, guildConfigId).catch((err) =>
     logger.warn({ err, guildConfigId }, 'Mise a jour du tableau paie KO'),
+  );
+  // Tableau palmares (classement + prestige) : idem.
+  await publishPalmaresBoard(client, guildConfigId).catch((err) =>
+    logger.warn({ err, guildConfigId }, 'Mise a jour du tableau palmares KO'),
   );
   // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : on ne publie
   // ni le tableau de stock ni le catalogue garage tant qu'il est desactive.

@@ -27,9 +27,14 @@ export function registerEvents(client: Client): void {
   client.on(Events.ShardDisconnect, (event, id) =>
     logger.warn({ shardId: id, code: event.code }, 'Shard deconnecte'),
   );
-  client.on(Events.ShardReconnecting, (id) => logger.warn({ shardId: id }, 'Shard reconnexion...'));
+  // Cycle de reconnexion/reprise normal de la Gateway (Discord recycle les
+  // connexions toutes les quelques heures). Un Resume rejoue les evenements
+  // manques sans perte de donnees : ce n'est PAS une alerte, on logge en debug
+  // pour ne pas noyer les vrais signaux. Une vraie deconnexion (ShardDisconnect)
+  // ou une session invalidee restent bruyantes.
+  client.on(Events.ShardReconnecting, (id) => logger.debug({ shardId: id }, 'Shard reconnexion...'));
   client.on(Events.ShardResume, (id, replayed) =>
-    logger.info({ shardId: id, replayed }, 'Shard repris'),
+    logger.debug({ shardId: id, replayed }, 'Shard repris'),
   );
 
   // Session invalidee par Discord (token revoque, kick, abus de reconnexion) :

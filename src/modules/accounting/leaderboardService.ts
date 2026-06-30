@@ -8,6 +8,7 @@ import { prisma } from '../../infrastructure/database/client.js';
  */
 
 export interface RankEntry {
+  employeeId: string;
   nomRP: string;
   units: number;
   revenue: number;
@@ -55,6 +56,7 @@ export async function getTopSellers(
   }
 
   return grouped.map((g) => ({
+    employeeId: g.employeeId,
     nomRP: nameById.get(g.employeeId) ?? '—',
     units: g._sum.validatedQuantity ?? 0,
     revenue: revenueById.get(g.employeeId) ?? 0,

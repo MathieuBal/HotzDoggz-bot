@@ -19,35 +19,36 @@ export interface BadgeDef {
  */
 export const UNIT_BADGES: readonly BadgeDef[] = [
   { key: 'first_sale', label: 'Première vente', emoji: '🌭', threshold: 1 },
-  { key: 'units_100', label: 'Centurion', emoji: '🥉', threshold: 100 },
-  { key: 'units_500', label: 'Vendeur confirmé', emoji: '🥈', threshold: 500 },
-  { key: 'units_1000', label: 'Maître du grill', emoji: '🥇', threshold: 1_000 },
-  { key: 'units_5000', label: 'Légende HotzDoggz', emoji: '👑', threshold: 5_000 },
-  { key: 'units_10000', label: 'Machine à hot-dogs', emoji: '🔥', threshold: 10_000 },
-  { key: 'units_25000', label: 'Cadence infernale', emoji: '⚡', threshold: 25_000 },
-  { key: 'units_50000', label: 'Idole du grill', emoji: '🌟', threshold: 50_000 },
-  { key: 'units_100000', label: 'G.O.A.T. du hot-dog', emoji: '🐐', threshold: 100_000 },
+  { key: 'units_100', label: 'Première fournée', emoji: '🥉', threshold: 100 },
+  { key: 'units_1k', label: 'Apprenti du grill', emoji: '🥈', threshold: 1_000 },
+  { key: 'units_10k', label: 'Vendeur confirmé', emoji: '🥇', threshold: 10_000 },
+  { key: 'units_50k', label: 'Maître du grill', emoji: '👑', threshold: 50_000 },
+  { key: 'units_100k', label: 'Légende HotzDoggz', emoji: '🔥', threshold: 100_000 },
+  { key: 'units_500k', label: 'Machine à hot-dogs', emoji: '⚡', threshold: 500_000 },
+  { key: 'units_1m', label: 'Idole du grill', emoji: '🌟', threshold: 1_000_000 },
+  { key: 'units_2_5m', label: 'G.O.A.T. du hot-dog', emoji: '🐐', threshold: 2_500_000 },
 ];
 
 /** Paliers de CA cumule genere (ventes PNJ validees), en dollars. */
 export const REVENUE_BADGES: readonly BadgeDef[] = [
-  { key: 'rev_100k', label: 'Caissier', emoji: '💵', threshold: 100_000 },
-  { key: 'rev_500k', label: 'Gros bras du grill', emoji: '💰', threshold: 500_000 },
-  { key: 'rev_1m', label: 'Millionnaire', emoji: '🤑', threshold: 1_000_000 },
-  { key: 'rev_5m', label: 'Magnat du hot-dog', emoji: '🏦', threshold: 5_000_000 },
-  { key: 'rev_10m', label: 'Empire HotzDoggz', emoji: '🏙️', threshold: 10_000_000 },
+  { key: 'rev_1m', label: 'Premiers billets', emoji: '💵', threshold: 1_000_000 },
+  { key: 'rev_10m', label: 'Gros bras du grill', emoji: '💰', threshold: 10_000_000 },
+  { key: 'rev_50m', label: 'Magnat du hot-dog', emoji: '🤑', threshold: 50_000_000 },
+  { key: 'rev_100m', label: 'Nabab du hot-dog', emoji: '🏦', threshold: 100_000_000 },
+  { key: 'rev_500m', label: 'Empire HotzDoggz', emoji: '🏙️', threshold: 500_000_000 },
+  { key: 'rev_1md', label: 'Milliardaire du grill', emoji: '👑', threshold: 1_000_000_000 },
 ];
 
 /** Paliers de contribution aux commandes clients (nombre de contributions). */
 export const CONTRIBUTION_BADGES: readonly BadgeDef[] = [
-  { key: 'contrib_10', label: 'Petite main', emoji: '🤝', threshold: 10 },
-  { key: 'contrib_50', label: 'Pilier de production', emoji: '🛠️', threshold: 50 },
-  { key: 'contrib_100', label: 'Maître d’œuvre', emoji: '🏗️', threshold: 100 },
-  { key: 'contrib_250', label: 'Légende de l’atelier', emoji: '🏛️', threshold: 250 },
+  { key: 'contrib_25', label: 'Petite main', emoji: '🤝', threshold: 25 },
+  { key: 'contrib_100', label: 'Pilier de production', emoji: '🛠️', threshold: 100 },
+  { key: 'contrib_250', label: 'Maître d’œuvre', emoji: '🏗️', threshold: 250 },
+  { key: 'contrib_500', label: 'Légende de l’atelier', emoji: '🏛️', threshold: 500 },
 ];
 
-/** Seuil d'une vente unique pour le badge « grosse prise ». */
-export const BIG_SALE_THRESHOLD = 250;
+/** Seuil d'une vente unique pour le badge « grosse prise » (gros drop). */
+export const BIG_SALE_THRESHOLD = 1_000;
 
 /** Badges speciaux (evenementiels, threshold non significatif pour l'echelle). */
 export const SPECIAL_BADGES: readonly BadgeDef[] = [
