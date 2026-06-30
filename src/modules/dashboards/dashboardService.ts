@@ -11,6 +11,7 @@ import { getCompanyBoardData } from './companyBoard.js';
 import { publishPlanningBoard } from '../../discord/planning/planningBoard.js';
 import { publishPayrollBoard } from '../../discord/payroll/payrollBoard.js';
 import { publishPalmaresBoard } from '../../discord/palmares/palmaresBoard.js';
+import { publishStaffBoard } from '../../discord/staff/staffBoard.js';
 import { publishStockBoard } from '../../discord/stock/stockBoard.js';
 import { publishGarageBoard } from '../../discord/garage/garageBoard.js';
 import {
@@ -150,6 +151,10 @@ export async function updateDashboards(client: Client, guildConfigId: string): P
   // Tableau palmares (classement + prestige) : idem.
   await publishPalmaresBoard(client, guildConfigId).catch((err) =>
     logger.warn({ err, guildConfigId }, 'Mise a jour du tableau palmares KO'),
+  );
+  // Trombinoscope "gestion des employes" (direction) : trombinoscope + anomalies.
+  await publishStaffBoard(client, guildConfigId).catch((err) =>
+    logger.warn({ err, guildConfigId }, 'Mise a jour du trombinoscope gestion KO'),
   );
   // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED) : on ne publie
   // ni le tableau de stock ni le catalogue garage tant qu'il est desactive.

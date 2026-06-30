@@ -139,6 +139,7 @@ model GuildConfig {
   channelStock          String? // salon employe "stock" (saucisses par vehicule + peremption)
   channelGarage         String? // salon "garage" (catalogue des vehicules + attribution)
   channelPalmares       String? // salon "palmarès" (classement + prestige, permanent)
+  channelStaff          String? // salon direction "gestion des employés" (trombinoscope + cartes)
 
   // Vitrines editables (texte du corps ; le titre/style est gere par le bot)
   welcomeBoardText String?
@@ -167,6 +168,7 @@ model GuildConfig {
   msgStockBoard       String? // tableau "stock" (saucisses + lots de hot dogs, permanent)
   msgGarageBoard      String? // catalogue "garage" (vehicules, permanent)
   msgPalmares         String? // tableau "palmarès" (classement + prestige, permanent)
+  msgStaffBoard       String? // trombinoscope "gestion des employés" (direction, permanent)
 
   // Prix de vente PNJ courant (snapshote a la validation de chaque vente)
   pnjUnitPrice Int @default(210)

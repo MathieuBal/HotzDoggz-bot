@@ -22,6 +22,7 @@ import { panelCommand } from './panel.js';
 import { partenaireCommand } from './partenaire.js';
 import { profilCommand } from './profil.js';
 import { semaineCommand } from './semaine.js';
+import { staffCommand } from './staff.js';
 import { stockCommand } from './stock.js';
 import { tableauCommand } from './tableau.js';
 import { tresorerieCommand } from './tresorerie.js';
@@ -53,6 +54,7 @@ const all: SlashCommand[] = [
   partenaireCommand,
   profilCommand,
   semaineCommand,
+  staffCommand,
   tableauCommand,
   tresorerieCommand,
   vendreCommand,

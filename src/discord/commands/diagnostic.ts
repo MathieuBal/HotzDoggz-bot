@@ -164,6 +164,7 @@ export const diagnosticCommand: SlashCommand = {
       channelLine(guild, 'Événement (vitrine)', config.channelEvent, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Prime (employés)', config.channelBonusBoard, [VIEW, SEND, EMBED]),
       channelLine(guild, 'Planning (employés)', config.channelPlanning, [VIEW, SEND, EMBED]),
+      channelLine(guild, 'Gestion employés (direction)', config.channelStaff, [VIEW, SEND, EMBED]),
       // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED).
       ...(GARAGE_STOCK_ENABLED
         ? [
@@ -219,6 +220,7 @@ export const diagnosticCommand: SlashCommand = {
       messageLine(guild, 'Vitrine événement', config.channelEvent, config.msgEventBoard),
       messageLine(guild, 'Tableau prime', config.channelBonusBoard, config.msgBonusBoard),
       messageLine(guild, 'Agenda planning', config.channelPlanning, config.msgPlanningBoard),
+      messageLine(guild, 'Trombinoscope gestion', config.channelStaff, config.msgStaffBoard),
       // Module garage / stock mis de cote (cf. GARAGE_STOCK_ENABLED).
       ...(GARAGE_STOCK_ENABLED
         ? [

@@ -124,6 +124,35 @@ export const PayrollSelectId = {
   PAY: 'payroll:pay',
 } as const;
 
+/**
+ * Salon "Gestion des employes" (direction). Menus et boutons portent l'employeeId
+ * en suffixe (`:<employeeId>`) — un cuid sans `:`, donc parsable par split.
+ */
+export const StaffSelectId = {
+  OPEN: 'staff:open', // trombinoscope -> ouvrir une carte (valeur = employeeId)
+  GRADE_SET: 'staff:gradeset', // choix du grade a appliquer (suffixe :<employeeId>, valeur = roleId|none)
+} as const;
+
+export const StaffButtonId = {
+  RENAME: 'staff:rename', // suffixe :<employeeId>
+  GRADE: 'staff:grade', // suffixe :<employeeId>
+  BRACELET: 'staff:bracelet', // suffixe :<employeeId>
+  ARCHIVE: 'staff:archive', // suffixe :<employeeId>
+  REACTIVATE: 'staff:reactivate', // suffixe :<employeeId>
+  RESYNC: 'staff:resync', // suffixe :<employeeId>
+  REFRESH: 'staff:refresh', // suffixe :<employeeId>
+} as const;
+
+export const StaffModalId = {
+  RENAME: 'staff:rename:modal', // suffixe :<employeeId>
+  BRACELET: 'staff:bracelet:modal', // suffixe :<employeeId>
+} as const;
+
+export const StaffFieldId = {
+  NOM_RP: 'nom_rp',
+  MULTIPLICATEUR: 'multiplicateur',
+} as const;
+
 /** Tableau stock : menus de selection de vehicule + modals de quantite. */
 export const StockSelectId = {
   RAMASSER: 'stock:pick:ramasser',

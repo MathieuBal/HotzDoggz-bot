@@ -166,12 +166,13 @@ Dans ton serveur (les réponses sont privées) :
    /config salons controle:#controle-des-ventes comptabilite:#comptabilite
            paies:#paies logs:#logs-et-archives tableau:#tableau-de-bord-hebdo
            developpement:#developpement commandes:#commandes avis:#avis-clients
-           partenariats:#partenariats
+           partenariats:#partenariats gestion:#gestion-employes
    ```
 
    (`developpement` = tableau de croissance employés ; `commandes` = commandes
-   client côté direction ; `avis` = salon public des avis clients. Tu peux n'en
-   renseigner qu'une partie.)
+   client côté direction ; `avis` = salon public des avis clients ; `gestion` =
+   salon direction « gestion des employés » (trombinoscope + cartes éditables).
+   Tu peux n'en renseigner qu'une partie.)
 
 3. **Associer un employé à son casier** :
 
